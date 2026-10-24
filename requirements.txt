@@ -1,0 +1,12 @@
+# Ghostwriter packages for the project venv (.venv, Python 3.11).
+#
+# Install (from D:\Projects\ghostwriter). The base Python must live inside the project,
+# never under AppData:
+#   set UV_PYTHON_INSTALL_DIR=D:\Projects\ghostwriter\.python
+#   python -m uv venv .venv --python 3.11 --managed-python
+#   python -m uv pip install --python .venv\Scripts\python.exe -r requirements.txt
+faster-whisper
+nvidia-cublas-cu12      # CUDA math library faster-whisper needs on the GPU
+nvidia-cudnn-cu12==9.*  # cuDNN 9, matched to ctranslate2 4.x
+sounddevice
+numpy

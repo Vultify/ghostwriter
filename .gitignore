@@ -1,0 +1,18 @@
+# Project memory for Claude Code
+CLAUDE.md
+
+# Secrets
+.env
+*.key
+secrets/
+
+# Python
+.python/
+.venv/
+__pycache__/
+*.pyc
+
+# Local data
+recordings/
+logs/
+*.wav
