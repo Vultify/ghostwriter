@@ -15,3 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The clipboard is put back after each paste, and dictated text stays out of Win+V history.
 - The model loads from disk with no network calls after the first download.
 - Tests for the clipboard, hotkey, mic, and the full dictation loop.
+- Ghost icon in the system tray that turns red while listening, with Quit.
+- Listening pill at the bottom center of the screen with a live mic level, then typing dots. It never takes focus and lets clicks through.
+- Soft start and stop sounds (`scripts/make_sounds.py` makes them).
+- "Wardogs" added to the word list.

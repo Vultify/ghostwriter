@@ -49,6 +49,14 @@ class ClipRecorder:
 
 
 @pytest.fixture(scope="module")
+def transcriber():
+    # Loaded before the test window opens, so the window never sits frozen while Whisper loads.
+    model = Transcriber()
+    model.warm_up()
+    return model
+
+
+@pytest.fixture(scope="module")
 def spoken_sentence():
     clip = Path(tempfile.gettempdir()) / "ghostwriter_loop_test.wav"
     speak_to_wav(SENTENCE, clip)
@@ -57,10 +65,8 @@ def spoken_sentence():
     return audio
 
 
-def test_hold_right_alt_talk_release_types_the_sentence(text_box, spoken_sentence):
+def test_hold_right_alt_talk_release_types_the_sentence(transcriber, spoken_sentence, text_box):
     root, box = text_box
-    transcriber = Transcriber()
-    transcriber.warm_up()
     dictation = Dictation(transcriber, ClipRecorder(spoken_sentence), Paster(), allow_injected=True)
     dictation.start()
     try:

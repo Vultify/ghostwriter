@@ -16,7 +16,13 @@ From the project folder:
 .venv\Scripts\python -m ghostwriter
 ```
 
-Hold **Right Alt**, talk, and let go. The text is pasted where your cursor is, and whatever was on your clipboard is put back right after. Press Ctrl+C in that window to quit.
+Hold **Right Alt**, talk, and let go. The text is pasted where your cursor is, and whatever was on your clipboard is put back right after.
+
+- A ghost icon in the system tray shows Ghostwriter is running, and turns red while it listens.
+- A small pill at the bottom of the screen shows a live mic level while you talk, then dots while it types.
+- A soft sound plays when listening starts and stops.
+
+Quit from the tray icon (right click, Quit Ghostwriter) or press Ctrl+C in the terminal.
 
 ## Tests
 

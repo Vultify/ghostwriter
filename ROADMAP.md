@@ -24,28 +24,34 @@ Build order I recommend. We check items off as we go.
 - [x] Paste the text where the cursor is, then put the old clipboard back
 - **Checkpoint 3 passed 2026-10-24:** Caleb's dictations landed correctly; mic opens in 10 to 18 ms, transcription takes 0.13 to 0.18s
 
-## Phase 4: lock mode
+## Phase 4: tray, indicator, and sound
+Moved ahead of lock mode, because lock mode keeps recording after you let go and you need to see that.
+- [x] Ghost icon in the system tray that turns red while listening, with Quit
+- [x] Listening pill at the bottom center of the screen with a live mic level, then "typing" dots; never takes focus and lets clicks through
+- [x] Soft sound when listening starts and stops
+- **Checkpoint 4 passed 2026-10-24:** tray ghost, listening pill, and sounds all confirmed by Caleb; "Wardogs" now spelled right
+
+## Phase 5: lock mode
 - [ ] Double tap the hotkey to keep recording hands free; tap again to stop
-- **Checkpoint 4:** a long ramble in lock mode comes out complete
+- **Checkpoint 5:** a long ramble in lock mode comes out complete
 
-## Phase 5: custom dictionary
-- [ ] `dictionary.txt` of words Whisper should know (Tulare, Castro Detailing, Supabase)
+## Phase 6: custom dictionary
+- [ ] `dictionary.txt` of words Whisper should know (Tulare, Castro Detailing, Supabase, Wardogs)
 - [ ] Optional find and replace rules for words it still gets wrong
-- **Checkpoint 5:** every dictionary word comes out right in a test run
+- **Checkpoint 6:** every dictionary word comes out right in a test run
 
-## Phase 6: tray and indicator
-- [ ] Tray icon with quit and settings
-- [ ] Small on screen indicator while recording
-- [ ] `settings.json` for hotkey, model, and mic
+## Phase 7: settings and launching
+- [ ] Settings in the tray menu, saved to `settings.json` (hotkey, mic, sounds)
 - [ ] Desktop shortcut that launches it with no console window
-- **Checkpoint 6:** Caleb uses it for a full day instead of Wispr Flow
+- **Checkpoint 7:** Caleb uses it for a full day instead of Wispr Flow
 
-## Phase 7: local AI cleanup (on/off switch)
+## Phase 8: local AI cleanup (on/off switch)
 - [ ] Small local model on the GPU cleans filler words and formats lists
 - [ ] Measure the delay against raw mode
-- **Checkpoint 7:** Caleb tries both and picks his default
+- **Checkpoint 8:** Caleb tries both and picks his default
 
 ## Later
+- Installer so other people can use Ghostwriter
 - Start with Windows
 - Dictation history
 - Voice commands ("new line", "scratch that")

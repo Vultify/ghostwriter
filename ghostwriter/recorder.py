@@ -15,6 +15,7 @@ class Recorder:
     def __init__(self, tail_seconds: float = TAIL_SECONDS) -> None:
         self.tail_seconds = tail_seconds
         self.open_ms = 0.0
+        self.level = 0.0  # loudness (RMS) of the latest chunk, for the listening pill
         self._stream: sd.InputStream | None = None
         self._chunks: list[np.ndarray] = []
 
@@ -37,7 +38,10 @@ class Recorder:
         self._stream.stop()
         self._stream.close()
         self._stream = None
+        self.level = 0.0
         return np.concatenate(self._chunks) if self._chunks else np.zeros(0, dtype=np.float32)
 
     def _on_audio(self, indata: np.ndarray, frames: int, time_info, status) -> None:
-        self._chunks.append(indata[:, 0].copy())
+        chunk = indata[:, 0].copy()
+        self._chunks.append(chunk)
+        self.level = float(np.sqrt(np.mean(chunk * chunk)))

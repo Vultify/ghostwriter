@@ -10,4 +10,6 @@ nvidia-cublas-cu12      # CUDA math library faster-whisper needs on the GPU
 nvidia-cudnn-cu12==9.*  # cuDNN 9, matched to ctranslate2 4.x
 sounddevice
 numpy
+pystray                 # system tray icon
+Pillow                  # draws the tray icon and the listening pill
 pytest                  # tests

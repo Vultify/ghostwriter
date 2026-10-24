@@ -16,3 +16,4 @@ __pycache__/
 recordings/
 logs/
 *.wav
+!ghostwriter/assets/*.wav
