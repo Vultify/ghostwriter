@@ -18,6 +18,7 @@ DARK_TASKBAR_COLOR = (255, 255, 255, 255)
 TOOLTIPS = {
     State.READY: "Ghostwriter: hold Right Alt to talk",
     State.LISTENING: "Ghostwriter: listening",
+    State.LOCKED: "Ghostwriter: listening hands free (tap Right Alt to stop)",
     State.WORKING: "Ghostwriter: typing",
 }
 
@@ -25,7 +26,8 @@ TOOLTIPS = {
 class Tray:
     def __init__(self, on_quit: Callable[[], None]) -> None:
         normal = draw_ghost(LIGHT_TASKBAR_COLOR if _taskbar_is_light() else DARK_TASKBAR_COLOR)
-        self._icons = {State.READY: normal, State.LISTENING: draw_ghost(RED), State.WORKING: normal}
+        listening = draw_ghost(RED)
+        self._icons = {State.READY: normal, State.LISTENING: listening, State.LOCKED: listening, State.WORKING: normal}
         menu = pystray.Menu(pystray.MenuItem("Quit Ghostwriter", lambda: on_quit()))
         self._tray = pystray.Icon("Ghostwriter", self._icons[State.READY], TOOLTIPS[State.READY], menu)
 

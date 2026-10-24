@@ -20,3 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Soft start and stop sounds (`scripts/make_sounds.py` makes them).
 - "Wardogs" added to the word list.
 - `dictionary.txt` for words to spell right and fixes for things Whisper mishears (like "sea whiz" to "CIWS"). Edits apply without a restart.
+- Lock mode: double tap Right Alt to record hands free, tap again to stop. The pill shows a stop square while locked, and recording stops by itself after 15 minutes.
+
+### Changed
+- A lone quick tap (under 0.3 seconds) now waits briefly for a second tap before it's thrown away.

@@ -1,6 +1,5 @@
 """The tray icon, listening pill, and sounds: they show the right state and never steal focus."""
 
-import threading
 import time
 import wave
 
@@ -67,34 +66,68 @@ class FakeTranscriber:
 
 
 class FakePaster:
+    def __init__(self) -> None:
+        self.pasted: list[str] = []
+
     def paste(self, text: str) -> bool:
+        self.pasted.append(text)
         return True
 
 
-def _states_for_a_press(hold_seconds: float) -> list[State]:
+PRESS, RELEASE = "press", "release"
+SETTLE_SECONDS = 0.8  # longer than the double tap window, so a lone tap has been decided
+
+
+def _play(*steps: tuple[str, float], max_recording_seconds: float | None = None) -> tuple[list[State], int]:
+    """Press and release Right Alt as listed (each step waits after itself), then return the states and paste count."""
     states: list[State] = []
-    back_to_ready = threading.Event()
-
-    def record(state: State) -> None:
-        states.append(state)
-        if state is State.READY:
-            back_to_ready.set()
-
-    dictation = Dictation(FakeTranscriber(), FakeRecorder(), FakePaster(), allow_injected=True, on_state=record)
+    paster = FakePaster()
+    dictation = Dictation(FakeTranscriber(), FakeRecorder(), paster, allow_injected=True, on_state=states.append)
+    if max_recording_seconds:
+        dictation.max_recording_seconds = max_recording_seconds
     dictation.start()
     try:
-        press_key(win32.VK_RMENU)
-        time.sleep(hold_seconds)
-        press_key(win32.VK_RMENU, release=True)
-        assert back_to_ready.wait(3)
+        for action, wait in steps:
+            press_key(win32.VK_RMENU, release=action == RELEASE)
+            time.sleep(wait)
+        deadline = time.perf_counter() + 5
+        settled_count, settled_at = -1, time.perf_counter()
+        while time.perf_counter() < deadline:
+            if len(states) != settled_count:
+                settled_count, settled_at = len(states), time.perf_counter()
+            elif states and states[-1] is State.READY and time.perf_counter() - settled_at > SETTLE_SECONDS:
+                break
+            time.sleep(0.02)
     finally:
         dictation.stop()
-    return states
+    return states, len(paster.pasted)
 
 
-def test_a_dictation_goes_listening_then_typing_then_ready():
-    assert _states_for_a_press(0.4) == [State.LISTENING, State.WORKING, State.READY]
+def test_hold_to_talk_goes_listening_then_typing_then_ready():
+    assert _play((PRESS, 0.5), (RELEASE, 0)) == ([State.LISTENING, State.WORKING, State.READY], 1)
 
 
-def test_a_quick_tap_goes_straight_back_to_ready():
-    assert _states_for_a_press(0.05) == [State.LISTENING, State.READY]
+def test_a_lone_quick_tap_is_thrown_away():
+    assert _play((PRESS, 0.05), (RELEASE, 0)) == ([State.LISTENING, State.READY], 0)
+
+
+def test_double_tap_locks_on_until_the_next_tap():
+    states, pastes = _play(
+        (PRESS, 0.05), (RELEASE, 0.1),  # first tap
+        (PRESS, 0.05), (RELEASE, 1.0),  # second tap locks on; letting go doesn't stop it
+        (PRESS, 0.05), (RELEASE, 0),  # one more tap stops and types
+    )
+    assert states == [State.LISTENING, State.LOCKED, State.WORKING, State.READY]
+    assert pastes == 1
+
+
+def test_a_second_tap_after_the_window_starts_fresh_instead_of_locking():
+    states, pastes = _play((PRESS, 0.05), (RELEASE, 0.7), (PRESS, 0.5), (RELEASE, 0))
+    assert states == [State.LISTENING, State.READY, State.LISTENING, State.WORKING, State.READY]
+    assert pastes == 1
+
+
+def test_lock_mode_stops_on_its_own_at_the_time_limit():
+    states, pastes = _play((PRESS, 0.05), (RELEASE, 0.1), (PRESS, 0.05), (RELEASE, 0), max_recording_seconds=1.0)
+    assert states == [State.LISTENING, State.LOCKED, State.WORKING, State.READY]
+    assert pastes == 1

@@ -32,8 +32,9 @@ Moved ahead of lock mode, because lock mode keeps recording after you let go and
 - **Checkpoint 4 passed 2026-10-24:** tray ghost, listening pill, and sounds all confirmed by Caleb; "Wardogs" now spelled right
 
 ## Phase 5: lock mode
-- [ ] Double tap the hotkey to keep recording hands free; tap again to stop
-- **Checkpoint 5:** a long ramble in lock mode comes out complete
+- [x] Double tap the hotkey to keep recording hands free; tap again to stop (tap under 0.3s, second press within 0.4s, 15 minute safety limit)
+- [x] Pill shows a stop square and the start sound plays twice while locked
+- **Checkpoint 5 passed 2026-10-24:** Caleb's 66 second ramble came out complete, transcribed in 0.67s
 
 ## Phase 6: custom dictionary
 Pulled ahead of lock mode on 2026-10-24 so Wardogs terms like CIWS ("sea whiz") come out right.

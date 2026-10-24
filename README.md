@@ -18,9 +18,11 @@ From the project folder:
 
 Hold **Right Alt**, talk, and let go. The text is pasted where your cursor is, and whatever was on your clipboard is put back right after.
 
+For longer stretches, **double tap Right Alt** to lock recording on and talk hands free. Tap it once more to stop and paste. A quick single tap on its own does nothing, and recording stops by itself after 15 minutes in case it gets left on.
+
 - A ghost icon in the system tray shows Ghostwriter is running, and turns red while it listens.
-- A small pill at the bottom of the screen shows a live mic level while you talk, then dots while it types.
-- A soft sound plays when listening starts and stops.
+- A small pill at the bottom of the screen shows a live mic level while you talk, then dots while it types. In hands free mode its red dot becomes a stop square.
+- A soft sound plays when listening starts and stops. Locking on plays it twice.
 
 Quit from the tray icon (right click, Quit Ghostwriter) or press Ctrl+C in the terminal.
 
@@ -47,7 +49,7 @@ The tests briefly use the clipboard (and put it back) and pop up a small test wi
 ## How it works
 
 - Speech to text: [faster-whisper](https://github.com/SYSTRAN/faster-whisper) running the Whisper large-v3-turbo model on an NVIDIA GPU
-- Hold Right Alt to talk (double tap to keep recording hands free is coming next)
+- Hold Right Alt to talk, or double tap it to keep recording hands free
 - Pastes with the clipboard and Ctrl+V, then restores your clipboard and keeps dictations out of Win+V history
 - The mic only opens while you hold the key
 - A custom dictionary teaches it names and words it would otherwise miss

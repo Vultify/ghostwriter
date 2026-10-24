@@ -65,7 +65,7 @@ class Indicator:
         self._ready.wait()
 
     def show(self, mode: State | None) -> None:
-        """Show the pill for LISTENING or WORKING, or fade it out with None."""
+        """Show the pill for LISTENING, LOCKED, or WORKING, or fade it out with None."""
         self._mode = mode
 
     def stop(self) -> None:
@@ -108,7 +108,7 @@ class Indicator:
             opacity = min(1.0, opacity + FADE_STEP) if mode else max(0.0, opacity - FADE_STEP)
 
             now = time.perf_counter()
-            if shown is State.LISTENING and mode is not None and now >= next_sample:
+            if shown.is_recording and mode is not None and now >= next_sample:
                 targets.append(loudness(self.level()))
                 next_sample = now + LEVEL_SAMPLE_SECONDS
             heights = [h + (t - h) * BAR_EASING for h, t in zip(heights, targets)]
@@ -198,8 +198,14 @@ def _draw(mode: State, heights: list[float], now: float, size: tuple[int, int], 
     draw.rounded_rectangle((0, 0, width - 1, height - 1), radius=height / 2, fill=BACKGROUND, outline=BORDER,
                            width=max(1, round(unit)))
     middle = height / 2
-    if mode is State.LISTENING:
-        _dot(draw, 16 * unit, middle, 4.5 * unit, RED)
+    if mode.is_recording:
+        if mode is State.LOCKED:
+            # A stop square instead of the dot: recording is hands free and a tap stops it.
+            half = 4 * unit
+            draw.rounded_rectangle((16 * unit - half, middle - half, 16 * unit + half, middle + half),
+                                   radius=1.5 * unit, fill=RED)
+        else:
+            _dot(draw, 16 * unit, middle, 4.5 * unit, RED)
         left, right = 30 * unit, (WIDTH - 16) * unit
         step = (right - left) / (BAR_COUNT - 1)
         bar = 3 * unit
