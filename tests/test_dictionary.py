@@ -65,6 +65,7 @@ SPOKEN = [
     ("Castro Detailing is open on Saturday.", "Castro Detailing"),
     ("The bookings are stored in Supabase.", "Supabase"),
     ("I asked Claude Code to fix the bug.", "Claude Code"),
+    ("I built Ghostwriter to replace Whisper Flow.", "Wispr Flow"),
     ("I played Wardogs last night.", "Wardogs"),
     ("I put a sea whiz on the corner of my base.", "CIWS"),
     ("Should I build two sea whizzes or one?", "CIWS"),
