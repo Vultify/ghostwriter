@@ -10,18 +10,18 @@ Build order I recommend. We check items off as we go.
 - **Checkpoint 1 passed 2026-10-23:** Caleb's voice comes back as correct text in under half a second
 
 ## Phase 2: design
-- [ ] Pasting: clipboard and Ctrl+V, with the old clipboard put back afterward
-- [ ] Hotkey: telling a hold from a double tap, and keeping the key away from the app underneath
-- [ ] Mic: starting fast enough that the first word is not cut off
-- [ ] Knowing which app is in front
-- **Checkpoint 2:** lock the approach
+- [x] Pasting: clipboard and Ctrl+V, with the old clipboard put back afterward
+- [x] Hotkey: telling a hold from a double tap, and keeping the key away from the app underneath
+- [x] Mic: starting fast enough that the first word is not cut off
+- [x] Knowing which app is in front
+- **Checkpoint 2 passed 2026-10-24:** mic opens on press, single key hotkey, clipboard put back after pasting
 
 ## Phase 3: core dictation loop
-- [ ] Pick the hotkey (not Ctrl+Win, that is Wispr; not Ctrl+Alt+J, that is Jarvis)
-- [ ] Global hotkey: hold to talk
-- [ ] Record the mic while the key is held
+- [ ] Pick a single key hotkey (not Ctrl+Win, that is Wispr; not Ctrl+Alt+J, that is Jarvis)
+- [ ] Global hotkey: hold to talk, with the key swallowed so the app in front never sees it
+- [ ] Open the mic on key press and record until release, plus a short tail; measure how fast it opens
 - [ ] Transcribe with the model kept warm in memory
-- [ ] Paste the text where the cursor is
+- [ ] Paste the text where the cursor is, then put the old clipboard back
 - **Checkpoint 3:** Caleb dictates into Notepad, a browser, and Claude Code, and it lands correctly every time
 
 ## Phase 4: lock mode
