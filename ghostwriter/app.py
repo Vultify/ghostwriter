@@ -9,6 +9,7 @@ from collections.abc import Callable
 import numpy as np
 
 from ghostwriter import sounds, win32
+from ghostwriter.dictionary import DictionaryFile
 from ghostwriter.hotkey import KeyHook
 from ghostwriter.indicator import Indicator
 from ghostwriter.paster import Paster
@@ -21,8 +22,6 @@ from ghostwriter.win32 import user32
 HOTKEY = win32.VK_RMENU
 # Taps shorter than this are treated as accidental and thrown away.
 MIN_HOLD_SECONDS = 0.25
-# Temporary word list until Phase 6 moves it into dictionary.txt.
-VOCABULARY = "Ghostwriter, Tulare, Castro Detailing, Supabase, Claude Code, Wardogs."
 
 log = logging.getLogger("ghostwriter")
 
@@ -42,11 +41,13 @@ class Dictation:
         hotkey: int = HOTKEY,
         allow_injected: bool = False,
         on_state: Callable[[State], None] = lambda state: None,
+        dictionary: DictionaryFile | None = None,
     ) -> None:
         self.transcriber = transcriber
         self.recorder = recorder
         self.paster = paster
         self.on_state = on_state
+        self.dictionary = dictionary or DictionaryFile()
         self._key_events: queue.Queue[bool | None] = queue.Queue()
         self._clips: queue.Queue[np.ndarray | None] = queue.Queue()
         self._pressed_at: float | None = None
@@ -124,8 +125,9 @@ class Dictation:
                 self._update_state(-1)
 
     def _type_out(self, audio: np.ndarray) -> None:
+        dictionary = self.dictionary.current()
         started = time.perf_counter()
-        text = self.transcriber.transcribe(audio, prompt=VOCABULARY)
+        text = dictionary.apply(self.transcriber.transcribe(audio, prompt=dictionary.prompt))
         elapsed = time.perf_counter() - started
         if not text:
             log.info("Heard nothing")
@@ -164,9 +166,13 @@ def main() -> None:
 
     quitting = threading.Event()
     recorder = Recorder()
+    dictionary = DictionaryFile()
+    dictionary.current()
     tray = Tray(on_quit=quitting.set)
     indicator = Indicator(level=lambda: recorder.level)
-    dictation = Dictation(transcriber, recorder, Paster(), on_state=StatusDisplay(tray, indicator))
+    dictation = Dictation(
+        transcriber, recorder, Paster(), on_state=StatusDisplay(tray, indicator), dictionary=dictionary
+    )
     tray.start()
     indicator.start()
     dictation.start()

@@ -12,6 +12,7 @@ import pytest
 
 from ghostwriter import win32
 from ghostwriter.clipboard import Clipboard, Snapshot
+from ghostwriter.transcriber import Transcriber
 from ghostwriter.win32 import kernel32, user32
 
 user32.GetForegroundWindow.restype = wintypes.HWND
@@ -28,6 +29,14 @@ def keep_users_clipboard():
     saved = clipboard.snapshot()
     yield
     clipboard.restore(saved, user32.GetClipboardSequenceNumber())
+
+
+@pytest.fixture(scope="session")
+def transcriber():
+    # Loaded once, and before any test window opens, so a window never sits frozen while Whisper loads.
+    model = Transcriber()
+    model.warm_up()
+    return model
 
 
 @pytest.fixture
@@ -91,6 +100,7 @@ def text_of(snapshot: Snapshot) -> str | None:
 
 def speak_to_wav(text: str, path: Path) -> None:
     """Use the built-in Windows voice to save a sentence as a 16 kHz WAV."""
+    text = text.replace("'", "''")  # PowerShell's escape for a quote inside a quoted string
     script = (
         "Add-Type -AssemblyName System.Speech;"
         "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;"

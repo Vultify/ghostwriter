@@ -24,6 +24,18 @@ Hold **Right Alt**, talk, and let go. The text is pasted where your cursor is, a
 
 Quit from the tray icon (right click, Quit Ghostwriter) or press Ctrl+C in the terminal.
 
+## Dictionary
+
+`dictionary.txt` teaches Ghostwriter names and terms. Changes apply to the next dictation, no restart needed.
+
+```
+Castro Detailing
+Wardogs
+sea whiz, sea whizzes -> CIWS
+```
+
+A plain line is a word to spell right. A line with `->` is a fix: what Whisper hears on the left (several versions split by commas), what you want on the right. Fixes ignore capital letters and work with or without spaces or hyphens.
+
 ## Tests
 
 ```

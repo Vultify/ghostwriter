@@ -12,7 +12,7 @@ from ghostwriter import win32
 from ghostwriter.app import Dictation
 from ghostwriter.clipboard import Clipboard
 from ghostwriter.paster import Paster
-from ghostwriter.transcriber import SAMPLE_RATE, Transcriber
+from ghostwriter.transcriber import SAMPLE_RATE
 from ghostwriter.win32 import user32
 
 SENTENCE = "Book the ceramic coating for Friday morning in Tulare."
@@ -46,14 +46,6 @@ class ClipRecorder:
 
     def stop(self):
         return self.audio
-
-
-@pytest.fixture(scope="module")
-def transcriber():
-    # Loaded before the test window opens, so the window never sits frozen while Whisper loads.
-    model = Transcriber()
-    model.warm_up()
-    return model
 
 
 @pytest.fixture(scope="module")

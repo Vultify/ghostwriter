@@ -19,3 +19,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Listening pill at the bottom center of the screen with a live mic level, then typing dots. It never takes focus and lets clicks through.
 - Soft start and stop sounds (`scripts/make_sounds.py` makes them).
 - "Wardogs" added to the word list.
+- `dictionary.txt` for words to spell right and fixes for things Whisper mishears (like "sea whiz" to "CIWS"). Edits apply without a restart.

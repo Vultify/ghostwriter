@@ -36,9 +36,10 @@ Moved ahead of lock mode, because lock mode keeps recording after you let go and
 - **Checkpoint 5:** a long ramble in lock mode comes out complete
 
 ## Phase 6: custom dictionary
-- [ ] `dictionary.txt` of words Whisper should know (Tulare, Castro Detailing, Supabase, Wardogs)
-- [ ] Optional find and replace rules for words it still gets wrong
-- **Checkpoint 6:** every dictionary word comes out right in a test run
+Pulled ahead of lock mode on 2026-10-24 so Wardogs terms like CIWS ("sea whiz") come out right.
+- [x] `dictionary.txt` of words Whisper should know (Tulare, Castro Detailing, Supabase, Wardogs, CIWS); edits apply without a restart
+- [x] Optional find and replace rules for words it still gets wrong (`sea whiz -> CIWS`)
+- **Checkpoint 6 passed 2026-10-24:** every dictionary word comes out right in a spoken test run, and Caleb's "CIWS" came out right in his own voice
 
 ## Phase 7: settings and launching
 - [ ] Settings in the tray menu, saved to `settings.json` (hotkey, mic, sounds)
