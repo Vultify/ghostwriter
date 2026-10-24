@@ -10,3 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Project plan, roadmap, and README.
 - Whisper large-v3-turbo transcription on the GPU, kept loaded for fast repeat use.
 - Speed test and microphone test scripts.
+- Hold to talk dictation: hold Right Alt, talk, and let go to paste the text where the cursor is (`python -m ghostwriter`).
+- Right Alt is hidden from other apps while Ghostwriter runs.
+- The clipboard is put back after each paste, and dictated text stays out of Win+V history.
+- The model loads from disk with no network calls after the first download.
+- Tests for the clipboard, hotkey, mic, and the full dictation loop.

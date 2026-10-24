@@ -10,3 +10,4 @@ nvidia-cublas-cu12      # CUDA math library faster-whisper needs on the GPU
 nvidia-cudnn-cu12==9.*  # cuDNN 9, matched to ctranslate2 4.x
 sounddevice
 numpy
+pytest                  # tests

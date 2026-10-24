@@ -17,12 +17,12 @@ Build order I recommend. We check items off as we go.
 - **Checkpoint 2 passed 2026-10-24:** mic opens on press, single key hotkey, clipboard put back after pasting
 
 ## Phase 3: core dictation loop
-- [ ] Pick a single key hotkey (not Ctrl+Win, that is Wispr; not Ctrl+Alt+J, that is Jarvis)
-- [ ] Global hotkey: hold to talk, with the key swallowed so the app in front never sees it
-- [ ] Open the mic on key press and record until release, plus a short tail; measure how fast it opens
-- [ ] Transcribe with the model kept warm in memory
-- [ ] Paste the text where the cursor is, then put the old clipboard back
-- **Checkpoint 3:** Caleb dictates into Notepad, a browser, and Claude Code, and it lands correctly every time
+- [x] Pick a single key hotkey: Right Alt (not Ctrl+Win, that is Wispr; not Ctrl+Alt+J, that is Jarvis)
+- [x] Global hotkey: hold to talk, with the key swallowed so the app in front never sees it
+- [x] Open the mic on key press and record until release, plus a short tail; measure how fast it opens (first audio in 35 to 55 ms)
+- [x] Transcribe with the model kept warm in memory
+- [x] Paste the text where the cursor is, then put the old clipboard back
+- **Checkpoint 3 passed 2026-10-24:** Caleb's dictations landed correctly; mic opens in 10 to 18 ms, transcription takes 0.13 to 0.18s
 
 ## Phase 4: lock mode
 - [ ] Double tap the hotkey to keep recording hands free; tap again to stop
