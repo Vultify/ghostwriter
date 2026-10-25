@@ -1,4 +1,4 @@
-"""Make Ghostwriter's start and stop sounds: short, soft blips that glide up to start and down to stop."""
+"""Make Ghostwriter's start and stop sounds: soft, low "bloops" that swell in gently and fade fast."""
 
 import wave
 from pathlib import Path
@@ -7,14 +7,21 @@ import numpy as np
 
 RATE = 44100
 ASSETS = Path(__file__).resolve().parent.parent / "ghostwriter" / "assets"
+PEAK_DB = -6  # clearly audible over game audio without being harsh
 
 
-def blip(start_hz: float, end_hz: float, seconds: float = 0.09, volume: float = 0.22) -> np.ndarray:
+def bloop(start_hz: float, end_hz: float, glide: float, attack: float, decay: float, seconds: float) -> np.ndarray:
+    """A short tone that bends from start_hz toward end_hz, rising in over `attack` and dying away over `decay`."""
     t = np.arange(int(RATE * seconds)) / RATE
-    phase = 2 * np.pi * np.cumsum(np.geomspace(start_hz, end_hz, len(t))) / RATE
-    tone = (np.sin(phase) + 0.25 * np.sin(2 * phase)) / 1.25  # a touch of overtone so it isn't a pure beep
-    envelope = np.minimum(1, t / 0.004) * np.exp(-t / 0.03)  # 4 ms fade in, quick decay
-    return volume * tone * envelope
+    frequency = end_hz + (start_hz - end_hz) * np.exp(-t / glide)
+    phase = 2 * np.pi * np.cumsum(frequency) / RATE
+    # A little second and third harmonic gives it a soft, rounded body instead of a pure beep.
+    tone = np.sin(phase) + 0.3 * np.sin(2 * phase) + 0.08 * np.sin(3 * phase)
+    rise = np.sin(np.pi / 2 * np.minimum(1, t / attack)) ** 2
+    fall = np.exp(-np.maximum(0, t - attack) / decay)
+    sound = tone * rise * fall
+    sound[-int(RATE * 0.005):] *= np.linspace(1, 0, int(RATE * 0.005))  # no click at the very end
+    return sound / np.abs(sound).max() * 10 ** (PEAK_DB / 20)
 
 
 def save(name: str, samples: np.ndarray) -> None:
@@ -27,6 +34,6 @@ def save(name: str, samples: np.ndarray) -> None:
 
 if __name__ == "__main__":
     ASSETS.mkdir(exist_ok=True)
-    save("start", blip(700, 1050))
-    save("stop", blip(1050, 700))
+    save("start", bloop(start_hz=470, end_hz=523, glide=0.02, attack=0.022, decay=0.009, seconds=0.12))  # settles up onto C
+    save("stop", bloop(start_hz=523, end_hz=349, glide=0.035, attack=0.03, decay=0.02, seconds=0.17))  # slides down to F
     print(f"Saved start.wav and stop.wav to {ASSETS}")
