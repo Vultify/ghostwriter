@@ -8,6 +8,7 @@ from conftest import press_key, pump_until
 from ghostwriter import sounds, win32
 from ghostwriter.app import Dictation
 from ghostwriter.indicator import Indicator
+from ghostwriter.settings import Settings
 from ghostwriter.state import State
 from ghostwriter.tray import Tray
 from ghostwriter.win32 import user32
@@ -33,11 +34,11 @@ def test_pill_shows_and_hides_without_taking_focus(text_box):
         indicator.stop()
 
 
-def test_tray_starts_switches_state_and_stops():
-    tray = Tray(on_quit=lambda: None)
+def test_tray_starts_switches_state_and_stops(tmp_path):
+    tray = Tray(Settings(path=tmp_path / "settings.json"), ["Mic A"], on_quit=lambda: None, files={})
     tray.start()
     time.sleep(0.3)
-    for state in (State.LISTENING, State.WORKING, State.READY):
+    for state in (State.LISTENING, State.LOCKED, State.WORKING, State.READY):
         tray.set_state(state)
     tray.stop()
 

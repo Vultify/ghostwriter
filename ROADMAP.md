@@ -43,9 +43,10 @@ Pulled ahead of lock mode on 2026-10-24 so Wardogs terms like CIWS ("sea whiz") 
 - **Checkpoint 6 passed 2026-10-24:** every dictionary word comes out right in a spoken test run, and Caleb's "CIWS" came out right in his own voice
 
 ## Phase 7: settings and launching
-- [ ] Settings in the tray menu, saved to `settings.json` (hotkey, mic, sounds)
-- [ ] Desktop shortcut that launches it with no console window
-- **Checkpoint 7:** Caleb uses it for a full day instead of Wispr Flow
+- [x] Settings in the tray menu, saved to `settings.json` (hotkey, mic, sounds), plus Edit dictionary and Open log
+- [x] Runs with no console window, logs to `logs/ghostwriter.log`, one copy at a time, error box if it can't start
+- [x] Start menu shortcut that launches it with no console window (`scripts/make_shortcut.py`; Caleb runs it himself so it lands in his real Start menu)
+- **Checkpoint 7 passed 2026-10-25:** Caleb used it all day on 2026-10-24, including 13 dictations into Wardogs chat. Felt a little slow to paste while gaming (transcription ~1s with the game on the GPU, vs ~0.2s on the desktop).
 
 ## Phase 8: local AI cleanup (on/off switch)
 - [ ] Small local model on the GPU cleans filler words and formats lists

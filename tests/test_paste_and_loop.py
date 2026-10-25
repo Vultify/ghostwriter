@@ -5,13 +5,12 @@ import time
 from pathlib import Path
 
 import pytest
-from conftest import press_key, pump_until, run_in_thread, speak_to_wav, text_of
+from conftest import GuardedPaster, press_key, pump_until, run_in_thread, speak_to_wav, text_of
 from faster_whisper import decode_audio
 
 from ghostwriter import win32
 from ghostwriter.app import Dictation
 from ghostwriter.clipboard import Clipboard
-from ghostwriter.paster import Paster
 from ghostwriter.transcriber import SAMPLE_RATE
 from ghostwriter.win32 import user32
 
@@ -35,7 +34,7 @@ def _set_clipboard_text(text: str) -> None:
 def test_paste_lands_in_the_focused_window_and_restores_the_clipboard(text_box):
     root, box = text_box
     _set_clipboard_text("what the user had copied")
-    paster = Paster()
+    paster = GuardedPaster(root.test_window)
     result = {}
     worker = run_in_thread(lambda: result.update(restored=paster.paste("Hello from Ghostwriter. ")))
     pump_until(root, lambda: not worker.is_alive())
@@ -76,10 +75,15 @@ def spoken_ramble():
     return _speak(RAMBLE)
 
 
+def _dictation(transcriber, audio, root) -> Dictation:
+    dictation = Dictation(transcriber, ClipRecorder(audio), GuardedPaster(root.test_window), allow_injected=True)
+    dictation.start()
+    return dictation
+
+
 def test_hold_right_alt_talk_release_types_the_sentence(transcriber, spoken_sentence, text_box):
     root, box = text_box
-    dictation = Dictation(transcriber, ClipRecorder(spoken_sentence), Paster(), allow_injected=True)
-    dictation.start()
+    dictation = _dictation(transcriber, spoken_sentence, root)
     try:
         press_key(win32.VK_RMENU)
         pump_until(root, lambda: False, timeout=0.4)
@@ -95,8 +99,7 @@ def test_hold_right_alt_talk_release_types_the_sentence(transcriber, spoken_sent
 
 def test_lock_mode_types_a_long_ramble_completely(transcriber, spoken_ramble, text_box):
     root, box = text_box
-    dictation = Dictation(transcriber, ClipRecorder(spoken_ramble), Paster(), allow_injected=True)
-    dictation.start()
+    dictation = _dictation(transcriber, spoken_ramble, root)
     try:
         # Double tap to lock on, let go for a bit, then tap once to stop.
         for release, wait in ((False, 0.05), (True, 0.1), (False, 0.05), (True, 0.6), (False, 0.05), (True, 0)):
@@ -115,8 +118,7 @@ def test_lock_mode_types_a_long_ramble_completely(transcriber, spoken_ramble, te
 
 def test_a_quick_tap_types_nothing(text_box, spoken_sentence):
     root, box = text_box
-    dictation = Dictation(None, ClipRecorder(spoken_sentence), Paster(), allow_injected=True)
-    dictation.start()
+    dictation = _dictation(None, spoken_sentence, root)
     try:
         press_key(win32.VK_RMENU)
         press_key(win32.VK_RMENU, release=True)

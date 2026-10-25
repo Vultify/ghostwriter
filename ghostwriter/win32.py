@@ -13,10 +13,19 @@ ULONG_PTR = ctypes.c_size_t
 VK_SHIFT = 0x10
 VK_CONTROL = 0x11
 VK_MENU = 0x12
+VK_PAUSE = 0x13
+VK_CAPITAL = 0x14
 VK_LWIN = 0x5B
 VK_RWIN = 0x5C
+VK_SCROLL = 0x91
+VK_RCONTROL = 0xA3
 VK_RMENU = 0xA5
 VK_V = 0x56
+
+ERROR_ALREADY_EXISTS = 183
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+MB_ICONINFORMATION = 0x40
+MB_ICONERROR = 0x10
 
 WH_KEYBOARD_LL = 13
 HC_ACTION = 0
@@ -193,6 +202,14 @@ for _func, _argtypes, _restype in (
     (gdi32.SelectObject, [wintypes.HDC, wintypes.HGDIOBJ], wintypes.HGDIOBJ),
     (gdi32.DeleteObject, [wintypes.HGDIOBJ], wintypes.BOOL),
     (gdi32.DeleteDC, [wintypes.HDC], wintypes.BOOL),
+    (user32.MessageBoxW, [wintypes.HWND, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.UINT], ctypes.c_int),
+    (user32.GetForegroundWindow, [], wintypes.HWND),
+    (user32.GetWindowThreadProcessId, [wintypes.HWND, wintypes.LPDWORD], wintypes.DWORD),
+    (kernel32.OpenProcess, [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD], wintypes.HANDLE),
+    (kernel32.QueryFullProcessImageNameW, [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, wintypes.LPDWORD],
+     wintypes.BOOL),
+    (kernel32.CloseHandle, [wintypes.HANDLE], wintypes.BOOL),
+    (kernel32.CreateMutexW, [wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR], wintypes.HANDLE),
     (kernel32.GetModuleHandleW, [wintypes.LPCWSTR], wintypes.HMODULE),
     (kernel32.GetCurrentThreadId, [], wintypes.DWORD),
     (kernel32.GlobalAlloc, [wintypes.UINT, ctypes.c_size_t], wintypes.HGLOBAL),

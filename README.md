@@ -10,11 +10,19 @@ Early development. Hold to talk works; see [ROADMAP.md](ROADMAP.md) for what's n
 
 ## Usage
 
-From the project folder:
+Open the Start menu, type **Ghostwriter**, and press Enter. It runs in the background with no window; the ghost in the system tray means it's on. To add it to the Start menu (once), run this yourself in Command Prompt or PowerShell:
+
+```
+D:\Projects\ghostwriter\.venv\Scripts\python D:\Projects\ghostwriter\scripts\make_shortcut.py
+```
+
+To run it in a terminal instead, with the log printed as you go:
 
 ```
 .venv\Scripts\python -m ghostwriter
 ```
+
+Only one copy runs at a time.
 
 Hold **Right Alt**, talk, and let go. The text is pasted where your cursor is, and whatever was on your clipboard is put back right after.
 
@@ -24,7 +32,17 @@ For longer stretches, **double tap Right Alt** to lock recording on and talk han
 - A small pill at the bottom of the screen shows a live mic level while you talk, then dots while it types. In hands free mode its red dot becomes a stop square.
 - A soft sound plays when listening starts and stops. Locking on plays it twice.
 
-Quit from the tray icon (right click, Quit Ghostwriter) or press Ctrl+C in the terminal.
+## Settings
+
+Right click the ghost in the tray:
+
+- **Hotkey:** Right Alt, Right Ctrl, Caps Lock, Scroll Lock, or Pause
+- **Microphone:** the Windows default, or a specific mic (plugged in a new one? restart Ghostwriter to see it)
+- **Sounds:** on or off
+- **Edit dictionary** and **Open log**
+- **Quit Ghostwriter**
+
+Changes apply right away and are saved to `settings.json`. The log is at `logs/ghostwriter.log`.
 
 ## Dictionary
 
@@ -44,7 +62,7 @@ A plain line is a word to spell right. A line with `->` is a fix: what Whisper h
 .venv\Scripts\python -m pytest tests
 ```
 
-The tests briefly use the clipboard (and put it back) and pop up a small test window to paste into.
+The tests briefly use the clipboard (and put it back) and pop up a small test window to paste into. Leave the PC alone for the 20 or so seconds they take; if another window grabs focus, the paste tests fail on purpose rather than type into it.
 
 ## How it works
 

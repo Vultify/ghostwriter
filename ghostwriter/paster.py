@@ -2,10 +2,12 @@
 
 import ctypes
 import time
+from ctypes import wintypes
+from pathlib import Path
 
 from ghostwriter import win32
 from ghostwriter.clipboard import Clipboard
-from ghostwriter.win32 import user32
+from ghostwriter.win32 import kernel32, user32
 
 # Long enough for slow apps (browsers, terminals) to read the clipboard before we restore it.
 RESTORE_DELAY_SECONDS = 0.5
@@ -31,6 +33,23 @@ class Paster:
         _send_ctrl_v()
         time.sleep(self.restore_delay)
         return self.clipboard.restore(previous, sequence)
+
+
+def foreground_app() -> str:
+    """The program name of the window in front, for the log."""
+    process_id = wintypes.DWORD()
+    user32.GetWindowThreadProcessId(user32.GetForegroundWindow(), ctypes.byref(process_id))
+    process = kernel32.OpenProcess(win32.PROCESS_QUERY_LIMITED_INFORMATION, False, process_id.value)
+    if not process:
+        return f"process {process_id.value}"
+    try:
+        name = ctypes.create_unicode_buffer(1024)
+        size = wintypes.DWORD(len(name))
+        if kernel32.QueryFullProcessImageNameW(process, 0, name, ctypes.byref(size)):
+            return Path(name.value).name
+        return f"process {process_id.value}"
+    finally:
+        kernel32.CloseHandle(process)
 
 
 def _wait_for_modifiers_released() -> None:

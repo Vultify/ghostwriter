@@ -1,26 +1,33 @@
 """Hold Right Alt, talk, let go: Ghostwriter pastes what you said wherever the cursor is."""
 
+import ctypes
 import logging
 import queue
+import sys
 import threading
 import time
 from collections.abc import Callable
 from enum import Enum
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 import numpy as np
 
 from ghostwriter import sounds, win32
-from ghostwriter.dictionary import DictionaryFile
+from ghostwriter.dictionary import DICTIONARY_PATH, DictionaryFile
 from ghostwriter.hotkey import KeyHook
 from ghostwriter.indicator import Indicator
-from ghostwriter.paster import Paster
-from ghostwriter.recorder import Recorder
+from ghostwriter.paster import Paster, foreground_app
+from ghostwriter.recorder import Recorder, list_microphones
+from ghostwriter.settings import Settings
 from ghostwriter.state import State
 from ghostwriter.transcriber import SAMPLE_RATE, Transcriber
 from ghostwriter.tray import Tray
-from ghostwriter.win32 import user32
+from ghostwriter.win32 import kernel32, user32
 
 HOTKEY = win32.VK_RMENU
+LOG_PATH = Path(__file__).resolve().parent.parent / "logs" / "ghostwriter.log"
+INSTANCE_NAME = "Local\\Ghostwriter"
 # A release sooner than this is a tap, not a hold. A lone tap is thrown away as accidental.
 TAP_SECONDS = 0.3
 # A second press this soon after a tap locks recording on, hands free.
@@ -29,6 +36,7 @@ DOUBLE_TAP_SECONDS = 0.4
 MAX_RECORDING_SECONDS = 15 * 60
 
 log = logging.getLogger("ghostwriter")
+_instance_mutex = None
 
 
 class _Key(Enum):
@@ -94,6 +102,9 @@ class Dictation:
         self._key_events.put(None)
         self._clips.put(None)
 
+    def set_hotkey(self, vk_code: int) -> None:
+        self._hook.set_key(vk_code)
+
     def _update_state(self, unfinished_change: int = 0) -> None:
         with self._state_lock:
             self._unfinished += unfinished_change
@@ -137,7 +148,7 @@ class Dictation:
                 self._start_recording()
             elif mode is _Mode.TAPPED:
                 self._set_mode(_Mode.LOCKED)
-                log.info("Locked on, hands free. Tap Right Alt to stop.")
+                log.info("Locked on, hands free. Tap the hotkey to stop.")
             elif mode is _Mode.LOCKED:
                 self._finish_recording(then=_Mode.RELEASING)
         elif key is _Key.RELEASE:
@@ -192,7 +203,8 @@ class Dictation:
         if not text:
             log.info("Heard nothing")
             return
-        log.info("%.1fs of audio, transcribed in %.2fs: %s", len(audio) / SAMPLE_RATE, elapsed, text)
+        log.info("%.1fs of audio, transcribed in %.2fs, pasting into %s: %s",
+                 len(audio) / SAMPLE_RATE, elapsed, foreground_app(), text)
         # The trailing space keeps back to back dictations from running together.
         if not self.paster.paste(text + " "):
             log.info("Clipboard changed during the paste, so it was left as is")
@@ -201,43 +213,67 @@ class Dictation:
 class StatusDisplay:
     """Shows each state change in the tray and the listening pill, with a sound when listening starts and stops."""
 
-    def __init__(self, tray: Tray, indicator: Indicator) -> None:
+    def __init__(self, tray: Tray, indicator: Indicator, settings: Settings) -> None:
         self.tray = tray
         self.indicator = indicator
+        self.settings = settings
         self._state = State.READY
 
     def __call__(self, state: State) -> None:
         # Locking on plays the start sound a second time, so a double tap is heard as two blips.
-        if state.is_recording:
-            sounds.play_start()
-        elif self._state.is_recording:
-            sounds.play_stop()
+        if self.settings.sounds:
+            if state.is_recording:
+                sounds.play_start()
+            elif self._state.is_recording:
+                sounds.play_stop()
         self._state = state
         self.tray.set_state(state)
         self.indicator.show(None if state is State.READY else state)
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.WARNING, format="%(asctime)s  %(message)s", datefmt="%H:%M:%S")
-    log.setLevel(logging.INFO)
+    _set_up_logging()
+    if not claim_single_instance():
+        _show_message("Ghostwriter is already running. Look for the ghost in the system tray.", win32.MB_ICONINFORMATION)
+        return
+    try:
+        _run()
+    except Exception as error:
+        log.exception("Ghostwriter stopped because of an error")
+        _show_message(f"Ghostwriter stopped because of an error:\n\n{error}\n\nDetails are in {LOG_PATH}", win32.MB_ICONERROR)
+
+
+def _run() -> None:
     user32.SetProcessDpiAwarenessContext(win32.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)  # crisp on scaled screens
+    settings = Settings.load()
+    quitting = threading.Event()
+    tray = Tray(settings, list_microphones(), on_quit=quitting.set,
+                files={"Edit dictionary": DICTIONARY_PATH, "Open log": LOG_PATH})
+    tray.start()  # the ghost shows up right away while Whisper loads
+
     log.info("Loading Whisper...")
     transcriber = Transcriber()
     transcriber.warm_up()
-
-    quitting = threading.Event()
-    recorder = Recorder()
+    recorder = Recorder(microphone=settings.microphone)
     dictionary = DictionaryFile()
     dictionary.current()
-    tray = Tray(on_quit=quitting.set)
     indicator = Indicator(level=lambda: recorder.level)
     dictation = Dictation(
-        transcriber, recorder, Paster(), on_state=StatusDisplay(tray, indicator), dictionary=dictionary
+        transcriber, recorder, Paster(), hotkey=settings.hotkey_code,
+        on_state=StatusDisplay(tray, indicator, settings), dictionary=dictionary,
     )
-    tray.start()
+
+    def apply_settings() -> None:
+        dictation.set_hotkey(settings.hotkey_code)
+        recorder.microphone = settings.microphone
+        log.info("Settings: hotkey %s, mic %s, sounds %s",
+                 settings.hotkey, settings.microphone or "Windows default", "on" if settings.sounds else "off")
+
+    tray.on_change = apply_settings
     indicator.start()
     dictation.start()
-    log.info("Ready. Hold Right Alt and talk. Quit from the tray icon or press Ctrl+C here.")
+    tray.set_state(State.READY)
+    log.info("Ready. Hold %s to talk, or double tap it for hands free.", settings.hotkey)
     try:
         while not quitting.wait(0.5):
             pass
@@ -248,3 +284,26 @@ def main() -> None:
         indicator.stop()
         tray.stop()
         log.info("Stopped.")
+
+
+def claim_single_instance(name: str = INSTANCE_NAME) -> bool:
+    """Return False if another copy of Ghostwriter is already running."""
+    global _instance_mutex
+    ctypes.set_last_error(0)
+    _instance_mutex = kernel32.CreateMutexW(None, False, name)  # held until the process exits
+    return ctypes.get_last_error() != win32.ERROR_ALREADY_EXISTS
+
+
+def _set_up_logging() -> None:
+    """Log to logs/ghostwriter.log, and to the terminal too when there is one."""
+    LOG_PATH.parent.mkdir(exist_ok=True)
+    handlers: list[logging.Handler] = [RotatingFileHandler(LOG_PATH, maxBytes=1_000_000, backupCount=2, encoding="utf-8")]
+    if sys.stderr is not None:
+        handlers.append(logging.StreamHandler())
+    logging.basicConfig(level=logging.WARNING, format="%(asctime)s  %(message)s", datefmt="%Y-%m-%d %H:%M:%S",
+                        handlers=handlers)
+    log.setLevel(logging.INFO)
+
+
+def _show_message(text: str, icon: int) -> None:
+    user32.MessageBoxW(None, text, "Ghostwriter", icon)

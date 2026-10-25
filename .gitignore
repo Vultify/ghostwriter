@@ -15,5 +15,6 @@ __pycache__/
 # Local data
 recordings/
 logs/
+settings.json
 *.wav
 !ghostwriter/assets/*.wav

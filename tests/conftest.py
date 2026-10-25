@@ -12,13 +12,11 @@ import pytest
 
 from ghostwriter import win32
 from ghostwriter.clipboard import Clipboard, Snapshot
+from ghostwriter.paster import Paster
 from ghostwriter.transcriber import Transcriber
 from ghostwriter.win32 import kernel32, user32
 
-user32.GetForegroundWindow.restype = wintypes.HWND
 user32.SetForegroundWindow.argtypes = [wintypes.HWND]
-user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, wintypes.LPDWORD]
-user32.GetWindowThreadProcessId.restype = wintypes.DWORD
 user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
 
 
@@ -42,7 +40,7 @@ def transcriber():
 @pytest.fixture
 def text_box():
     """A small window with a focused text box, brought to the front so Ctrl+V lands in it."""
-    root = tk.Tk()
+    root = _new_tk()
     root.title("Ghostwriter test")
     root.geometry("420x160+80+80")
     root.attributes("-topmost", True)
@@ -56,8 +54,33 @@ def text_box():
     if user32.GetForegroundWindow() != window:
         root.destroy()
         pytest.skip("Windows would not let the test window come to the front")
+    root.test_window = window
     yield root, box
     root.destroy()
+
+
+class GuardedPaster(Paster):
+    """A Paster that refuses to paste unless the test window is in front, so tests never type into the user's apps."""
+
+    def __init__(self, window: int) -> None:
+        super().__init__()
+        self.window = window
+
+    def paste(self, text: str) -> bool:
+        if user32.GetForegroundWindow() != self.window:
+            raise RuntimeError("The test window lost focus, so the paste was skipped")
+        return super().paste(text)
+
+
+def _new_tk(attempts: int = 3) -> tk.Tk:
+    # Tk now and then fails to read its own startup files on this machine; a retry always works.
+    for attempt in range(attempts):
+        try:
+            return tk.Tk()
+        except tk.TclError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.2)
 
 
 def _bring_to_front(window: int) -> None:

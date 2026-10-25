@@ -42,6 +42,11 @@ class KeyHook:
         if self._error:
             raise self._error
 
+    def set_key(self, vk_code: int) -> None:
+        """Switch to a different key without reinstalling the hook."""
+        self._held = False
+        self.vk_code = vk_code
+
     def stop(self) -> None:
         if self._thread and self._thread.is_alive():
             user32.PostThreadMessageW(self._thread_id, win32.WM_QUIT, 0, 0)
