@@ -48,6 +48,11 @@ Pulled ahead of lock mode on 2026-10-24 so Wardogs terms like CIWS ("sea whiz") 
 - [x] Start menu shortcut that launches it with no console window (`scripts/make_shortcut.py`; Caleb runs it himself so it lands in his real Start menu)
 - **Checkpoint 7 passed 2026-10-25:** Caleb used it all day on 2026-10-24, including 13 dictations into Wardogs chat. Felt a little slow to paste while gaming (transcription ~1s with the game on the GPU, vs ~0.2s on the desktop).
 
+## Speed pass (after Checkpoint 7)
+- [x] End recording as soon as Caleb goes quiet after letting go (tail ~0.08s, was 0.3s)
+- [x] Whisper beam size 5 to 1 (88 ms vs 112 ms per short phrase, same text)
+- **Check passed 2026-10-25:** Caleb says it feels faster even on the desktop; transcription 0.09 to 0.15s, no last words clipped
+
 ## Phase 8: local AI cleanup (on/off switch)
 - [ ] Small local model on the GPU cleans filler words and formats lists
 - [ ] Measure the delay against raw mode

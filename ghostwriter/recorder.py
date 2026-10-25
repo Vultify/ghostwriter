@@ -8,8 +8,11 @@ import sounddevice as sd
 
 from ghostwriter.transcriber import SAMPLE_RATE
 
-# Keep listening this long after release so the last word isn't clipped.
-TAIL_SECONDS = 0.3
+# After release, keep listening until the speaker has gone quiet, so the last word isn't clipped.
+TAIL_SECONDS = 0.3  # never longer than this
+MIN_TAIL_SECONDS = 0.06  # always at least this, so audio still on its way from the mic arrives
+QUIET_SECONDS = 0.06  # this much quiet in a row ends the tail
+QUIET_RMS = 10 ** (-50 / 20)  # -50 dB: well under speech, well over the RODECaster's -82 dB silence
 
 log = logging.getLogger("ghostwriter")
 
@@ -39,12 +42,24 @@ class Recorder:
 
     def stop(self) -> np.ndarray:
         """Record the tail, close the mic, and return everything heard as 16 kHz mono float32."""
-        time.sleep(self.tail_seconds)
+        deadline = time.perf_counter() + self.tail_seconds
+        time.sleep(min(max(self._stream.latency, MIN_TAIL_SECONDS), self.tail_seconds))
+        while time.perf_counter() < deadline and not self.ends_quietly():
+            time.sleep(0.01)
         self._stream.stop()
         self._stream.close()
         self._stream = None
         self.level = 0.0
         return np.concatenate(self._chunks) if self._chunks else np.zeros(0, dtype=np.float32)
+
+    def ends_quietly(self) -> bool:
+        """Whether the most recent audio is quiet enough to stop recording."""
+        needed = int(QUIET_SECONDS * SAMPLE_RATE)
+        recent = self._chunks[-50:]
+        if sum(len(chunk) for chunk in recent) < needed:
+            return False
+        tail = np.concatenate(recent)[-needed:]
+        return float(np.sqrt(np.mean(tail * tail))) < QUIET_RMS
 
     def _on_audio(self, indata: np.ndarray, frames: int, time_info, status) -> None:
         chunk = indata[:, 0].copy()

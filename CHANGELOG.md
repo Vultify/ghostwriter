@@ -30,5 +30,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - An error message box if Ghostwriter can't start, instead of quietly closing.
 
 ### Changed
+- Faster paste after you let go: recording ends as soon as you've gone quiet (about 0.08s instead of a fixed 0.3s), and Whisper follows its single best guess instead of weighing five (about 20% faster, same text in testing).
 - A lone quick tap (under 0.3 seconds) now waits briefly for a second tap before it's thrown away.
 - The tray ghost appears right away while Whisper loads.
