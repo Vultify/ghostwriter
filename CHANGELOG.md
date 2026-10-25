@@ -6,31 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-25
+
+The first release: local, unlimited dictation that replaces Wispr Flow for my daily use.
+
 ### Added
-- Project plan, roadmap, and README.
-- Whisper large-v3-turbo transcription on the GPU, kept loaded for fast repeat use.
-- Speed test and microphone test scripts.
-- Hold to talk dictation: hold Right Alt, talk, and let go to paste the text where the cursor is (`python -m ghostwriter`).
-- Right Alt is hidden from other apps while Ghostwriter runs.
-- The clipboard is put back after each paste, and dictated text stays out of Win+V history.
-- The model loads from disk with no network calls after the first download.
-- Tests for the clipboard, hotkey, mic, and the full dictation loop.
-- Ghost icon in the system tray that turns red while listening, with Quit.
-- Listening pill at the bottom center of the screen with a live mic level, then typing dots. It never takes focus and lets clicks through.
-- Soft start and stop sounds (`scripts/make_sounds.py` makes them).
-- "Wardogs" added to the word list.
-- `dictionary.txt` for words to spell right and fixes for things Whisper mishears (like "sea whiz" to "CIWS"). Edits apply without a restart.
-- Lock mode: double tap Right Alt to record hands free, tap again to stop. The pill shows a stop square while locked, and recording stops by itself after 15 minutes.
+- Hold to talk: hold Right Alt, talk, and let go to paste the text where the cursor is.
+- Lock mode: double tap Right Alt to record hands free, tap again to stop. Recording stops by itself after 15 minutes in case it's left on.
+- Speech to text with Whisper large-v3-turbo on the GPU, kept loaded so each dictation takes a fraction of a second. After the first download it never goes online.
+- Fast finish: recording ends as soon as you go quiet after letting go, so the text usually lands within about 0.2 seconds on the desktop.
+- Pasting through the clipboard and Ctrl+V, with your clipboard put back right after and dictations kept out of Win+V history.
+- The hotkey is hidden from other apps, and works inside games (tested in Wardogs chat).
+- `dictionary.txt` for names and terms to spell right, plus fixes for things Whisper mishears (like "sea whiz" to "CIWS"). Edits apply without a restart.
+- A ghost in the system tray that turns red while listening.
+- A listening pill at the bottom of the screen with a live mic level, typing dots, and a stop square in lock mode. It never takes focus and lets clicks through.
+- Soft start and stop sounds.
+- Tray settings for the hotkey, microphone, and sounds, saved to `settings.json`, plus shortcuts to edit the dictionary and open the log.
+- A Start menu shortcut that runs Ghostwriter with no terminal window, with its own ghost icon.
+- A log at `logs/ghostwriter.log`, one copy running at a time, and an error message if it can't start.
+- Tests for the clipboard, hotkey, mic, dictionary, lock mode, settings, and the full dictation loop.
 
-- Settings in the tray menu: hotkey, microphone, and sounds, saved to `settings.json` and applied right away.
-- Tray menu items to edit the dictionary and open the log.
-- Runs with no terminal window from a Start menu shortcut (`scripts/make_shortcut.py`), with its own ghost app icon.
-- Log file at `logs/ghostwriter.log`, including which app each dictation was pasted into.
-- Only one copy of Ghostwriter runs at a time.
-- An error message box if Ghostwriter can't start, instead of quietly closing.
-
-### Changed
-- Faster paste after you let go: recording ends as soon as you've gone quiet (about 0.08s instead of a fixed 0.3s), and Whisper follows its single best guess instead of weighing five (about 20% faster, same text in testing).
-- A lone quick tap (under 0.3 seconds) now waits briefly for a second tap before it's thrown away.
-- Softer, lower start and stop sounds: a quick "bloop" that settles up onto C to start, and slides down to stop.
-- The tray ghost appears right away while Whisper loads.
+[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/Vultify/ghostwriter/releases/tag/v1.0.0

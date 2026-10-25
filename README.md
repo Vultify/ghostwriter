@@ -6,15 +6,26 @@ Hold a hotkey, talk, let go, and the text appears wherever the cursor is.
 
 ## Status
 
-Early development. Hold to talk works; see [ROADMAP.md](ROADMAP.md) for what's next.
+Version 1.0.0. It's what I use every day instead of Wispr Flow. See [CHANGELOG.md](CHANGELOG.md) for what's in it and [ROADMAP.md](ROADMAP.md) for what's next.
+
+## Setup
+
+You'll need [git](https://git-scm.com/), Python with [uv](https://docs.astral.sh/uv/) (`pip install uv`), and an NVIDIA GPU. In Command Prompt:
+
+```
+git clone https://github.com/Vultify/ghostwriter.git
+cd ghostwriter
+set UV_PYTHON_INSTALL_DIR=%CD%\.python
+python -m uv venv .venv --python 3.11 --managed-python
+python -m uv pip install --python .venv\Scripts\python.exe -r requirements.txt
+.venv\Scripts\python scripts\make_shortcut.py
+```
+
+That keeps Python and every package inside the project folder and adds Ghostwriter to the Start menu. The first start downloads the Whisper model (about 1.6 GB).
 
 ## Usage
 
-Open the Start menu, type **Ghostwriter**, and press Enter. It runs in the background with no window; the ghost in the system tray means it's on. To add it to the Start menu (once), run this yourself in Command Prompt or PowerShell:
-
-```
-D:\Projects\ghostwriter\.venv\Scripts\python D:\Projects\ghostwriter\scripts\make_shortcut.py
-```
+Open the Start menu, type **Ghostwriter**, and press Enter. It runs in the background with no window; the ghost in the system tray means it's on.
 
 To run it in a terminal instead, with the log printed as you go:
 
@@ -67,12 +78,18 @@ The tests briefly use the clipboard (and put it back) and pop up a small test wi
 ## How it works
 
 - Speech to text: [faster-whisper](https://github.com/SYSTRAN/faster-whisper) running the Whisper large-v3-turbo model on an NVIDIA GPU
-- Hold Right Alt to talk, or double tap it to keep recording hands free
+- A low level keyboard hook catches the hotkey (Right Alt by default) and hides it from the app in front
 - Pastes with the clipboard and Ctrl+V, then restores your clipboard and keeps dictations out of Win+V history
-- The mic only opens while you hold the key
+- The mic only opens while you're dictating, and recording ends as soon as you go quiet after letting go
 - A custom dictionary teaches it names and words it would otherwise miss
+- Nothing goes online after the first model download
 
 ## Requirements
 
 - Windows 10 or 11
-- An NVIDIA GPU (built and tested on an RTX 4090)
+- An NVIDIA GPU with CUDA (built and tested on an RTX 4090)
+- About 2 GB of disk for the model
+
+## License
+
+MIT. See [LICENSE](LICENSE).

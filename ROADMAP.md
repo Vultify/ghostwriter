@@ -53,6 +53,9 @@ Pulled ahead of lock mode on 2026-10-24 so Wardogs terms like CIWS ("sea whiz") 
 - [x] Whisper beam size 5 to 1 (88 ms vs 112 ms per short phrase, same text)
 - **Check passed 2026-10-25:** Caleb says it feels faster even on the desktop; transcription 0.09 to 0.15s, no last words clipped
 
+## Version 1.0.0 released 2026-10-25
+Phases 1 to 7 plus the speed pass.
+
 ## Phase 8: local AI cleanup (on/off switch)
 - [ ] Small local model on the GPU cleans filler words and formats lists
 - [ ] Measure the delay against raw mode
