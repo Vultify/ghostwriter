@@ -1,7 +1,4 @@
-"""Make Ghostwriter's app icon and add it to the Start menu, set to start with no terminal window.
-
-Run this yourself rather than from Claude, so the shortcut lands in your real Start menu folder.
-"""
+"""Make Ghostwriter's app icon and add it to the Start menu, set to start with no terminal window (install.bat runs this)."""
 
 import os
 import subprocess
@@ -36,14 +33,19 @@ def start_menu_folder() -> Path:
     return Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
 
 
+def _quoted(value: object) -> str:
+    """Quote a value for PowerShell, so paths with apostrophes (like O'Brien) still work."""
+    return "'" + str(value).replace("'", "''") + "'"
+
+
 def make_shortcut(folder: Path) -> Path:
     path = folder / "Ghostwriter.lnk"
     script = f"""
-$link = (New-Object -ComObject WScript.Shell).CreateShortcut('{path}')
-$link.TargetPath = '{PYTHONW}'
+$link = (New-Object -ComObject WScript.Shell).CreateShortcut({_quoted(path)})
+$link.TargetPath = {_quoted(PYTHONW)}
 $link.Arguments = '-m ghostwriter'
-$link.WorkingDirectory = '{PROJECT}'
-$link.IconLocation = '{ICON_PATH}'
+$link.WorkingDirectory = {_quoted(PROJECT)}
+$link.IconLocation = {_quoted(ICON_PATH)}
 $link.Description = 'Ghostwriter: local dictation'
 $link.Save()
 """

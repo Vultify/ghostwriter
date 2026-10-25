@@ -61,8 +61,15 @@ Phases 1 to 7 plus the speed pass.
 - [ ] Measure the delay against raw mode
 - **Checkpoint 8:** Caleb tries both and picks his default
 
+## Ready to share
+- [x] `install.bat`: download the ZIP, double click, done (own Python and packages inside the folder, Start menu shortcut)
+- [x] Personal `dictionary.txt` out of git; new installs start from `dictionary.example.txt`
+- [x] Right Ctrl by default on AltGr keyboards
+- [x] Clear message on PCs without an NVIDIA GPU
+- [x] Notification during the one time model download
+
 ## Later
-- Installer so other people can use Ghostwriter
+- A real setup wizard (.exe) for people who want a classic installer
 - Start with Windows
 - Dictation history
 - Voice commands ("new line", "scratch that")

@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 import pytest
-from conftest import GuardedPaster, press_key, pump_until, run_in_thread, speak_to_wav, text_of
+from conftest import GuardedPaster, fixed_dictionary, press_key, pump_until, run_in_thread, speak_to_wav, text_of
 from faster_whisper import decode_audio
 
 from ghostwriter import win32
@@ -76,7 +76,8 @@ def spoken_ramble():
 
 
 def _dictation(transcriber, audio, root) -> Dictation:
-    dictation = Dictation(transcriber, ClipRecorder(audio), GuardedPaster(root.test_window), allow_injected=True)
+    dictation = Dictation(transcriber, ClipRecorder(audio), GuardedPaster(root.test_window), allow_injected=True,
+                          dictionary=fixed_dictionary())
     dictation.start()
     return dictation
 

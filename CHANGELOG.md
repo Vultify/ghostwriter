@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- `install.bat`: download the ZIP, double click it, and Ghostwriter installs its own Python and packages inside its folder and adds itself to the Start menu. Safe to run again.
+- A notification while the speech model downloads on first start, and another when it's ready.
+- A clear message on PCs without an NVIDIA graphics card, instead of a crash.
+
+### Changed
+- The default hotkey is Right Ctrl on keyboards where Right Alt is AltGr, so it doesn't block typing characters like @ and €.
+- `dictionary.txt` is now personal and no longer in git. New installs start from `dictionary.example.txt`.
+
 ## [1.0.0] - 2026-10-25
 
 The first release: local, unlimited dictation that replaces Wispr Flow for my daily use.

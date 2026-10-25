@@ -9,14 +9,20 @@ from test_status import FakePaster, FakeRecorder, FakeTranscriber
 from ghostwriter import app, sounds, win32
 from ghostwriter.app import Dictation, StatusDisplay, claim_single_instance
 from ghostwriter.recorder import Recorder, list_microphones
-from ghostwriter.settings import Settings
+from ghostwriter.settings import Settings, default_hotkey, keyboard_uses_altgr
 from ghostwriter.state import State
 from ghostwriter.tray import Tray
 
 
 def test_missing_file_means_defaults(tmp_path):
     settings = Settings.load(tmp_path / "settings.json")
-    assert (settings.hotkey, settings.microphone, settings.sounds) == ("Right Alt", None, True)
+    assert (settings.hotkey, settings.microphone, settings.sounds) == (default_hotkey(), None, True)
+
+
+def test_the_default_hotkey_avoids_altgr_keyboards():
+    # This PC has a plain US layout, so Right Alt is free; a layout with AltGr would get Right Ctrl.
+    assert keyboard_uses_altgr() is False
+    assert default_hotkey() == "Right Alt"
 
 
 def test_settings_survive_a_save_and_load(tmp_path):
@@ -29,10 +35,10 @@ def test_settings_survive_a_save_and_load(tmp_path):
 def test_a_broken_or_odd_file_falls_back_to_defaults(tmp_path):
     path = tmp_path / "settings.json"
     path.write_text("{not json", encoding="utf-8")
-    assert Settings.load(path).hotkey == "Right Alt"
+    assert Settings.load(path).hotkey == default_hotkey()
     path.write_text(json.dumps({"hotkey": "Banana", "sounds": "loud"}), encoding="utf-8")
     loaded = Settings.load(path)
-    assert (loaded.hotkey, loaded.sounds) == ("Right Alt", True)
+    assert (loaded.hotkey, loaded.sounds) == (default_hotkey(), True)
 
 
 def test_tray_menu_changes_are_saved_and_reported(tmp_path):

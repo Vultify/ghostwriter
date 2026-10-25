@@ -1,0 +1,12 @@
+# Ghostwriter dictionary. Changes apply to your next dictation, no restart needed.
+#
+# One word or name per line, so Whisper knows how to spell it.
+# To fix something it keeps getting wrong, write what it hears, then ->, then what you want.
+# Several versions of what it hears can share one line, split by commas.
+#
+# Examples (remove the # in front to use one):
+# Your Business Name
+# Claude Code
+# sea whiz, sea whizzes -> CIWS
+
+Ghostwriter

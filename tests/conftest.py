@@ -12,9 +12,12 @@ import pytest
 
 from ghostwriter import win32
 from ghostwriter.clipboard import Clipboard, Snapshot
+from ghostwriter.dictionary import DictionaryFile
 from ghostwriter.paster import Paster
 from ghostwriter.transcriber import Transcriber
 from ghostwriter.win32 import kernel32, user32
+
+TEST_DICTIONARY = Path(__file__).resolve().parent / "dictionary.txt"
 
 user32.SetForegroundWindow.argtypes = [wintypes.HWND]
 user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
@@ -35,6 +38,11 @@ def transcriber():
     model = Transcriber()
     model.warm_up()
     return model
+
+
+def fixed_dictionary() -> DictionaryFile:
+    """The fixed word list the tests use, instead of the user's own dictionary.txt."""
+    return DictionaryFile(TEST_DICTIONARY, starter=None)
 
 
 @pytest.fixture

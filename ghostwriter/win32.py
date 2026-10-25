@@ -204,6 +204,8 @@ for _func, _argtypes, _restype in (
     (gdi32.DeleteDC, [wintypes.HDC], wintypes.BOOL),
     (user32.MessageBoxW, [wintypes.HWND, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.UINT], ctypes.c_int),
     (user32.GetForegroundWindow, [], wintypes.HWND),
+    (user32.GetKeyboardLayoutList, [ctypes.c_int, ctypes.POINTER(wintypes.HKL)], ctypes.c_int),
+    (user32.VkKeyScanExW, [wintypes.WCHAR, wintypes.HKL], ctypes.c_short),
     (user32.GetWindowThreadProcessId, [wintypes.HWND, wintypes.LPDWORD], wintypes.DWORD),
     (kernel32.OpenProcess, [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD], wintypes.HANDLE),
     (kernel32.QueryFullProcessImageNameW, [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, wintypes.LPDWORD],

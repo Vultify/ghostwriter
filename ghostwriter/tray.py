@@ -54,7 +54,18 @@ class Tray:
         self._tray = pystray.Icon("Ghostwriter", normal, "Ghostwriter: starting up", menu)
 
     def start(self) -> None:
-        threading.Thread(target=self._tray.run, name="Tray", daemon=True).start()
+        shown = threading.Event()
+
+        def show(icon: pystray.Icon) -> None:
+            icon.visible = True
+            shown.set()
+
+        threading.Thread(target=self._tray.run, args=(show,), name="Tray", daemon=True).start()
+        shown.wait(5)
+
+    def notify(self, message: str) -> None:
+        """Pop up a Windows notification from the tray icon."""
+        self._tray.notify(message, "Ghostwriter")
 
     def set_state(self, state: State) -> None:
         self._state = state

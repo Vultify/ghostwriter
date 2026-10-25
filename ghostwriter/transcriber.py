@@ -2,6 +2,7 @@
 
 import os
 import site
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -24,16 +25,30 @@ def _add_cuda_dll_dirs() -> None:
 
 _add_cuda_dll_dirs()
 
-from faster_whisper import WhisperModel  # noqa: E402  (needs the DLL paths above)
+import ctranslate2  # noqa: E402  (needs the DLL paths above)
+from faster_whisper import WhisperModel, download_model  # noqa: E402
+
+
+def gpu_available() -> bool:
+    """Whether there's an NVIDIA GPU that Whisper can run on."""
+    try:
+        return ctranslate2.get_cuda_device_count() > 0
+    except Exception:
+        return False
+
+
+def model_path(model_name: str = MODEL_NAME, on_download: Callable[[], None] = lambda: None) -> str:
+    """Find the model on disk, so startup never goes online. Only the very first run downloads it."""
+    try:
+        return download_model(model_name, local_files_only=True)
+    except Exception:  # not downloaded yet
+        on_download()
+        return download_model(model_name)
 
 
 class Transcriber:
-    def __init__(self, model_name: str = MODEL_NAME) -> None:
-        # Load from the local download so startup never goes online; only the very first run downloads it.
-        try:
-            self.model = WhisperModel(model_name, device="cuda", compute_type="float16", local_files_only=True)
-        except Exception:
-            self.model = WhisperModel(model_name, device="cuda", compute_type="float16")
+    def __init__(self, model_name: str = MODEL_NAME, on_download: Callable[[], None] = lambda: None) -> None:
+        self.model = WhisperModel(model_path(model_name, on_download), device="cuda", compute_type="float16")
 
     def transcribe(self, audio: np.ndarray | str, prompt: str | None = None) -> str:
         """Turn 16 kHz mono float32 audio (or a file path) into text."""

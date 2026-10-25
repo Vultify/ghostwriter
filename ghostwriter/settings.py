@@ -3,9 +3,11 @@
 import json
 import logging
 from dataclasses import asdict, dataclass, field
+from ctypes import wintypes
 from pathlib import Path
 
 from ghostwriter import win32
+from ghostwriter.win32 import user32
 
 SETTINGS_PATH = Path(__file__).resolve().parent.parent / "settings.json"
 
@@ -17,14 +19,33 @@ HOTKEYS = {
     "Scroll Lock": win32.VK_SCROLL,
     "Pause": win32.VK_PAUSE,
 }
-DEFAULT_HOTKEY = "Right Alt"
+# Characters that keyboards with an AltGr key (Right Alt on most non-US layouts) type through it.
+_ALTGR_CHARACTERS = "@€{}[]\\|~#$^`<>"
+_CTRL_AND_ALT = 0x06  # in the shift state VkKeyScanEx reports
 
 log = logging.getLogger("ghostwriter")
 
 
+def keyboard_uses_altgr() -> bool:
+    """Whether any installed keyboard layout types characters with AltGr, which would make Right Alt a bad hotkey."""
+    count = user32.GetKeyboardLayoutList(0, None)
+    layouts = (wintypes.HKL * count)()
+    user32.GetKeyboardLayoutList(count, layouts)
+    for layout in layouts:
+        for character in _ALTGR_CHARACTERS:
+            key = user32.VkKeyScanExW(character, layout)
+            if key != -1 and (key >> 8) & _CTRL_AND_ALT == _CTRL_AND_ALT:
+                return True
+    return False
+
+
+def default_hotkey() -> str:
+    return "Right Ctrl" if keyboard_uses_altgr() else "Right Alt"
+
+
 @dataclass
 class Settings:
-    hotkey: str = DEFAULT_HOTKEY
+    hotkey: str = field(default_factory=default_hotkey)
     microphone: str | None = None  # None follows the Windows default mic
     sounds: bool = True
     path: Path = field(default=SETTINGS_PATH, repr=False, compare=False)

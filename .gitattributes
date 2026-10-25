@@ -1,0 +1,2 @@
+# Batch files need Windows line endings, so git never converts them.
+*.bat -text

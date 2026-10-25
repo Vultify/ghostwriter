@@ -2,6 +2,7 @@
 
 import ctypes
 import logging
+import os
 import queue
 import sys
 import threading
@@ -21,13 +22,21 @@ from ghostwriter.paster import Paster, foreground_app
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import Settings
 from ghostwriter.state import State
-from ghostwriter.transcriber import SAMPLE_RATE, Transcriber
+from ghostwriter.transcriber import SAMPLE_RATE, Transcriber, gpu_available
 from ghostwriter.tray import Tray
 from ghostwriter.win32 import kernel32, user32
 
 HOTKEY = win32.VK_RMENU
 LOG_PATH = Path(__file__).resolve().parent.parent / "logs" / "ghostwriter.log"
 INSTANCE_NAME = "Local\\Ghostwriter"
+NO_GPU_MESSAGE = (
+    "Ghostwriter needs an NVIDIA graphics card to turn speech into text, and it couldn't find one on this PC.\n\n"
+    "If you do have one, updating its driver from nvidia.com usually fixes this."
+)
+DOWNLOAD_MESSAGE = (
+    "Downloading the speech model (about 1.6 GB). This only happens once and can take a few minutes. "
+    "I'll let you know when it's ready."
+)
 # A release sooner than this is a tap, not a hold. A lone tap is thrown away as accidental.
 TAP_SECONDS = 0.3
 # A second press this soon after a tap locks recording on, hands free.
@@ -245,14 +254,25 @@ def main() -> None:
 
 def _run() -> None:
     user32.SetProcessDpiAwarenessContext(win32.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)  # crisp on scaled screens
+    if not gpu_available():
+        log.error("No NVIDIA GPU found")
+        _show_message(NO_GPU_MESSAGE, win32.MB_ICONERROR)
+        return
     settings = Settings.load()
     quitting = threading.Event()
     tray = Tray(settings, list_microphones(), on_quit=quitting.set,
                 files={"Edit dictionary": DICTIONARY_PATH, "Open log": LOG_PATH})
     tray.start()  # the ghost shows up right away while Whisper loads
 
+    downloaded = []
+
+    def announce_download() -> None:
+        downloaded.append(True)
+        log.info("Downloading the speech model for the first time")
+        tray.notify(DOWNLOAD_MESSAGE)
+
     log.info("Loading Whisper...")
-    transcriber = Transcriber()
+    transcriber = Transcriber(on_download=announce_download)
     transcriber.warm_up()
     recorder = Recorder(microphone=settings.microphone)
     dictionary = DictionaryFile()
@@ -274,6 +294,8 @@ def _run() -> None:
     dictation.start()
     tray.set_state(State.READY)
     log.info("Ready. Hold %s to talk, or double tap it for hands free.", settings.hotkey)
+    if downloaded:
+        tray.notify(f"Ready! Hold {settings.hotkey} to talk, or double tap it for hands free.")
     try:
         while not quitting.wait(0.5):
             pass
@@ -298,7 +320,10 @@ def _set_up_logging() -> None:
     """Log to logs/ghostwriter.log, and to the terminal too when there is one."""
     LOG_PATH.parent.mkdir(exist_ok=True)
     handlers: list[logging.Handler] = [RotatingFileHandler(LOG_PATH, maxBytes=1_000_000, backupCount=2, encoding="utf-8")]
-    if sys.stderr is not None:
+    if sys.stderr is None:
+        # Started with no terminal: give libraries that print progress (like the model download) somewhere to write.
+        sys.stdout = sys.stderr = open(os.devnull, "w", encoding="utf-8")
+    else:
         handlers.append(logging.StreamHandler())
     logging.basicConfig(level=logging.WARNING, format="%(asctime)s  %(message)s", datefmt="%Y-%m-%d %H:%M:%S",
                         handlers=handlers)

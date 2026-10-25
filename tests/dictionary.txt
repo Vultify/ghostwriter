@@ -1,0 +1,12 @@
+# Words for the tests: a fixed copy, so tests do not depend on anyone's personal dictionary.
+
+Ghostwriter
+Tulare
+Castro Detailing
+Supabase
+Claude Code
+Whisperflow, Whisper Flow -> Wispr Flow
+
+# Wardogs
+Wardogs
+sea whiz, sea whizzes, see whiz, sea wiz, CWIS, CWIZ, CWIZs, CWizzes -> CIWS

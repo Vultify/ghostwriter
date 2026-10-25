@@ -18,3 +18,9 @@ logs/
 settings.json
 *.wav
 !ghostwriter/assets/*.wav
+
+# Personal word list (made from dictionary.example.txt on first run)
+/dictionary.txt
+
+# Tools install.bat downloads
+.tools/

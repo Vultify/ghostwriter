@@ -10,18 +10,11 @@ Version 1.0.0. It's what I use every day instead of Wispr Flow. See [CHANGELOG.m
 
 ## Setup
 
-You'll need [git](https://git-scm.com/), Python with [uv](https://docs.astral.sh/uv/) (`pip install uv`), and an NVIDIA GPU. In Command Prompt:
+1. On GitHub, click **Code**, then **Download ZIP**. Unzip it wherever you want Ghostwriter to live, like `C:\Ghostwriter`.
+2. Double click **install.bat** in that folder. It installs its own copy of Python and Ghostwriter's packages inside the folder, adds Ghostwriter to the Start menu, and offers to start it. Nothing else needs to be installed first.
+3. The first start downloads the speech model (about 1.6 GB, one time only). A notification tells you when it's ready.
 
-```
-git clone https://github.com/Vultify/ghostwriter.git
-cd ghostwriter
-set UV_PYTHON_INSTALL_DIR=%CD%\.python
-python -m uv venv .venv --python 3.11 --managed-python
-python -m uv pip install --python .venv\Scripts\python.exe -r requirements.txt
-.venv\Scripts\python scripts\make_shortcut.py
-```
-
-That keeps Python and every package inside the project folder and adds Ghostwriter to the Start menu. The first start downloads the Whisper model (about 1.6 GB).
+Ghostwriter needs an NVIDIA graphics card; install.bat checks for one before downloading anything. Running install.bat again is safe, and it picks up where it left off if it was interrupted.
 
 ## Usage
 
@@ -35,9 +28,9 @@ To run it in a terminal instead, with the log printed as you go:
 
 Only one copy runs at a time.
 
-Hold **Right Alt**, talk, and let go. The text is pasted where your cursor is, and whatever was on your clipboard is put back right after.
+Hold the hotkey, talk, and let go. The text is pasted where your cursor is, and whatever was on your clipboard is put back right after. The hotkey is **Right Alt**, or **Right Ctrl** on keyboards where Right Alt is AltGr (it types characters like @ and € there), and you can change it in the tray menu.
 
-For longer stretches, **double tap Right Alt** to lock recording on and talk hands free. Tap it once more to stop and paste. A quick single tap on its own does nothing, and recording stops by itself after 15 minutes in case it gets left on.
+For longer stretches, **double tap the hotkey** to lock recording on and talk hands free. Tap it once more to stop and paste. A quick single tap on its own does nothing, and recording stops by itself after 15 minutes in case it gets left on.
 
 - A ghost icon in the system tray shows Ghostwriter is running, and turns red while it listens.
 - A small pill at the bottom of the screen shows a live mic level while you talk, then dots while it types. In hands free mode its red dot becomes a stop square.
@@ -57,7 +50,7 @@ Changes apply right away and are saved to `settings.json`. The log is at `logs/g
 
 ## Dictionary
 
-`dictionary.txt` teaches Ghostwriter names and terms. Changes apply to the next dictation, no restart needed.
+`dictionary.txt` is your own list of names and terms for Ghostwriter to spell right. It's made from `dictionary.example.txt` the first time Ghostwriter starts, and git leaves it alone, so your words stay yours. Open it from the tray menu with **Edit dictionary**; changes apply to the next dictation, no restart needed.
 
 ```
 Castro Detailing
@@ -88,7 +81,7 @@ The tests briefly use the clipboard (and put it back) and pop up a small test wi
 
 - Windows 10 or 11
 - An NVIDIA GPU with CUDA (built and tested on an RTX 4090)
-- About 2 GB of disk for the model
+- About 4 GB of disk: 2.4 GB in the Ghostwriter folder plus the 1.6 GB speech model
 
 ## License
 

@@ -5,10 +5,10 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from conftest import speak_to_wav
+from conftest import fixed_dictionary, speak_to_wav
 from faster_whisper import decode_audio
 
-from ghostwriter.dictionary import Dictionary, DictionaryFile
+from ghostwriter.dictionary import STARTER_PATH, Dictionary, DictionaryFile
 from ghostwriter.transcriber import SAMPLE_RATE
 
 EXAMPLE = """
@@ -55,7 +55,13 @@ def test_file_changes_apply_without_a_restart(tmp_path):
 
 
 def test_a_missing_file_means_an_empty_dictionary(tmp_path):
-    assert DictionaryFile(tmp_path / "missing.txt").current().words == []
+    assert DictionaryFile(tmp_path / "missing.txt", starter=None).current().words == []
+
+
+def test_a_new_user_gets_the_starter_dictionary(tmp_path):
+    path = tmp_path / "dictionary.txt"
+    assert DictionaryFile(path).current().words == ["Ghostwriter"]
+    assert path.read_text(encoding="utf-8") == STARTER_PATH.read_text(encoding="utf-8")
 
 
 SPOKEN = [
@@ -78,6 +84,6 @@ def test_every_dictionary_word_comes_out_right_when_spoken(transcriber, sentence
     speak_to_wav(sentence, clip)
     audio = decode_audio(str(clip), sampling_rate=SAMPLE_RATE)
     clip.unlink(missing_ok=True)
-    dictionary = DictionaryFile().current()
+    dictionary = fixed_dictionary().current()
     heard = dictionary.apply(transcriber.transcribe(audio, prompt=dictionary.prompt))
     assert expected in heard

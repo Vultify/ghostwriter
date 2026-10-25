@@ -2,10 +2,13 @@
 
 import logging
 import re
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
-DICTIONARY_PATH = Path(__file__).resolve().parent.parent / "dictionary.txt"
+PROJECT = Path(__file__).resolve().parent.parent
+DICTIONARY_PATH = PROJECT / "dictionary.txt"  # personal, so it isn't in git
+STARTER_PATH = PROJECT / "dictionary.example.txt"  # copied to dictionary.txt on first run
 FIX_ARROW = "->"
 
 log = logging.getLogger("ghostwriter")
@@ -55,12 +58,16 @@ def _loose_pattern(phrase: str) -> re.Pattern[str]:
 class DictionaryFile:
     """Reloads the dictionary whenever the file changes, so edits apply to the next dictation."""
 
-    def __init__(self, path: Path = DICTIONARY_PATH) -> None:
+    def __init__(self, path: Path = DICTIONARY_PATH, starter: Path | None = STARTER_PATH) -> None:
         self.path = path
+        self.starter = starter
         self._modified: int | None = None
         self._dictionary = Dictionary()
 
     def current(self) -> Dictionary:
+        if not self.path.exists() and self.starter and self.starter.exists():
+            shutil.copyfile(self.starter, self.path)
+            log.info("Created %s from %s", self.path.name, self.starter.name)
         try:
             modified = self.path.stat().st_mtime_ns
         except FileNotFoundError:
