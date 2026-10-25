@@ -61,7 +61,7 @@ Phases 1 to 7 plus the speed pass.
 - [ ] Measure the delay against raw mode
 - **Checkpoint 8:** Caleb tries both and picks his default
 
-## Ready to share
+## Ready to share (version 1.1.0, released 2026-10-25)
 - [x] `install.bat`: download the ZIP, double click, done (own Python and packages inside the folder, Start menu shortcut)
 - [x] Personal `dictionary.txt` out of git; new installs start from `dictionary.example.txt`
 - [x] Right Ctrl by default on AltGr keyboards

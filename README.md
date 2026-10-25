@@ -6,7 +6,7 @@ Hold a hotkey, talk, let go, and the text appears wherever the cursor is.
 
 ## Status
 
-Version 1.0.0. It's what I use every day instead of Wispr Flow. See [CHANGELOG.md](CHANGELOG.md) for what's in it and [ROADMAP.md](ROADMAP.md) for what's next.
+Version 1.1.0. It's what I use every day instead of Wispr Flow. See [CHANGELOG.md](CHANGELOG.md) for what's in it and [ROADMAP.md](ROADMAP.md) for what's next.
 
 ## Setup
 

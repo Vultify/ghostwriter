@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-25
+
+Ready to share: anyone with an NVIDIA graphics card can download the ZIP and install Ghostwriter with a double click.
+
 ### Added
 - `install.bat`: download the ZIP, double click it, and Ghostwriter installs its own Python and packages inside its folder and adds itself to the Start menu. Safe to run again.
 - A notification while the speech model downloads on first start, and another when it's ready.
@@ -35,5 +39,6 @@ The first release: local, unlimited dictation that replaces Wispr Flow for my da
 - A log at `logs/ghostwriter.log`, one copy running at a time, and an error message if it can't start.
 - Tests for the clipboard, hotkey, mic, dictionary, lock mode, settings, and the full dictation loop.
 
-[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Vultify/ghostwriter/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Vultify/ghostwriter/releases/tag/v1.0.0
