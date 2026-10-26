@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- One-line install and update: `irm https://raw.githubusercontent.com/Vultify/ghostwriter/main/get.ps1 | iex` in PowerShell. Updates keep your dictionary, settings, and log.
+- **Check for updates** in the tray menu. It asks before updating, then closes Ghostwriter, updates it, and starts it again.
+
+### Changed
+- The starter dictionary now has common app names (GitHub, VS Code, Discord, and more), which also helps Whisper capitalize them, plus examples of adding your own words and fixes.
+- `install.bat` can run without questions (`install.bat /quiet`) and reports whether it worked.
+
 ## [1.1.0] - 2026-10-25
 
 Ready to share: anyone with an NVIDIA graphics card can download the ZIP and install Ghostwriter with a double click.

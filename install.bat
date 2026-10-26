@@ -1,10 +1,14 @@
 @echo off
 rem Sets up Ghostwriter inside this folder: its own Python, its packages, and a Start menu shortcut.
 rem Safe to run again; it skips what's already done and picks up where it left off.
+rem "install.bat /quiet" skips the questions at the end (get.ps1 uses this).
 setlocal
 title Ghostwriter setup
 cd /d "%~dp0"
 
+set "QUIET="
+if /i "%~1"=="/quiet" set "QUIET=1"
+set "RESULT=1"
 set "UV_VERSION=0.13.5"
 set "UV=%~dp0.tools\uv.exe"
 set "UV_PYTHON_INSTALL_DIR=%~dp0.python"
@@ -22,7 +26,7 @@ if errorlevel 1 goto no_nvidia
 
 if exist "%UV%" goto have_uv
 echo   [1/4] Downloading uv, the tool that installs Python and packages...
-powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $zip = Join-Path $env:TEMP 'ghostwriter-uv.zip'; Invoke-WebRequest 'https://github.com/astral-sh/uv/releases/download/%UV_VERSION%/uv-x86_64-pc-windows-msvc.zip' -OutFile $zip; Expand-Archive $zip -DestinationPath '.tools' -Force; Remove-Item $zip"
+powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $zip = Join-Path $env:TEMP 'ghostwriter-uv.zip'; Invoke-WebRequest 'https://github.com/astral-sh/uv/releases/download/%UV_VERSION%/uv-x86_64-pc-windows-msvc.zip' -OutFile $zip; Expand-Archive $zip -DestinationPath '.tools' -Force; Remove-Item $zip"
 if errorlevel 1 goto failed
 :have_uv
 
@@ -32,7 +36,7 @@ echo   [2/4] Installing Python 3.11 into this folder...
 if errorlevel 1 goto failed
 :have_python
 
-echo   [3/4] Installing Ghostwriter's packages. This downloads about 2.3 GB and takes a few minutes...
+echo   [3/4] Installing Ghostwriter's packages. The first time this downloads about 2.3 GB and takes a few minutes...
 "%UV%" pip install --python .venv\Scripts\python.exe -r requirements.txt
 if errorlevel 1 goto failed
 
@@ -40,9 +44,11 @@ echo   [4/4] Adding Ghostwriter to the Start menu...
 .venv\Scripts\python.exe scripts\make_shortcut.py
 if errorlevel 1 goto failed
 
+set "RESULT=0"
 echo.
 echo   All set! To start Ghostwriter, open the Start menu and type Ghostwriter.
 echo   The first start downloads the speech model, about 1.6 GB, one time only.
+if defined QUIET goto done
 echo.
 set "START_NOW="
 set /p "START_NOW=  Start Ghostwriter now? Type Y and press Enter, or just press Enter to skip: "
@@ -61,5 +67,5 @@ echo   Check your internet connection and run install.bat again. It picks up whe
 
 :done
 echo.
-pause
-endlocal
+if not defined QUIET pause
+endlocal & exit /b %RESULT%

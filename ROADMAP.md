@@ -68,7 +68,15 @@ Phases 1 to 7 plus the speed pass.
 - [x] Clear message on PCs without an NVIDIA GPU
 - [x] Notification during the one time model download
 
+## Going public
+- [x] One-line install and update (`get.ps1`), plus Check for updates in the tray
+- [x] Starter dictionary with common app names
+- [x] Private notes out of the repo
+- [ ] Clean old private files out of the git history
+- [ ] Make the GitHub repo public, then try the one-line install on a second PC
+
 ## Later
+- winget (`winget install Vultify.Ghostwriter`), which needs a setup .exe and Microsoft's review
 - A real setup wizard (.exe) for people who want a classic installer
 - Start with Windows
 - Dictation history

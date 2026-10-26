@@ -60,8 +60,10 @@ def test_a_missing_file_means_an_empty_dictionary(tmp_path):
 
 def test_a_new_user_gets_the_starter_dictionary(tmp_path):
     path = tmp_path / "dictionary.txt"
-    assert DictionaryFile(path).current().words == ["Ghostwriter"]
+    starter = DictionaryFile(path).current()
     assert path.read_text(encoding="utf-8") == STARTER_PATH.read_text(encoding="utf-8")
+    assert {"Ghostwriter", "GitHub", "VS Code", "Discord"} <= set(starter.words)
+    assert starter.fixes == []  # the fix examples are notes until someone turns them on
 
 
 SPOKEN = [

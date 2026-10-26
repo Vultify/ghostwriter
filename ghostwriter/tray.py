@@ -28,6 +28,7 @@ class Tray:
         microphones: list[str],
         on_quit: Callable[[], None],
         files: dict[str, Path],
+        on_check_updates: Callable[[], None] = lambda: None,
     ) -> None:
         self.settings = settings
         self.on_change: Callable[[], None] = lambda: None
@@ -48,6 +49,7 @@ class Tray:
                              checked=lambda item: settings.sounds),
             pystray.Menu.SEPARATOR,
             *(pystray.MenuItem(label, _opener(path)) for label, path in files.items()),
+            pystray.MenuItem("Check for updates", lambda: on_check_updates()),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit Ghostwriter", lambda: on_quit()),
         )

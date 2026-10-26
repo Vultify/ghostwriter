@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ghostwriter import sounds, win32
+from ghostwriter import __version__, sounds, updates, win32
 from ghostwriter.dictionary import DICTIONARY_PATH, DictionaryFile
 from ghostwriter.hotkey import KeyHook
 from ghostwriter.indicator import Indicator
@@ -261,7 +261,8 @@ def _run() -> None:
     settings = Settings.load()
     quitting = threading.Event()
     tray = Tray(settings, list_microphones(), on_quit=quitting.set,
-                files={"Edit dictionary": DICTIONARY_PATH, "Open log": LOG_PATH})
+                files={"Edit dictionary": DICTIONARY_PATH, "Open log": LOG_PATH},
+                on_check_updates=lambda: threading.Thread(target=check_for_updates, args=(tray,), daemon=True).start())
     tray.start()  # the ghost shows up right away while Whisper loads
 
     downloaded = []
@@ -306,6 +307,27 @@ def _run() -> None:
         indicator.stop()
         tray.stop()
         log.info("Stopped.")
+
+
+def check_for_updates(tray: Tray) -> None:
+    """Ask GitHub for the latest release and offer to install it. Runs on its own thread, since it goes online."""
+    if updates.is_git_checkout():
+        tray.notify("This copy of Ghostwriter is a git checkout, so update it with git pull instead.")
+        return
+    try:
+        latest = updates.latest_version()
+    except Exception as error:
+        log.warning("Couldn't check for updates: %s", error)
+        tray.notify("Couldn't check for updates. Check your internet connection and try again.")
+        return
+    if not updates.is_newer(latest):
+        tray.notify(f"You're up to date (version {__version__}).")
+        return
+    question = (f"Ghostwriter {latest} is available (you have {__version__}).\n\n"
+                "Update now? Ghostwriter will close, update, and start again.")
+    if user32.MessageBoxW(None, question, "Ghostwriter", win32.MB_YESNO | win32.MB_ICONQUESTION) == win32.IDYES:
+        log.info("Updating to %s", latest)
+        updates.start_update()
 
 
 def claim_single_instance(name: str = INSTANCE_NAME) -> bool:

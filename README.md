@@ -8,13 +8,21 @@ Hold a hotkey, talk, let go, and the text appears wherever the cursor is.
 
 Version 1.1.0. It's what I use every day instead of Wispr Flow. See [CHANGELOG.md](CHANGELOG.md) for what's in it and [ROADMAP.md](ROADMAP.md) for what's next.
 
-## Setup
+## Install
 
-1. On GitHub, click **Code**, then **Download ZIP**. Unzip it wherever you want Ghostwriter to live, like `C:\Ghostwriter`.
-2. Double click **install.bat** in that folder. It installs its own copy of Python and Ghostwriter's packages inside the folder, adds Ghostwriter to the Start menu, and offers to start it. Nothing else needs to be installed first.
-3. The first start downloads the speech model (about 1.6 GB, one time only). A notification tells you when it's ready.
+Open **PowerShell** and paste:
 
-Ghostwriter needs an NVIDIA graphics card; install.bat checks for one before downloading anything. Running install.bat again is safe, and it picks up where it left off if it was interrupted.
+```
+irm https://raw.githubusercontent.com/Vultify/ghostwriter/main/get.ps1 | iex
+```
+
+That downloads the latest version into a `Ghostwriter` folder in your user folder, installs its own copy of Python and its packages inside that folder, adds Ghostwriter to the Start menu, and starts it. The first start downloads the speech model (about 1.6 GB, one time only), and a notification tells you when it's ready.
+
+**Updating:** right click the ghost in the tray and choose **Check for updates**, or run the same command again. Your dictionary and settings are kept.
+
+**Without the command:** click **Code**, then **Download ZIP** on GitHub, unzip it wherever you want Ghostwriter to live, and double click **install.bat** in that folder.
+
+Ghostwriter needs an NVIDIA graphics card; the installer checks for one before downloading anything. If an install gets interrupted, running it again picks up where it left off.
 
 ## Usage
 
@@ -44,13 +52,14 @@ Right click the ghost in the tray:
 - **Microphone:** the Windows default, or a specific mic (plugged in a new one? restart Ghostwriter to see it)
 - **Sounds:** on or off
 - **Edit dictionary** and **Open log**
+- **Check for updates**
 - **Quit Ghostwriter**
 
 Changes apply right away and are saved to `settings.json`. The log is at `logs/ghostwriter.log`.
 
 ## Dictionary
 
-`dictionary.txt` is your own list of names and terms for Ghostwriter to spell right. It's made from `dictionary.example.txt` the first time Ghostwriter starts, and git leaves it alone, so your words stay yours. Open it from the tray menu with **Edit dictionary**; changes apply to the next dictation, no restart needed.
+`dictionary.txt` is your own list of names and terms for Ghostwriter to spell right. It starts as a copy of `dictionary.example.txt`, which has common app names like GitHub and VS Code, and from there it's yours to edit; updates never touch it. Open it from the tray menu with **Edit dictionary**; changes apply to the next dictation, no restart needed.
 
 ```
 Castro Detailing
@@ -75,7 +84,7 @@ The tests briefly use the clipboard (and put it back) and pop up a small test wi
 - Pastes with the clipboard and Ctrl+V, then restores your clipboard and keeps dictations out of Win+V history
 - The mic only opens while you're dictating, and recording ends as soon as you go quiet after letting go
 - A custom dictionary teaches it names and words it would otherwise miss
-- Nothing goes online after the first model download
+- Nothing goes online after the first model download, except when you choose Check for updates
 
 ## Requirements
 
