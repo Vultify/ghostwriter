@@ -62,9 +62,9 @@ Changes apply right away and are saved to `settings.json`. The log is at `logs/g
 `dictionary.txt` is your own list of names and terms for Ghostwriter to spell right. It starts as a copy of `dictionary.example.txt`, which has common app names like GitHub and VS Code, and from there it's yours to edit; updates never touch it. Open it from the tray menu with **Edit dictionary**; changes apply to the next dictation, no restart needed.
 
 ```
-Castro Detailing
-Wardogs
-sea whiz, sea whizzes -> CIWS
+Your Business Name
+Jayson
+my sequel -> MySQL
 ```
 
 A plain line is a word to spell right. A line with `->` is a fix: what Whisper hears on the left (several versions split by commas), what you want on the right. Fixes ignore capital letters and work with or without spaces or hyphens.

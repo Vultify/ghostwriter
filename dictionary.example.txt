@@ -6,7 +6,7 @@
 # To fix something Whisper keeps getting wrong, write what it hears, then ->, then what you want.
 # Several versions of what it hears can share one line, split by commas. For example:
 #   Jason -> Jayson
-#   sea whiz, sea whizzes -> CIWS
+#   my sequel, my SQL -> MySQL
 #
 # Lines starting with # are notes and are ignored. Delete any line you don't need.
 
