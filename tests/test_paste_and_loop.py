@@ -14,16 +14,15 @@ from ghostwriter.clipboard import Clipboard
 from ghostwriter.transcriber import SAMPLE_RATE
 from ghostwriter.win32 import user32
 
-SENTENCE = "Book the ceramic coating for Friday morning in Tulare."
+SENTENCE = "Book the ceramic coating for Friday morning in Gloucester."
 RAMBLE = (
-    "Okay so here is my plan for the weekend. On Saturday morning I have three ceramic coatings booked, "
-    "and the first one is a black truck that needs a full paint correction before the coating goes on. "
-    "After that I want to clean the shop, restock the microfiber towels, and order more iron remover. "
+    "Okay so here is my plan for the weekend. On Saturday morning I have three ceramic coatings booked at "
+    "Brightwater Detailing, and the first one is a black truck that needs a full paint correction before the "
+    "coating goes on. After that I want to clean the shop, restock the microfiber towels, and order more iron remover. "
     "In the afternoon I will update the booking page and check that the payments are syncing. "
-    "Then on Sunday I am going to relax and play some games with my friends. "
-    "We have been playing Wardogs a lot lately and our base keeps getting destroyed by missiles. "
-    "I think we need to put a sea whiz on every corner of the base, and maybe two sea whizzes near the command center. "
-    "Wardogs is way more fun when the defenses actually hold. That is basically the whole plan."
+    "Then on Sunday I am going to move all the bookings into a my sequel database, "
+    "and maybe set up two my sequel servers for backups. "
+    "Brightwater Detailing is way easier to run when everything is in one place. That is basically the whole plan."
 )
 
 
@@ -89,12 +88,12 @@ def test_hold_right_alt_talk_release_types_the_sentence(transcriber, spoken_sent
         press_key(win32.VK_RMENU)
         pump_until(root, lambda: False, timeout=0.4)
         press_key(win32.VK_RMENU, release=True)
-        pump_until(root, lambda: "Tulare" in box.get("1.0", "end"))
+        pump_until(root, lambda: "Gloucester" in box.get("1.0", "end"))
         typed = box.get("1.0", "end-1c")
     finally:
         dictation.stop()
     assert "ceramic coating" in typed.lower()
-    assert "Tulare" in typed
+    assert "Gloucester" in typed
     assert typed.endswith(" ")
 
 
@@ -112,8 +111,8 @@ def test_lock_mode_types_a_long_ramble_completely(transcriber, spoken_ramble, te
         dictation.stop()
     assert "here is my plan for the weekend" in typed
     assert "Saturday morning" in typed
-    assert typed.count("Wardogs") == 2
-    assert "CIWS" in typed
+    assert typed.count("Brightwater Detailing") == 2
+    assert "MySQL" in typed
     assert "whole plan" in typed
 
 

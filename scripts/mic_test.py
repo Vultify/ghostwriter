@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from ghostwriter.transcriber import SAMPLE_RATE, Transcriber  # noqa: E402
 
 SECONDS = 8
-VOCABULARY = "Ghostwriter, Tulare, Castro Detailing, Supabase, Claude Code."
+VOCABULARY = "Ghostwriter, Gloucester, Brightwater Detailing, Supabase, Claude Code."
 
 
 def main() -> None:

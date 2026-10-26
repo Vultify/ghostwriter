@@ -29,7 +29,7 @@ Moved ahead of lock mode, because lock mode keeps recording after you let go and
 - [x] Ghost icon in the system tray that turns red while listening, with Quit
 - [x] Listening pill at the bottom center of the screen with a live mic level, then "typing" dots; never takes focus and lets clicks through
 - [x] Soft sound when listening starts and stops
-- **Checkpoint 4 passed 2026-10-24:** tray ghost, listening pill, and sounds all confirmed by Caleb; "Wardogs" now spelled right
+- **Checkpoint 4 passed 2026-10-24:** tray ghost, listening pill, and sounds all confirmed by Caleb
 
 ## Phase 5: lock mode
 - [x] Double tap the hotkey to keep recording hands free; tap again to stop (tap under 0.3s, second press within 0.4s, 15 minute safety limit)
@@ -37,16 +37,16 @@ Moved ahead of lock mode, because lock mode keeps recording after you let go and
 - **Checkpoint 5 passed 2026-10-24:** Caleb's 66 second ramble came out complete, transcribed in 0.67s
 
 ## Phase 6: custom dictionary
-Pulled ahead of lock mode on 2026-10-24 so Wardogs terms like CIWS ("sea whiz") come out right.
-- [x] `dictionary.txt` of words Whisper should know (Tulare, Castro Detailing, Supabase, Wardogs, CIWS); edits apply without a restart
-- [x] Optional find and replace rules for words it still gets wrong (`sea whiz -> CIWS`)
-- **Checkpoint 6 passed 2026-10-24:** every dictionary word comes out right in a spoken test run, and Caleb's "CIWS" came out right in his own voice
+Pulled ahead of lock mode on 2026-10-24 so terms that sound different from how they're spelled come out right.
+- [x] `dictionary.txt` of words Whisper should know (names, places, and game terms); edits apply without a restart
+- [x] Optional find and replace rules for words it still gets wrong (like `my sequel -> MySQL`)
+- **Checkpoint 6 passed 2026-10-24:** every dictionary word comes out right in a spoken test run, and a sound-alike game term came out right in Caleb's own voice
 
 ## Phase 7: settings and launching
 - [x] Settings in the tray menu, saved to `settings.json` (hotkey, mic, sounds), plus Edit dictionary and Open log
 - [x] Runs with no console window, logs to `logs/ghostwriter.log`, one copy at a time, error box if it can't start
 - [x] Start menu shortcut that launches it with no console window (`scripts/make_shortcut.py`; Caleb runs it himself so it lands in his real Start menu)
-- **Checkpoint 7 passed 2026-10-25:** Caleb used it all day on 2026-10-24, including 13 dictations into Wardogs chat. Felt a little slow to paste while gaming (transcription ~1s with the game on the GPU, vs ~0.2s on the desktop).
+- **Checkpoint 7 passed 2026-10-25:** Caleb used it all day on 2026-10-24, including 13 dictations into a game's chat. Felt a little slow to paste while gaming (transcription ~1s with the game on the GPU, vs ~0.2s on the desktop).
 
 ## Speed pass (after Checkpoint 7)
 - [x] End recording as soon as Caleb goes quiet after letting go (tail ~0.08s, was 0.3s)

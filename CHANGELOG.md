@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-25
+
+### Changed
+- The README, starter dictionary, and tests use generic examples (like "my sequel" to "MySQL") instead of my own words.
+
 ## [1.2.0] - 2026-10-25
 
 Public release: install or update with one line in PowerShell.
@@ -41,8 +46,8 @@ The first release: local, unlimited dictation that replaces Wispr Flow for my da
 - Speech to text with Whisper large-v3-turbo on the GPU, kept loaded so each dictation takes a fraction of a second. After the first download it never goes online.
 - Fast finish: recording ends as soon as you go quiet after letting go, so the text usually lands within about 0.2 seconds on the desktop.
 - Pasting through the clipboard and Ctrl+V, with your clipboard put back right after and dictations kept out of Win+V history.
-- The hotkey is hidden from other apps, and works inside games (tested in Wardogs chat).
-- `dictionary.txt` for names and terms to spell right, plus fixes for things Whisper mishears (like "sea whiz" to "CIWS"). Edits apply without a restart.
+- The hotkey is hidden from other apps, and works inside games (tested in a game's chat).
+- `dictionary.txt` for names and terms to spell right, plus fixes for things Whisper mishears (like "my sequel" to "MySQL"). Edits apply without a restart.
 - A ghost in the system tray that turns red while listening.
 - A listening pill at the bottom of the screen with a live mic level, typing dots, and a stop square in lock mode. It never takes focus and lets clicks through.
 - Soft start and stop sounds.
@@ -51,7 +56,8 @@ The first release: local, unlimited dictation that replaces Wispr Flow for my da
 - A log at `logs/ghostwriter.log`, one copy running at a time, and an error message if it can't start.
 - Tests for the clipboard, hotkey, mic, dictionary, lock mode, settings, and the full dictation loop.
 
-[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/Vultify/ghostwriter/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Vultify/ghostwriter/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Vultify/ghostwriter/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Vultify/ghostwriter/releases/tag/v1.0.0

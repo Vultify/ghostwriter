@@ -1,12 +1,9 @@
-# Words for the tests: a fixed copy, so tests do not depend on anyone's personal dictionary.
+# Words for the tests: a fixed list, so tests don't depend on anyone's personal dictionary.
 
 Ghostwriter
-Tulare
-Castro Detailing
+Gloucester
+Brightwater Detailing
 Supabase
 Claude Code
 Whisperflow, Whisper Flow -> Wispr Flow
-
-# Wardogs
-Wardogs
-sea whiz, sea whizzes, see whiz, sea wiz, CWIS, CWIZ, CWIZs, CWizzes -> CIWS
+my sequel, my SQL -> MySQL

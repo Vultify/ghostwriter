@@ -10,9 +10,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from ghostwriter.transcriber import Transcriber  # noqa: E402
 
-SENTENCE = "Hey, this is a quick test of Ghostwriter. Book the ceramic coating for Friday morning in Tulare."
+SENTENCE = "Hey, this is a quick test of Ghostwriter. Book the ceramic coating for Friday morning in Gloucester."
 TARGET_SECONDS = 0.5
-VOCABULARY = "Ghostwriter, Tulare, Castro Detailing."
+VOCABULARY = "Ghostwriter, Gloucester, Brightwater Detailing."
 
 
 def speak_to_wav(text: str, path: Path) -> None:
@@ -48,7 +48,7 @@ def main() -> int:
     print(f"Heard (raw):     {raw}")
     print(f"Heard (w/ list): {with_vocab}")
     print(f"Warm transcription: {elapsed:.2f}s (target under {TARGET_SECONDS}s)")
-    passed = elapsed < TARGET_SECONDS and "Ghostwriter" in with_vocab and "Tulare" in with_vocab
+    passed = elapsed < TARGET_SECONDS and "Ghostwriter" in with_vocab and "Gloucester" in with_vocab
     print("PASS" if passed else "FAIL")
     return 0 if passed else 1
 

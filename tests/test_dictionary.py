@@ -13,45 +13,45 @@ from ghostwriter.transcriber import SAMPLE_RATE
 
 EXAMPLE = """
 # a comment
-Tulare
+Gloucester
 C#
 
-sea whiz, sea whizzes, CWIS -> CIWS
+my sequel, my SQL, MySequel -> MySQL
 """
 
 
 def test_words_and_fixes_are_read_and_comments_skipped():
     dictionary = Dictionary.parse(EXAMPLE)
-    assert dictionary.words == ["Tulare", "C#", "CIWS"]
+    assert dictionary.words == ["Gloucester", "C#", "MySQL"]
     assert len(dictionary.fixes) == 3
-    assert dictionary.prompt == "Tulare, C#, CIWS."
+    assert dictionary.prompt == "Gloucester, C#, MySQL."
 
 
-@pytest.mark.parametrize("heard", ["sea whiz", "Sea Whiz", "sea-whiz", "seawhiz", "Sea whizzes", "CWIS"])
+@pytest.mark.parametrize("heard", ["my sequel", "My Sequel", "my-sequel", "mysequel", "my SQL", "My Sql"])
 def test_fixes_match_loosely(heard):
-    assert Dictionary.parse(EXAMPLE).apply(f"I built a {heard}.") == "I built a CIWS."
+    assert Dictionary.parse(EXAMPLE).apply(f"I set up a {heard} database.") == "I set up a MySQL database."
 
 
 def test_fixes_leave_other_words_alone():
-    text = "The sea was calm and he is a whiz at math, a seawhizard."
+    text = "My sequels are better than the originals, and mysequelwriter is a username."
     assert Dictionary.parse(EXAMPLE).apply(text) == text
 
 
 def test_an_empty_dictionary_changes_nothing():
     dictionary = Dictionary.parse("")
     assert dictionary.prompt is None
-    assert dictionary.apply("sea whiz") == "sea whiz"
+    assert dictionary.apply("my sequel") == "my sequel"
 
 
 def test_file_changes_apply_without_a_restart(tmp_path):
     path = tmp_path / "dictionary.txt"
-    path.write_text("Tulare\n", encoding="utf-8")
+    path.write_text("Gloucester\n", encoding="utf-8")
     dictionary = DictionaryFile(path)
-    assert dictionary.current().words == ["Tulare"]
-    path.write_text("Tulare\nWardogs\n", encoding="utf-8")
+    assert dictionary.current().words == ["Gloucester"]
+    path.write_text("Gloucester\nBrightwater\n", encoding="utf-8")
     later = path.stat().st_mtime_ns + 1_000_000_000
     os.utime(path, ns=(later, later))  # make sure the change is seen even on a coarse file clock
-    assert dictionary.current().words == ["Tulare", "Wardogs"]
+    assert dictionary.current().words == ["Gloucester", "Brightwater"]
 
 
 def test_a_missing_file_means_an_empty_dictionary(tmp_path):
@@ -68,15 +68,13 @@ def test_a_new_user_gets_the_starter_dictionary(tmp_path):
 
 SPOKEN = [
     ("I'm testing Ghostwriter right now.", "Ghostwriter"),
-    # The robot voice slurs "in Tulare" at the end of very short sentences ("into Lairi"); real speech is fine.
-    ("Our shop is in Tulare, California.", "Tulare"),
-    ("Castro Detailing is open on Saturday.", "Castro Detailing"),
+    ("Our shop is in Gloucester, Massachusetts.", "Gloucester"),
+    ("Brightwater Detailing is open on Saturday.", "Brightwater Detailing"),
     ("The bookings are stored in Supabase.", "Supabase"),
     ("I asked Claude Code to fix the bug.", "Claude Code"),
     ("I built Ghostwriter to replace Whisper Flow.", "Wispr Flow"),
-    ("I played Wardogs last night.", "Wardogs"),
-    ("I put a sea whiz on the corner of my base.", "CIWS"),
-    ("Should I build two sea whizzes or one?", "CIWS"),
+    ("We keep the bookings in a my sequel database.", "MySQL"),
+    ("Should we spin up two my sequel servers or one?", "MySQL"),
 ]
 
 
