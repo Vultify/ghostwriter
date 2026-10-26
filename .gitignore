@@ -27,3 +27,6 @@ settings.json
 
 # Private notes, kept on this PC only
 docs/research.md
+
+# Local backups of the git history
+backups/
