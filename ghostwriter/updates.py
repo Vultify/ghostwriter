@@ -21,8 +21,8 @@ def latest_version(timeout: float = 10) -> str:
         return json.load(response)["tag_name"].lstrip("v")
 
 
-def is_newer(latest: str, current: str = __version__) -> bool:
-    return _numbers(latest) > _numbers(current)
+def is_newer(latest: str, current: str | None = None) -> bool:
+    return _numbers(latest) > _numbers(current or __version__)
 
 
 def is_git_checkout(folder: Path = INSTALL_DIR) -> bool:

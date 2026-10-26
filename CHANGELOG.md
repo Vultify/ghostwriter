@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-25
+
+Public release: install or update with one line in PowerShell.
+
 ### Added
 - One-line install and update: `irm https://raw.githubusercontent.com/Vultify/ghostwriter/main/get.ps1 | iex` in PowerShell. Updates keep your dictionary, settings, and log.
 - **Check for updates** in the tray menu. It asks before updating, then closes Ghostwriter, updates it, and starts it again.
@@ -47,6 +51,7 @@ The first release: local, unlimited dictation that replaces Wispr Flow for my da
 - A log at `logs/ghostwriter.log`, one copy running at a time, and an error message if it can't start.
 - Tests for the clipboard, hotkey, mic, dictionary, lock mode, settings, and the full dictation loop.
 
-[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Vultify/ghostwriter/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Vultify/ghostwriter/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Vultify/ghostwriter/releases/tag/v1.0.0

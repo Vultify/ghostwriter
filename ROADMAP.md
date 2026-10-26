@@ -68,11 +68,11 @@ Phases 1 to 7 plus the speed pass.
 - [x] Clear message on PCs without an NVIDIA GPU
 - [x] Notification during the one time model download
 
-## Going public
+## Going public (version 1.2.0, released 2026-10-25)
 - [x] One-line install and update (`get.ps1`), plus Check for updates in the tray
 - [x] Starter dictionary with common app names
 - [x] Private notes out of the repo
-- [ ] Clean old private files out of the git history
+- [x] Clean old private files out of the git history
 - [ ] Make the GitHub repo public, then try the one-line install on a second PC
 
 ## Later
