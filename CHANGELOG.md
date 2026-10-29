@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Home shows today's words and dictations, this month's words, and your three latest dictations.
 - Saving history can be turned off in Settings, and Clear history deletes everything saved.
 - A dictation is saved to History even if pasting it fails, so the words aren't lost.
+- A welcome on the first start: the speech model download with a progress bar and the time left, then picking your hotkey, then trying it out. If the download stops, it says so and picks up where it left off next time.
 
 ### Changed
 - Starting Ghostwriter while it's already running opens the window instead of showing an "already running" message.

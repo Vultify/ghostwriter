@@ -1,6 +1,6 @@
 """The Ghostwriter app window. It runs as its own small program next to the tray app, so closing it frees all its
 memory and a problem in it can never stop dictation. It only reads and writes settings.json, dictionary.txt, and
-history.db; the tray app notices those changes and applies them.
+history.db, and reads startup.json to follow the first download; the tray app notices changes and applies them.
 
 Start it with: python -m ghostwriter.window
 """
@@ -14,11 +14,11 @@ import winreg
 from ctypes import wintypes
 from pathlib import Path
 
-from ghostwriter import __version__, updates, win32
+from ghostwriter import __version__, startup, updates, win32
 from ghostwriter.dictionary import DictionaryFile
 from ghostwriter.history import PAGE_SIZE, History
-from ghostwriter.paths import (DICTIONARY_PATH, HISTORY_PATH, ICON_PATH, LOG_PATH, PROJECT, SETTINGS_PATH, UI_DIR,
-                               WEB_DATA_DIR, WINDOW_LOG_PATH)
+from ghostwriter.paths import (DICTIONARY_PATH, HISTORY_PATH, ICON_PATH, LOG_PATH, PROJECT, SETTINGS_PATH,
+                               STARTUP_PATH, UI_DIR, WEB_DATA_DIR, WINDOW_LOG_PATH)
 from ghostwriter.recorder import list_microphones
 from ghostwriter.settings import HANDS_FREE_MINUTES, HOTKEYS, Settings
 from ghostwriter.win32 import dwmapi, kernel32, user32
@@ -46,10 +46,13 @@ class Api:
     menu can change the same settings while the window is open."""
 
     def __init__(self, settings_path: Path = SETTINGS_PATH, dictionary_path: Path = DICTIONARY_PATH,
-                 history_path: Path = HISTORY_PATH) -> None:
+                 history_path: Path = HISTORY_PATH, startup_path: Path = STARTUP_PATH) -> None:
         self._settings_path = settings_path
         self._dictionary = DictionaryFile(dictionary_path)
         self._history = History(history_path)
+        self._startup_path = startup_path
+        # The tray app is downloading the speech model, so this is a new install: open on the welcome.
+        self._first_run = startup.read(startup_path).get("model") == "downloading"
         self._window = None
         self._maximized = False
         self._gpu = None
@@ -61,6 +64,7 @@ class Api:
         settings = Settings.load(self._settings_path)
         return {
             "version": __version__,
+            "firstRun": self._first_run,
             "settings": {
                 "hotkey": settings.hotkey,
                 "microphone": settings.microphone,
@@ -96,6 +100,9 @@ class Api:
 
     def remove_fix(self, heard: str, write: str) -> dict:
         return self._edit(self._dictionary.remove_fix, heard, write)
+
+    def startup_status(self) -> dict:
+        return startup.read(self._startup_path)
 
     def history(self, query: str = "", app: str = "", limit: int = PAGE_SIZE) -> dict:
         return {**self._history.search(query, app or None, limit), "apps": self._history.apps()}

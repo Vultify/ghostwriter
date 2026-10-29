@@ -88,8 +88,8 @@ Built from Caleb's design (dark and light themes, mint accent, Geist font), show
 - **Checkpoint 9:** a day of dictations shows up in History and on Home
 
 ## Phase 10: first run
-- [ ] A 3 step welcome: speech model download with a progress bar, pick a hotkey, try it
-- **Checkpoint 10:** a fresh install walks through the welcome
+- [x] A 3 step welcome: speech model download with a progress bar, pick a hotkey, try it
+- **Checkpoint 10 passed 2026-10-28:** a first run with an empty model folder downloaded the real model (1.6 GB in about 90 seconds) with live progress, and Caleb walked through the welcome and dictated into it
 
 ## Phase 11: pill and polish
 - [ ] Pill on/off (it stays at the bottom center, no position setting)

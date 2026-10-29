@@ -16,7 +16,7 @@ Open **PowerShell** and paste:
 irm https://raw.githubusercontent.com/Vultify/ghostwriter/main/get.ps1 | iex
 ```
 
-That downloads the latest version into a `Ghostwriter` folder in your user folder, installs its own copy of Python and its packages inside that folder, adds Ghostwriter to the Start menu, and starts it. The first start downloads the speech model (about 1.6 GB, one time only), and a notification tells you when it's ready.
+That downloads the latest version into a `Ghostwriter` folder in your user folder, installs its own copy of Python and its packages inside that folder, adds Ghostwriter to the Start menu, and starts it. The first start opens a short welcome: it downloads the speech model (about 1.6 GB, one time only) with a progress bar, then lets you pick your hotkey and try it out.
 
 **Updating:** right click the ghost in the tray and choose **Check for updates**, or run the same command again. Your dictionary, settings, and history are kept.
 

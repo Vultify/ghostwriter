@@ -9,12 +9,16 @@ const PAGE_SIZE = 200;
 let state = null;
 // What the History page is showing, and the last stamp seen, so new dictations show up while the window is open.
 const shown = { query: "", app: "", limit: PAGE_SIZE, apps: "", stamp: null, summary: null, request: 0 };
+// The welcome on a new install: which step it's on, and the download's progress over time for the time left.
+const setup = { step: 1, status: {}, timer: null, samples: [] };
 
 const api = () => window.pywebview.api;
 
 window.addEventListener("pywebviewready", async () => {
   bindPage();
   render(await api().state());
+  if (state.firstRun) startSetup();
+  app.classList.add("loaded");
   renderDictionary(await api().dictionary());
   await watchHistory();
   setInterval(watchHistory, 1000);
@@ -45,6 +49,7 @@ function bindPage() {
   });
 
   document.getElementById("hotkeys").addEventListener("change", (event) => change("hotkey", event.target.value));
+  document.getElementById("setup-hotkeys").addEventListener("change", (event) => change("hotkey", event.target.value));
   document.getElementById("themes").addEventListener("change", (event) => change("theme", event.target.value));
 
   const openers = { log: "open_log", folder: "open_folder", dictionary: "open_dictionary_file" };
@@ -71,6 +76,9 @@ function bindPage() {
   document.getElementById("clear-history").addEventListener("click", askToClear);
   document.getElementById("clear-cancel").addEventListener("click", () => showClearQuestion(false));
   document.getElementById("clear-yes").addEventListener("click", clearHistory);
+
+  document.getElementById("setup-back").addEventListener("click", () => showStep(setup.step - 1));
+  document.getElementById("setup-next").addEventListener("click", () => (setup.step < 3 ? showStep(setup.step + 1) : finishSetup()));
 }
 
 async function change(name, value) {
@@ -108,9 +116,11 @@ function render(next) {
 
   document.querySelectorAll("select[data-setting='microphone']").forEach((select) => fillMicrophones(select, settings.microphone));
   fillMinutes(settings);
-  fillHotkeys(settings.hotkey);
+  fillHotkeys("hotkeys", settings.hotkey);
+  fillHotkeys("setup-hotkeys", settings.hotkey);
   document.querySelectorAll("#themes input").forEach((input) => { input.checked = input.value === settings.theme; });
   document.getElementById("history-off").hidden = settings.history;
+  document.getElementById("setup-tip").hidden = !settings.hands_free;
   if (shown.summary) renderSummary(shown.summary);
 }
 
@@ -133,11 +143,12 @@ function fillMinutes(settings) {
   select.disabled = !settings.hands_free;
 }
 
-function fillHotkeys(chosen) {
-  const fieldset = document.getElementById("hotkeys");
+// Settings and the welcome each have a set of keycaps, with their own radio group named after the fieldset.
+function fillHotkeys(id, chosen) {
+  const fieldset = document.getElementById(id);
   const legend = fieldset.querySelector("legend");
   const caps = state.hotkeys.map((name) => {
-    const input = Object.assign(document.createElement("input"), { type: "radio", name: "hotkey", value: name, checked: name === chosen });
+    const input = Object.assign(document.createElement("input"), { type: "radio", name: id, value: name, checked: name === chosen });
     const cap = Object.assign(document.createElement("span"), { className: "keycap", textContent: name });
     const label = document.createElement("label");
     label.append(input, cap);
@@ -365,6 +376,92 @@ function element(tag, className, text) {
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
+}
+
+// First run
+
+const DOWNLOAD_TEXT = {
+  downloading: ["Getting the speech model", "A one-time 1.6 GB download. After this, Ghostwriter never needs the internet to hear you."],
+  loading: ["Setting it up", "Loading the speech model onto your graphics card. This takes a few seconds."],
+  ready: ["Ready to go", "The speech model is on this PC now, so nothing you say ever needs the internet."],
+  failed: ["The download stopped", "Check your internet connection, then start Ghostwriter again from the Start menu. It picks up where it left off."],
+};
+
+function startSetup() {
+  app.classList.add("in-setup");
+  document.getElementById("window-title").textContent = "Ghostwriter setup";
+  showStep(1);
+  watchDownload();
+  setup.timer = setInterval(watchDownload, 500);
+}
+
+function finishSetup() {
+  clearInterval(setup.timer);
+  app.classList.remove("in-setup");
+  document.getElementById("window-title").textContent = "Ghostwriter";
+  showView("home");
+}
+
+function showStep(step) {
+  setup.step = step;
+  document.querySelectorAll(".setup-step").forEach((section) => { section.hidden = Number(section.dataset.step) !== step; });
+  document.querySelectorAll("#steps span").forEach((dot, index) => {
+    dot.className = index + 1 === step ? "current" : index + 1 < step ? "done" : "";
+  });
+  document.getElementById("steps").setAttribute("aria-label", `Step ${step} of 3`);
+  document.getElementById("setup-back").hidden = step === 1;
+  const next = document.getElementById("setup-next");
+  next.textContent = ["Continue", "Next", "Finish"][step - 1];
+  next.disabled = step === 1 && setup.status.model !== "ready";
+  if (step === 3) document.getElementById("setup-try").focus();
+}
+
+// The tray app saves its progress a few times a second; this follows it until the model is ready.
+async function watchDownload() {
+  const status = await api().startup_status();
+  if (!DOWNLOAD_TEXT[status.model]) return;  // caught mid-write; the next check will have it
+  setup.status = status;
+  renderDownload(status);
+  if (setup.step === 1) document.getElementById("setup-next").disabled = status.model !== "ready";
+  if (status.model === "ready") clearInterval(setup.timer);
+}
+
+function renderDownload(status) {
+  const [title, text] = DOWNLOAD_TEXT[status.model];
+  document.getElementById("download-title").textContent = title;
+  document.getElementById("download-text").textContent = text;
+  const downloading = status.model === "downloading";
+  const bar = document.getElementById("download-bar");
+  bar.classList.toggle("stopped", status.model === "failed");
+  if (status.model !== "failed") {
+    const fraction = downloading ? (status.total ? status.done / status.total : 0) : 1;
+    bar.firstElementChild.style.width = `${fraction * 100}%`;
+    bar.setAttribute("aria-valuenow", String(Math.round(fraction * 100)));
+  }
+  const amount = {
+    downloading: status.total ? `${gigabytes(status.done)} of ${gigabytes(status.total)} GB` : "Starting…",
+    loading: "Downloaded",
+    ready: "Downloaded",
+    failed: "Stopped",
+  };
+  document.getElementById("download-amount").textContent = amount[status.model];
+  document.getElementById("download-left").textContent = downloading ? timeLeft(status) : status.model === "loading" ? "Loading…" : "";
+}
+
+// Estimated from the last ten seconds, so it settles quickly and follows changes in speed.
+function timeLeft(status) {
+  const now = performance.now();
+  setup.samples.push([now, status.done]);
+  while (setup.samples.length > 2 && now - setup.samples[0][0] > 10000) setup.samples.shift();
+  const [since, doneThen] = setup.samples[0];
+  const rate = (status.done - doneThen) / ((now - since) / 1000);
+  if (now - since < 2000 || rate <= 0) return "";
+  const seconds = (status.total - status.done) / rate;
+  return seconds < 60 ? "less than a minute left" : `about ${Math.round(seconds / 60)} min left`;
+}
+
+function gigabytes(bytes) {
+  return (bytes / 1e9).toFixed(1);
 }
 
 // Updates

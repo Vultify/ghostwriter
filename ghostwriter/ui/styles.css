@@ -20,7 +20,7 @@
   --field: #0F1013; --field-line: #2A2B31; --row: #222328; --cap: #23242A; --cap-line: #33343B;
   --nav-on: #1C1D22; --panel: #141518; --text: #EDEDEF; --text2: #C9CAD1; --muted: #9A9BA3; --faint: #8A8B93;
   --accent: #7DF0C3; --ink: #7DF0C3; --ink-hover: #A9F6D9; --on-accent: #0E0F11;
-  --accent-soft: rgba(125, 240, 195, 0.12); --accent-line: rgba(125, 240, 195, 0.35);
+  --accent-soft: rgba(125, 240, 195, 0.12); --accent-line: rgba(125, 240, 195, 0.35); --accent-dim: #4C8F76;
   --off-knob: #9A9BA3; --danger: #FF8A80; --danger-line: #3A2A2A; --danger-soft: rgba(255, 138, 128, 0.08);
   --close-hover: #C42B1C; --control-hover: rgba(255, 255, 255, 0.06);
 }
@@ -31,7 +31,7 @@
   --field: #F4F5F6; --field-line: #D3D4D9; --row: #ECEDEF; --cap: #F0F1F3; --cap-line: #C5C6CC;
   --nav-on: #FFFFFF; --panel: #FFFFFF; --text: #16171A; --text2: #3D3F47; --muted: #5C5E67; --faint: #686A73;
   --accent: #5EE0B0; --ink: #0A7553; --ink-hover: #075C41; --on-accent: #0B1F18;
-  --accent-soft: rgba(16, 140, 100, 0.10); --accent-line: rgba(10, 117, 83, 0.45);
+  --accent-soft: rgba(16, 140, 100, 0.10); --accent-line: rgba(10, 117, 83, 0.45); --accent-dim: #8FD3B9;
   --off-knob: #FFFFFF; --danger: #B3261E; --danger-line: #EBC4C0; --danger-soft: rgba(179, 38, 30, 0.06);
   --close-hover: #C42B1C; --control-hover: rgba(0, 0, 0, 0.05);
 }
@@ -113,6 +113,9 @@ button { cursor: pointer; }
 /* Sidebar */
 
 .layout { flex-grow: 1; display: flex; min-height: 0; }
+
+/* Hidden until the first settings arrive, so a new install never flashes Home before the welcome. */
+.app:not(.loaded) .layout { visibility: hidden; }
 
 .sidebar {
   width: 220px;
@@ -653,6 +656,90 @@ kbd {
 .add-fix .button { width: 36px; padding: 0; font-size: 18px; }
 
 .empty { margin: 0; font-size: 13px; color: var(--faint); }
+
+/* First run: the welcome takes the whole window until it's finished */
+
+.setup {
+  flex-grow: 1;
+  min-height: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  background: radial-gradient(ellipse at 50% 0%, var(--accent-soft) 0%, transparent 55%);
+}
+
+.app.in-setup .setup { display: flex; }
+
+.app.in-setup .layout, .app.in-setup [data-action="maximize"] { display: none; }
+
+.setup-body {
+  width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.steps { display: flex; gap: 8px; }
+
+.steps span { width: 6px; height: 6px; border-radius: 999px; background: var(--cap-line); transition: width 0.2s ease; }
+
+.steps span.done { background: var(--accent-dim); }
+
+.steps span.current { width: 28px; background: var(--ink); }
+
+.setup-step { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+.setup-step h1 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
+
+.setup-step p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--muted); }
+
+.setup-step .hint { font-size: 13px; color: var(--faint); }
+
+.setup-eye { fill: var(--bg); }
+
+.download { width: 420px; display: flex; flex-direction: column; gap: 8px; }
+
+.download-track { height: 8px; overflow: hidden; border-radius: 999px; background: var(--cap); }
+
+.download-track span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.download-track.stopped span { background: var(--danger); }
+
+.download-numbers { display: flex; justify-content: space-between; font-size: 12px; color: var(--faint); }
+
+#setup-hotkeys { justify-content: center; gap: 10px; }
+
+#setup-hotkeys .keycap { height: 48px; padding: 0 18px; border-bottom-width: 4px; border-radius: 10px; font-size: 14px; }
+
+#setup-try {
+  width: 100%;
+  height: 120px;
+  padding: 14px;
+  resize: none;
+  border: 1px solid var(--field-line);
+  border-radius: 12px;
+  background: var(--card);
+  font-size: 15px;
+  line-height: 1.5;
+  user-select: text;
+}
+
+#setup-try::placeholder { color: var(--faint); }
+
+.setup-buttons { display: flex; gap: 10px; }
+
+.button.big { height: 44px; padding: 0 22px; border-radius: 10px; font-size: 14px; }
 
 /* Settings */
 

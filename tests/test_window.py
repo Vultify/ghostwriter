@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from ghostwriter import updates, window
+from ghostwriter import startup, updates, window
 from ghostwriter.history import History
 from ghostwriter.paths import ICON_PATH, UI_DIR
 from ghostwriter.settings import HOTKEYS
@@ -19,7 +19,7 @@ STARTER = "# notes stay put\nGhostwriter\n\n# a section\nsea whiz -> CIWS\n"
 def api(tmp_path):
     (tmp_path / "dictionary.txt").write_text(STARTER, encoding="utf-8")
     return Api(settings_path=tmp_path / "settings.json", dictionary_path=tmp_path / "dictionary.txt",
-               history_path=tmp_path / "history.db")
+               history_path=tmp_path / "history.db", startup_path=tmp_path / "startup.json")
 
 
 def test_state_has_everything_the_page_shows(api):
@@ -27,6 +27,7 @@ def test_state_has_everything_the_page_shows(api):
     assert state["settings"]["theme"] == "system"
     assert state["settings"]["hands_free"] is True
     assert state["settings"]["history"] is True
+    assert state["firstRun"] is False
     assert state["hotkeys"] == list(HOTKEYS)
     assert state["handsFreeMinutes"] == [5, 15, 30]
     assert state["microphones"] and state["gpu"]
@@ -199,6 +200,39 @@ def test_home_and_the_history_page_show_dictations(api, tmp_path):
     assert results["question"] == "Delete all 4 dictations?"
     assert results["cleared"] == [False, 0]
     assert history.search()["total"] == 0
+
+
+def test_a_new_install_opens_on_the_welcome(tmp_path):
+    startup_path = tmp_path / "startup.json"
+    startup.write(startup_path, model="downloading", done=400_000_000, total=1_600_000_000)
+    api = Api(settings_path=tmp_path / "settings.json", dictionary_path=tmp_path / "dictionary.txt",
+              history_path=tmp_path / "history.db", startup_path=startup_path)
+    results = {}
+
+    def drive(run):
+        results["welcome"] = run("[app.classList.contains('in-setup'), document.getElementById('window-title').textContent]")
+        results["downloading"] = run("[document.getElementById('download-amount').textContent, "
+                                     "document.getElementById('setup-next').disabled]")
+        startup.write(startup_path, model="ready")
+        time.sleep(1)
+        results["ready"] = run("[document.getElementById('download-title').textContent, "
+                               "document.getElementById('setup-next').disabled]")
+        run("document.getElementById('setup-next').click()")
+        run("document.querySelector('#setup-hotkeys input[value=\"Caps Lock\"]').click()")
+        run("document.getElementById('setup-next').click()")
+        results["try"] = run("[document.getElementById('setup-next').textContent, "
+                             "document.querySelector('[data-step=\"3\"] kbd').textContent]")
+        run("document.getElementById('setup-next').click()")
+        results["finished"] = run("[app.classList.contains('in-setup'), document.getElementById('home').hidden]")
+
+    _open_page(api, drive, tmp_path)
+
+    assert results["welcome"] == [True, "Ghostwriter setup"]
+    assert results["downloading"] == ["0.4 of 1.6 GB", True]  # can't continue until the model is ready
+    assert results["ready"] == ["Ready to go", False]
+    assert results["try"] == ["Finish", "Caps Lock"]
+    assert json.loads((tmp_path / "settings.json").read_text(encoding="utf-8"))["hotkey"] == "Caps Lock"
+    assert results["finished"] == [False, False]
 
 
 def _wait_for(check, timeout: float = 20.0) -> bool:

@@ -15,17 +15,18 @@ from pathlib import Path
 
 import numpy as np
 
-from ghostwriter import __version__, sounds, updates, win32
+from ghostwriter import __version__, sounds, startup, updates, win32
 from ghostwriter.dictionary import DICTIONARY_PATH, DictionaryFile
 from ghostwriter.history import History
 from ghostwriter.hotkey import KeyHook
 from ghostwriter.indicator import Indicator
 from ghostwriter.paster import Paster, app_name, foreground_app
-from ghostwriter.paths import LOG_PATH
+from ghostwriter.paths import LOG_PATH, STARTUP_PATH
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import Settings
 from ghostwriter.state import State
-from ghostwriter.transcriber import SAMPLE_RATE, Transcriber, gpu_available
+from ghostwriter.transcriber import (SAMPLE_RATE, DownloadProgress, Transcriber, gpu_available, model_downloaded,
+                                     model_path)
 from ghostwriter.tray import Tray
 from ghostwriter.window import close_window, open_window
 from ghostwriter.win32 import kernel32, user32
@@ -288,19 +289,25 @@ def _run() -> None:
                 on_check_updates=lambda: threading.Thread(target=check_for_updates, args=(tray,), daemon=True).start(),
                 on_open=open_window)
     tray.start()  # the ghost shows up right away while Whisper loads
-    if TRAY_ONLY_FLAG not in sys.argv:
-        open_window()
-
-    downloaded = []
-
-    def announce_download() -> None:
-        downloaded.append(True)
+    first_run = not model_downloaded()
+    startup.write(model="downloading" if first_run else "loading")  # before the window opens, so it knows
+    show_window = TRAY_ONLY_FLAG not in sys.argv
+    if show_window:
+        open_window()  # on the first run it opens on the welcome, which shows the download
+    if first_run:
         log.info("Downloading the speech model for the first time")
-        tray.notify(DOWNLOAD_MESSAGE)
+        if not show_window:
+            tray.notify(DOWNLOAD_MESSAGE)
 
     log.info("Loading Whisper...")
-    transcriber = Transcriber(on_download=announce_download)
-    transcriber.warm_up()
+    try:
+        path = model_path(on_progress=_download_reporter())
+        startup.write(model="loading")
+        transcriber = Transcriber(path)
+        transcriber.warm_up()
+    except Exception:
+        startup.write(model="failed")
+        raise
     recorder = Recorder(microphone=settings.microphone)
     dictionary = DictionaryFile()
     dictionary.current()
@@ -328,8 +335,9 @@ def _run() -> None:
     indicator.start()
     dictation.start()
     tray.set_state(State.READY)
+    startup.write(model="ready")
     log.info("Ready. Hold %s to talk, or double tap it for hands free.", settings.hotkey)
-    if downloaded:
+    if first_run:
         tray.notify(f"Ready! Hold {settings.hotkey} to talk, or double tap it for hands free.")
     try:
         while not quitting.wait(0.5):
@@ -343,6 +351,21 @@ def _run() -> None:
         indicator.stop()
         tray.stop()
         log.info("Stopped.")
+
+
+def _download_reporter(path: Path = STARTUP_PATH, every: float = 0.25) -> DownloadProgress:
+    """Save the model download's progress for the window, a few times a second at most."""
+    lock = threading.Lock()
+    last = float("-inf")
+
+    def report(done: int, total: int) -> None:
+        nonlocal last
+        with lock:  # the download reports from several threads
+            if time.perf_counter() - last >= every or done >= total:
+                last = time.perf_counter()
+                startup.write(path, model="downloading", done=done, total=total)
+
+    return report
 
 
 def check_for_updates(tray: Tray) -> None:

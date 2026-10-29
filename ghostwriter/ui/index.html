@@ -11,7 +11,7 @@
 <header class="titlebar">
   <div class="titlebar-drag pywebview-drag-region">
     <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path class="ghost-mark" d="M4 11a8 8 0 0 1 16 0v10l-2.67-1.8L14.67 21 12 19.2 9.33 21l-2.66-1.8L4 21z"/><circle class="ghost-eye" cx="9.5" cy="10.5" r="1.4"/><circle class="ghost-eye" cx="14.5" cy="10.5" r="1.4"/></svg>
-    <span>Ghostwriter</span>
+    <span id="window-title">Ghostwriter</span>
   </div>
   <div class="window-controls">
     <button type="button" data-action="minimize" aria-label="Minimize"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M0 5h10" stroke="currentColor"/></svg></button>
@@ -309,6 +309,43 @@
       </div>
     </section>
   </main>
+</div>
+
+<div class="setup" id="setup">
+  <div class="setup-body">
+    <div class="steps" id="steps" role="img" aria-label="Step 1 of 3"><span></span><span></span><span></span></div>
+
+    <section class="setup-step" data-step="1" aria-labelledby="download-title">
+      <svg width="72" height="72" viewBox="0 0 24 24" aria-hidden="true"><path class="ghost-mark" d="M4 11a8 8 0 0 1 16 0v10l-2.67-1.8L14.67 21 12 19.2 9.33 21l-2.66-1.8L4 21z"/><circle class="setup-eye" cx="9.5" cy="10.5" r="1.4"/><circle class="setup-eye" cx="14.5" cy="10.5" r="1.4"/></svg>
+      <h1 id="download-title">Getting the speech model</h1>
+      <p id="download-text">A one-time 1.6 GB download. After this, Ghostwriter never needs the internet to hear you.</p>
+      <div class="download">
+        <div class="download-track" id="download-bar" role="progressbar" aria-labelledby="download-title" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
+        <div class="download-numbers mono"><span id="download-amount">Starting…</span><span id="download-left"></span></div>
+      </div>
+    </section>
+
+    <section class="setup-step" data-step="2" aria-labelledby="key-title" hidden>
+      <h1 id="key-title">Pick your talk key</h1>
+      <p>Hold it to talk. It's swallowed, so it never types into the app you're in.</p>
+      <fieldset class="picker" id="setup-hotkeys">
+        <legend class="sr-only">Talk key</legend>
+      </fieldset>
+    </section>
+
+    <section class="setup-step" data-step="3" aria-labelledby="try-title" hidden>
+      <h1 id="try-title">Say something</h1>
+      <p>Click the box, hold <kbd data-text="hotkey"></kbd>, talk, and let go.</p>
+      <label class="sr-only" for="setup-try">Try dictating</label>
+      <textarea id="setup-try" placeholder="Your words land here…" spellcheck="false"></textarea>
+      <p class="hint" id="setup-tip">Tip: double tap the key to talk hands free.</p>
+    </section>
+
+    <div class="setup-buttons">
+      <button type="button" class="button big" id="setup-back" hidden>Back</button>
+      <button type="button" class="button primary big" id="setup-next" disabled>Continue</button>
+    </div>
+  </div>
 </div>
 </div>
 <script src="app.js"></script>
