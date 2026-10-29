@@ -56,11 +56,6 @@ Pulled ahead of lock mode on 2026-10-24 so terms that sound different from how t
 ## Version 1.0.0 released 2026-10-25
 Phases 1 to 7 plus the speed pass.
 
-## Phase 8: local AI cleanup (on/off switch)
-- [ ] Small local model on the GPU cleans filler words and formats lists
-- [ ] Measure the delay against raw mode
-- **Checkpoint 8:** Caleb tries both and picks his default
-
 ## Ready to share (version 1.1.0, released 2026-10-25)
 - [x] `install.bat`: download the ZIP, double click, done (own Python and packages inside the folder, Start menu shortcut)
 - [x] Personal `dictionary.txt` out of git; new installs start from `dictionary.example.txt`
@@ -75,11 +70,41 @@ Phases 1 to 7 plus the speed pass.
 - [x] Clean old private files out of the git history
 - [ ] Make the GitHub repo public, then try the one-line install on a second PC
 
+## Phase 8: the app window
+Built from Caleb's design (dark and light themes, mint accent, Geist font), shown in a real window through the web engine built into Windows (pywebview).
+- [x] Window with its own title bar and a sidebar: Home, Dictionary, Settings, the version, and Check for updates (History joins in Phase 9)
+- [x] Closing the window keeps Ghostwriter running in the tray; the tray menu gets Open Ghostwriter (also a left click on the ghost)
+- [x] Home: ready card showing the hotkey, a box to try dictating, and quick switches
+- [x] Settings: hotkey, hands free on/off and its auto-stop time, mic, sounds, speech model info, theme (system, light, dark), open log and folder
+- [x] Dictionary editor for words and fixes, saved to `dictionary.txt`
+- [x] The window is its own small program: closing it frees its memory, and settings it saves reach the running app within half a second
+- [x] Each Dictionary tab explains what a word or a fix does
+- **Checkpoint 8 passed 2026-10-28:** Caleb changed settings and dictionary words from the window, and his next dictations used them
+
+## Phase 9: history
+- [ ] Save each dictation on this PC, with an on/off switch and Clear history
+- [ ] History page: search, filter by app, copy
+- [ ] Home: recent dictations and word counts
+- **Checkpoint 9:** a day of dictations shows up in History and on Home
+
+## Phase 10: first run
+- [ ] A 3 step welcome: speech model download with a progress bar, pick a hotkey, try it
+- **Checkpoint 10:** a fresh install walks through the welcome
+
+## Phase 11: pill and polish
+- [ ] Pill on/off (it stays at the bottom center, no position setting)
+- [ ] Start with Windows
+- [ ] Mic test meter in Settings
+- **Checkpoint 11:** Caleb uses each one for a day
+
+## Phase 12: local AI cleanup (on/off switch, its own page in the app)
+- [ ] Small local model on the GPU removes filler words, formats lists, and fixes punctuation
+- [ ] Voice commands ("new line", "scratch that")
+- [ ] Style by app (raw, casual, or polished per app)
+- [ ] Measure the delay against raw mode
+- **Checkpoint 12:** Caleb tries both and picks his default
+
 ## Later
 - winget (`winget install Vultify.Ghostwriter`), which needs a setup .exe and Microsoft's review
 - A real setup wizard (.exe) for people who want a classic installer
-- Start with Windows
-- Dictation history
-- Voice commands ("new line", "scratch that")
-- App aware formatting (casual in Discord, clean in email)
 - Let Jarvis use Ghostwriter as its ears

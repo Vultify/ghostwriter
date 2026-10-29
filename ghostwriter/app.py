@@ -10,7 +10,6 @@ import time
 from collections.abc import Callable
 from enum import Enum
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 
 import numpy as np
 
@@ -19,16 +18,18 @@ from ghostwriter.dictionary import DICTIONARY_PATH, DictionaryFile
 from ghostwriter.hotkey import KeyHook
 from ghostwriter.indicator import Indicator
 from ghostwriter.paster import Paster, foreground_app
+from ghostwriter.paths import LOG_PATH
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import Settings
 from ghostwriter.state import State
 from ghostwriter.transcriber import SAMPLE_RATE, Transcriber, gpu_available
 from ghostwriter.tray import Tray
+from ghostwriter.window import close_window, open_window
 from ghostwriter.win32 import kernel32, user32
 
 HOTKEY = win32.VK_RMENU
-LOG_PATH = Path(__file__).resolve().parent.parent / "logs" / "ghostwriter.log"
 INSTANCE_NAME = "Local\\Ghostwriter"
+TRAY_ONLY_FLAG = "--tray"  # start in the tray without opening the window
 NO_GPU_MESSAGE = (
     "Ghostwriter needs an NVIDIA graphics card to turn speech into text, and it couldn't find one on this PC.\n\n"
     "If you do have one, updating its driver from nvidia.com usually fixes this."
@@ -86,6 +87,7 @@ class Dictation:
         self.on_state = on_state
         self.dictionary = dictionary or DictionaryFile()
         self.max_recording_seconds = MAX_RECORDING_SECONDS
+        self.hands_free = True  # with this off, a double tap is just two ignored taps
         self._key_events: queue.Queue[_Key | None] = queue.Queue()
         self._clips: queue.Queue[np.ndarray | None] = queue.Queue()
         self._mode = _Mode.IDLE
@@ -164,6 +166,8 @@ class Dictation:
             if mode is _Mode.HOLDING:
                 if time.perf_counter() - self._recording_started >= TAP_SECONDS:
                     self._finish_recording(then=_Mode.IDLE)
+                elif not self.hands_free:
+                    self._discard_recording()
                 else:
                     self._tapped_at = time.perf_counter()
                     self._set_mode(_Mode.TAPPED)
@@ -243,7 +247,7 @@ class StatusDisplay:
 def main() -> None:
     _set_up_logging()
     if not claim_single_instance():
-        _show_message("Ghostwriter is already running. Look for the ghost in the system tray.", win32.MB_ICONINFORMATION)
+        open_window()  # starting it again, like from the Start menu, just opens the window
         return
     try:
         _run()
@@ -262,8 +266,11 @@ def _run() -> None:
     quitting = threading.Event()
     tray = Tray(settings, list_microphones(), on_quit=quitting.set,
                 files={"Edit dictionary": DICTIONARY_PATH, "Open log": LOG_PATH},
-                on_check_updates=lambda: threading.Thread(target=check_for_updates, args=(tray,), daemon=True).start())
+                on_check_updates=lambda: threading.Thread(target=check_for_updates, args=(tray,), daemon=True).start(),
+                on_open=open_window)
     tray.start()  # the ghost shows up right away while Whisper loads
+    if TRAY_ONLY_FLAG not in sys.argv:
+        open_window()
 
     downloaded = []
 
@@ -286,11 +293,16 @@ def _run() -> None:
 
     def apply_settings() -> None:
         dictation.set_hotkey(settings.hotkey_code)
+        dictation.hands_free = settings.hands_free
+        dictation.max_recording_seconds = settings.hands_free_minutes * 60
         recorder.microphone = settings.microphone
-        log.info("Settings: hotkey %s, mic %s, sounds %s",
-                 settings.hotkey, settings.microphone or "Windows default", "on" if settings.sounds else "off")
+        tray.refresh()
+        log.info("Settings: hotkey %s, mic %s, sounds %s, hands free %s",
+                 settings.hotkey, settings.microphone or "Windows default", "on" if settings.sounds else "off",
+                 f"on, up to {settings.hands_free_minutes} min" if settings.hands_free else "off")
 
     tray.on_change = apply_settings
+    apply_settings()
     indicator.start()
     dictation.start()
     tray.set_state(State.READY)
@@ -299,10 +311,12 @@ def _run() -> None:
         tray.notify(f"Ready! Hold {settings.hotkey} to talk, or double tap it for hands free.")
     try:
         while not quitting.wait(0.5):
-            pass
+            if settings.reload_if_changed():  # saved by the app window
+                apply_settings()
     except KeyboardInterrupt:
         pass
     finally:
+        close_window()
         dictation.stop()
         indicator.stop()
         tray.stop()

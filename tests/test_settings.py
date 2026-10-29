@@ -1,6 +1,7 @@
 """Settings load and save safely, the tray menu changes them, and the app applies the changes live."""
 
 import json
+import os
 import time
 
 from conftest import press_key
@@ -49,7 +50,8 @@ def test_tray_menu_changes_are_saved_and_reported(tmp_path):
     tray._change(hotkey="Right Ctrl")
     tray._change(sounds=False)
     saved = json.loads(settings.path.read_text(encoding="utf-8"))
-    assert saved == {"hotkey": "Right Ctrl", "microphone": None, "sounds": False}
+    assert saved == {"hotkey": "Right Ctrl", "microphone": None, "sounds": False,
+                     "hands_free": True, "hands_free_minutes": 15, "theme": "system"}
     assert changes == ["Right Ctrl", "Right Ctrl"]
     tray.set_state(State.READY)
     assert "Right Ctrl" in tray._tray.title
@@ -107,3 +109,23 @@ def test_only_one_copy_can_run_at_a_time():
     assert claim_single_instance(name)
     assert not claim_single_instance(name)
     assert app.LOG_PATH.name == "ghostwriter.log"
+
+
+def test_new_settings_load_with_safe_defaults(tmp_path):
+    path = tmp_path / "settings.json"
+    path.write_text(json.dumps({"hands_free": "yes", "hands_free_minutes": 7, "theme": "blue"}), encoding="utf-8")
+    loaded = Settings.load(path)
+    assert (loaded.hands_free, loaded.hands_free_minutes, loaded.theme) == (True, 15, "system")
+
+
+def test_the_running_app_picks_up_what_the_window_saves(tmp_path):
+    path = tmp_path / "settings.json"
+    running = Settings.load(path)
+    running.save()
+    assert not running.reload_if_changed()  # its own save isn't news
+    Settings.load(path).change("hands_free", False)
+    later = path.stat().st_mtime_ns + 1_000_000_000
+    os.utime(path, ns=(later, later))  # make sure the change is seen even on a coarse file clock
+    assert running.reload_if_changed()
+    assert running.hands_free is False
+    assert not running.reload_if_changed()

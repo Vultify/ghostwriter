@@ -29,6 +29,7 @@ class Tray:
         on_quit: Callable[[], None],
         files: dict[str, Path],
         on_check_updates: Callable[[], None] = lambda: None,
+        on_open: Callable[[], None] = lambda: None,
     ) -> None:
         self.settings = settings
         self.on_change: Callable[[], None] = lambda: None
@@ -37,6 +38,9 @@ class Tray:
         listening = draw_ghost(RED)
         self._icons = {State.READY: normal, State.LISTENING: listening, State.LOCKED: listening, State.WORKING: normal}
         menu = pystray.Menu(
+            # The default item also runs on a left click of the ghost.
+            pystray.MenuItem("Open Ghostwriter", lambda: on_open(), default=True),
+            pystray.Menu.SEPARATOR,
             pystray.MenuItem("Hotkey", pystray.Menu(*(self._choice("hotkey", name) for name in HOTKEYS))),
             pystray.MenuItem(
                 "Microphone",
@@ -72,6 +76,11 @@ class Tray:
     def set_state(self, state: State) -> None:
         self._state = state
         self._tray.icon = self._icons[state]
+        self._tray.title = self._tooltip()
+
+    def refresh(self) -> None:
+        """Show settings changed elsewhere, like in the app window, in the menu's checkmarks and the tooltip."""
+        self._tray.update_menu()
         self._tray.title = self._tooltip()
 
     def stop(self) -> None:

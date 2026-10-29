@@ -79,13 +79,15 @@ PRESS, RELEASE = "press", "release"
 SETTLE_SECONDS = 0.8  # longer than the double tap window, so a lone tap has been decided
 
 
-def _play(*steps: tuple[str, float], max_recording_seconds: float | None = None) -> tuple[list[State], int]:
+def _play(*steps: tuple[str, float], max_recording_seconds: float | None = None,
+          hands_free: bool = True) -> tuple[list[State], int]:
     """Press and release Right Alt as listed (each step waits after itself), then return the states and paste count."""
     states: list[State] = []
     paster = FakePaster()
     dictation = Dictation(FakeTranscriber(), FakeRecorder(), paster, allow_injected=True, on_state=states.append)
     if max_recording_seconds:
         dictation.max_recording_seconds = max_recording_seconds
+    dictation.hands_free = hands_free
     dictation.start()
     try:
         for action, wait in steps:
@@ -132,3 +134,9 @@ def test_lock_mode_stops_on_its_own_at_the_time_limit():
     states, pastes = _play((PRESS, 0.05), (RELEASE, 0.1), (PRESS, 0.05), (RELEASE, 0), max_recording_seconds=1.0)
     assert states == [State.LISTENING, State.LOCKED, State.WORKING, State.READY]
     assert pastes == 1
+
+
+def test_with_hands_free_off_a_double_tap_is_just_two_ignored_taps():
+    states, pastes = _play((PRESS, 0.05), (RELEASE, 0.1), (PRESS, 0.05), (RELEASE, 0), hands_free=False)
+    assert states == [State.LISTENING, State.READY, State.LISTENING, State.READY]
+    assert pastes == 0

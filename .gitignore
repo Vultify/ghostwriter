@@ -30,3 +30,6 @@ docs/research.md
 
 # Local backups of the git history
 backups/
+
+# The app window's scratch space
+.webview/

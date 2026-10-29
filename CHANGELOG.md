@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- The Ghostwriter window, in dark and light: Home with your hotkey, a box to try dictating, and quick switches; a Dictionary page to add and remove words and fixes; and Settings for the hotkey, hands free, microphone, theme, sounds, and files. Check for updates sits at the bottom of the sidebar.
+- Starting Ghostwriter opens the window; closing it keeps Ghostwriter running in the tray. Click the ghost, or start it again from the Start menu, to bring the window back. `--tray` starts it without the window.
+- The Dictionary page explains the difference: a word is a hint Whisper gets before it listens; a fix swaps what it heard for what you want, every time.
+- Hands free can be turned off, and its time limit set to 5, 15, or 30 minutes.
+- Settings changed in the window apply right away to the running app.
+
+### Changed
+- Starting Ghostwriter while it's already running opens the window instead of showing an "already running" message.
+
 ## [1.2.1] - 2026-10-25
 
 ### Changed

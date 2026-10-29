@@ -26,40 +26,38 @@ Ghostwriter needs an NVIDIA graphics card; the installer checks for one before d
 
 ## Usage
 
-Open the Start menu, type **Ghostwriter**, and press Enter. It runs in the background with no window; the ghost in the system tray means it's on.
+Open the Start menu, type **Ghostwriter**, and press Enter. The Ghostwriter window opens, and the ghost in the system tray means it's running. Closing the window keeps Ghostwriter running in the tray; click the ghost to open the window again.
 
-To run it in a terminal instead, with the log printed as you go:
+To run it in a terminal instead, with the log printed as you go (add `--tray` to start without the window):
 
 ```
 .venv\Scripts\python -m ghostwriter
 ```
 
-Only one copy runs at a time.
+Only one copy runs at a time; starting it again just opens the window.
 
-Hold the hotkey, talk, and let go. The text is pasted where your cursor is, and whatever was on your clipboard is put back right after. The hotkey is **Right Alt**, or **Right Ctrl** on keyboards where Right Alt is AltGr (it types characters like @ and € there), and you can change it in the tray menu.
+Hold the hotkey, talk, and let go. The text is pasted where your cursor is, and whatever was on your clipboard is put back right after. The hotkey is **Right Alt**, or **Right Ctrl** on keyboards where Right Alt is AltGr (it types characters like @ and € there), and you can change it in Settings.
 
-For longer stretches, **double tap the hotkey** to lock recording on and talk hands free. Tap it once more to stop and paste. A quick single tap on its own does nothing, and recording stops by itself after 15 minutes in case it gets left on.
+For longer stretches, **double tap the hotkey** to lock recording on and talk hands free. Tap it once more to stop and paste. A quick single tap on its own does nothing, and recording stops by itself after 15 minutes (you can pick 5, 15, or 30) in case it gets left on. Hands free can be turned off in Settings.
 
 - A ghost icon in the system tray shows Ghostwriter is running, and turns red while it listens.
 - A small pill at the bottom of the screen shows a live mic level while you talk, then dots while it types. In hands free mode its red dot becomes a stop square.
 - A soft sound plays when listening starts and stops. Locking on plays it twice.
 
-## Settings
+## The window
 
-Right click the ghost in the tray:
+- **Home:** your hotkey, a box to try dictating in, and quick switches for sounds, hands free, and the mic
+- **Dictionary:** add and remove words and fixes
+- **Settings:** hotkey, hands free and when it stops, microphone, speech model, light or dark theme (or follow Windows), sounds, and buttons to open the log, the folder, and `dictionary.txt`
+- **Check for updates** at the bottom of the sidebar
 
-- **Hotkey:** Right Alt, Right Ctrl, Caps Lock, Scroll Lock, or Pause
-- **Microphone:** the Windows default, or a specific mic (plugged in a new one? restart Ghostwriter to see it)
-- **Sounds:** on or off
-- **Edit dictionary** and **Open log**
-- **Check for updates**
-- **Quit Ghostwriter**
+The tray menu (right click the ghost) has the hotkey, mic, and sounds too, plus Quit. Changes apply right away and are saved to `settings.json`. The log is at `logs/ghostwriter.log`.
 
-Changes apply right away and are saved to `settings.json`. The log is at `logs/ghostwriter.log`.
+The window uses Microsoft WebView2, which comes with Windows 11 and Microsoft Edge.
 
 ## Dictionary
 
-`dictionary.txt` is your own list of names and terms for Ghostwriter to spell right. It starts as a copy of `dictionary.example.txt`, which has common app names like GitHub and VS Code, and from there it's yours to edit; updates never touch it. Open it from the tray menu with **Edit dictionary**; changes apply to the next dictation, no restart needed.
+`dictionary.txt` is your own list of names and terms for Ghostwriter to spell right. It starts as a copy of `dictionary.example.txt`, which has common app names like GitHub and VS Code, and from there it's yours to edit; updates never touch it. Edit it on the window's Dictionary page, or as a text file with **Edit as text**; changes apply to the next dictation, no restart needed.
 
 ```
 Your Business Name
@@ -84,6 +82,7 @@ The tests briefly use the clipboard (and put it back) and pop up a small test wi
 - Pastes with the clipboard and Ctrl+V, then restores your clipboard and keeps dictations out of Win+V history
 - The mic only opens while you're dictating, and recording ends as soon as you go quiet after letting go
 - A custom dictionary teaches it names and words it would otherwise miss
+- The window is its own small program built with [pywebview](https://pywebview.flowrl.com/), so closing it frees its memory and it can never interrupt dictation
 - Nothing goes online after the first model download, except when you choose Check for updates
 
 ## Requirements

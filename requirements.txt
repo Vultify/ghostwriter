@@ -12,4 +12,5 @@ sounddevice
 numpy
 pystray                 # system tray icon
 Pillow                  # draws the tray icon and the listening pill
+pywebview               # the app window, shown in the web engine built into Windows
 pytest                  # tests

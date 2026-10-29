@@ -6,7 +6,7 @@ import time
 import numpy as np
 import sounddevice as sd
 
-from ghostwriter.transcriber import SAMPLE_RATE
+from ghostwriter.audio import SAMPLE_RATE
 
 # After release, keep listening until the speaker has gone quiet, so the last word isn't clipped.
 TAIL_SECONDS = 0.3  # never longer than this

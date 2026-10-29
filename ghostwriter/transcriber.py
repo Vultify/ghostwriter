@@ -7,8 +7,9 @@ from pathlib import Path
 
 import numpy as np
 
+from ghostwriter.audio import SAMPLE_RATE
+
 MODEL_NAME = "large-v3-turbo"
-SAMPLE_RATE = 16000
 # Whisper follows only its single best guess; weighing 5 was 20% slower and gave the same text in testing.
 BEAM_SIZE = 1
 

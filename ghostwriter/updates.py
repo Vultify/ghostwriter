@@ -8,11 +8,11 @@ import urllib.request
 from pathlib import Path
 
 from ghostwriter import __version__
+from ghostwriter.paths import PROJECT as INSTALL_DIR
 
 REPO = "Vultify/ghostwriter"
 LATEST_RELEASE_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
 INSTALL_COMMAND = f"irm https://raw.githubusercontent.com/{REPO}/main/get.ps1 | iex"
-INSTALL_DIR = Path(__file__).resolve().parent.parent
 
 
 def latest_version(timeout: float = 10) -> str:

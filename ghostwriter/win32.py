@@ -6,6 +6,7 @@ from ctypes import wintypes
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
+dwmapi = ctypes.WinDLL("dwmapi", use_last_error=True)
 
 LRESULT = ctypes.c_ssize_t
 ULONG_PTR = ctypes.c_size_t
@@ -24,6 +25,11 @@ VK_V = 0x56
 
 ERROR_ALREADY_EXISTS = 183
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+WM_CLOSE = 0x0010
+SW_RESTORE = 9
+ASFW_ANY = 0xFFFFFFFF  # let any process take the foreground once
+DWMWA_WINDOW_CORNER_PREFERENCE = 33
+DWMWCP_ROUND = 2
 MB_ICONINFORMATION = 0x40
 MB_ICONERROR = 0x10
 MB_ICONQUESTION = 0x20
@@ -111,6 +117,7 @@ class INPUT(ctypes.Structure):
 
 
 HOOKPROC = ctypes.WINFUNCTYPE(LRESULT, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM)
+WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 WNDPROC = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
 
 
@@ -208,6 +215,13 @@ for _func, _argtypes, _restype in (
     (user32.MessageBoxW, [wintypes.HWND, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.UINT], ctypes.c_int),
     (user32.GetForegroundWindow, [], wintypes.HWND),
     (user32.GetKeyboardLayoutList, [ctypes.c_int, ctypes.POINTER(wintypes.HKL)], ctypes.c_int),
+    (user32.EnumWindows, [WNDENUMPROC, wintypes.LPARAM], wintypes.BOOL),
+    (user32.GetWindowTextW, [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int], ctypes.c_int),
+    (user32.GetClassNameW, [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int], ctypes.c_int),
+    (user32.PostMessageW, [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM], wintypes.BOOL),
+    (user32.SetForegroundWindow, [wintypes.HWND], wintypes.BOOL),
+    (user32.AllowSetForegroundWindow, [wintypes.DWORD], wintypes.BOOL),
+    (dwmapi.DwmSetWindowAttribute, [wintypes.HWND, wintypes.DWORD, wintypes.LPCVOID, wintypes.DWORD], ctypes.c_long),
     (user32.VkKeyScanExW, [wintypes.WCHAR, wintypes.HKL], ctypes.c_short),
     (user32.GetWindowThreadProcessId, [wintypes.HWND, wintypes.LPDWORD], wintypes.DWORD),
     (kernel32.OpenProcess, [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD], wintypes.HANDLE),
