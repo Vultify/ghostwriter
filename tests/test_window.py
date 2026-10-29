@@ -2,10 +2,12 @@
 
 import json
 import time
+from datetime import datetime, timedelta
 
 import pytest
 
 from ghostwriter import updates, window
+from ghostwriter.history import History
 from ghostwriter.paths import ICON_PATH, UI_DIR
 from ghostwriter.settings import HOTKEYS
 from ghostwriter.window import Api
@@ -16,13 +18,15 @@ STARTER = "# notes stay put\nGhostwriter\n\n# a section\nsea whiz -> CIWS\n"
 @pytest.fixture
 def api(tmp_path):
     (tmp_path / "dictionary.txt").write_text(STARTER, encoding="utf-8")
-    return Api(settings_path=tmp_path / "settings.json", dictionary_path=tmp_path / "dictionary.txt")
+    return Api(settings_path=tmp_path / "settings.json", dictionary_path=tmp_path / "dictionary.txt",
+               history_path=tmp_path / "history.db")
 
 
 def test_state_has_everything_the_page_shows(api):
     state = api.state()
     assert state["settings"]["theme"] == "system"
     assert state["settings"]["hands_free"] is True
+    assert state["settings"]["history"] is True
     assert state["hotkeys"] == list(HOTKEYS)
     assert state["handsFreeMinutes"] == [5, 15, 30]
     assert state["microphones"] and state["gpu"]
@@ -78,11 +82,24 @@ def test_check_for_updates_reports_each_outcome(api, monkeypatch, git, latest, s
     assert api.check_for_updates()["status"] == status
 
 
-def test_the_page_changes_settings_and_the_dictionary(api, tmp_path):
-    """Opens the real page in a window and clicks through it (page clicks only, no real typing)."""
+def test_history_calls_search_and_clear(api, tmp_path):
+    history = History(tmp_path / "history.db")
+    history.add("Deploy the MySQL backup", "Windows Terminal", 3.0)
+    history.add("See you Friday", "Discord", 1.0)
+    assert api.history("mysql")["total"] == 1
+    result = api.history(app="Discord")
+    assert [item["text"] for item in result["items"]] == ["See you Friday"]
+    assert set(result["apps"]) == {"Windows Terminal", "Discord"}
+    assert api.history_summary()["dictations_today"] == 2
+    stamp = api.history_stamp()
+    api.clear_history()
+    assert api.history()["total"] == 0 and api.history_stamp() != stamp
+
+
+def _open_page(api, drive, tmp_path):
+    """Open the real page in a window and run drive(run) against it (page clicks only, no real typing)."""
     import webview
 
-    results = {}
     view = webview.create_window(window.TITLE, url=str(UI_DIR / "index.html"), js_api=api, width=window.WIDTH,
                                  height=window.HEIGHT, frameless=True, easy_drag=False, background_color="#121316")
     api.attach(view)
@@ -92,32 +109,42 @@ def test_the_page_changes_settings_and_the_dictionary(api, tmp_path):
         time.sleep(wait)
         return value
 
-    def drive():
+    def start():
         try:
             for _ in range(60):
                 if view.evaluate_js("typeof state !== 'undefined' && state !== null"):
                     break
                 time.sleep(0.25)
-            run("document.querySelector('#hotkeys input[value=\"Right Ctrl\"]').click()")
-            run("document.querySelector('#settings .switch[data-setting=hands_free]').click()")
-            results["minutes_locked"] = run("document.getElementById('hands-free-minutes').disabled")
-            run("document.querySelector('#settings .switch[data-setting=hands_free]').click()")
-            run("const m = document.getElementById('hands-free-minutes'); m.value = '30'; m.dispatchEvent(new Event('change'))")
-            run("document.querySelector('#themes input[value=light]').click()")
-            results["theme"] = run("document.getElementById('app').dataset.theme")
-            results["hint"] = run("document.getElementById('tryit').placeholder")
-            run("document.getElementById('new-word').value = 'Brightwater'; document.getElementById('add-word').requestSubmit()")
-            run("document.getElementById('new-heard').value = 'my sequel'; document.getElementById('new-write').value = 'MySQL'; "
-                "document.getElementById('add-fix').requestSubmit()")
-            run("document.getElementById('new-word').value = 'a -> b'; document.getElementById('add-word').requestSubmit()")
-            results["error"] = run("document.getElementById('word-error').textContent")
-            run("document.querySelector('#word-list .remove[aria-label=\"Remove Ghostwriter\"]').click()")
-            results["chips"] = run("[...document.querySelectorAll('#word-list li')].map((li) => li.textContent).join('|')")
+            time.sleep(0.5)  # the first history check
+            drive(run)
         finally:
             view.destroy()
 
-    webview.start(drive, http_server=True, private_mode=True, storage_path=str(tmp_path / "webview"),
+    webview.start(start, http_server=True, private_mode=True, storage_path=str(tmp_path / "webview"),
                   icon=str(ICON_PATH))
+
+
+def test_the_page_changes_settings_and_the_dictionary(api, tmp_path):
+    results = {}
+
+    def drive(run):
+        run("document.querySelector('#hotkeys input[value=\"Right Ctrl\"]').click()")
+        run("document.querySelector('#settings .switch[data-setting=hands_free]').click()")
+        results["minutes_locked"] = run("document.getElementById('hands-free-minutes').disabled")
+        run("document.querySelector('#settings .switch[data-setting=hands_free]').click()")
+        run("const m = document.getElementById('hands-free-minutes'); m.value = '30'; m.dispatchEvent(new Event('change'))")
+        run("document.querySelector('#themes input[value=light]').click()")
+        results["theme"] = run("document.getElementById('app').dataset.theme")
+        results["hint"] = run("document.getElementById('tryit').placeholder")
+        run("document.getElementById('new-word').value = 'Brightwater'; document.getElementById('add-word').requestSubmit()")
+        run("document.getElementById('new-heard').value = 'my sequel'; document.getElementById('new-write').value = 'MySQL'; "
+            "document.getElementById('add-fix').requestSubmit()")
+        run("document.getElementById('new-word').value = 'a -> b'; document.getElementById('add-word').requestSubmit()")
+        results["error"] = run("document.getElementById('word-error').textContent")
+        run("document.querySelector('#word-list .remove[aria-label=\"Remove Ghostwriter\"]').click()")
+        results["chips"] = run("[...document.querySelectorAll('#word-list li')].map((li) => li.textContent).join('|')")
+
+    _open_page(api, drive, tmp_path)
 
     saved = json.loads((tmp_path / "settings.json").read_text(encoding="utf-8"))
     assert saved["hotkey"] == "Right Ctrl"
@@ -129,6 +156,49 @@ def test_the_page_changes_settings_and_the_dictionary(api, tmp_path):
     assert results["chips"] == "Brightwater"
     dictionary = (tmp_path / "dictionary.txt").read_text(encoding="utf-8")
     assert "my sequel -> MySQL" in dictionary and "Ghostwriter" not in dictionary.replace("# notes", "")
+
+
+def test_home_and_the_history_page_show_dictations(api, tmp_path):
+    history = History(tmp_path / "history.db")
+    history.add("Book the ceramic coating for Friday.", "Google Chrome", 4.2, at=datetime.now() - timedelta(days=1))
+    history.add("gg, queue up again in five", "Discord", 3.0)
+    history.add("Deploy the MySQL backup tonight", "Windows Terminal", 6.5)
+    texts = "[...document.querySelectorAll('{} .entry-text')].map((node) => node.textContent)"
+    results = {}
+
+    def drive(run):
+        results["today"] = run("[document.getElementById('words-today').textContent, document.getElementById('dictations-today').textContent]")
+        results["recent"] = run(texts.format("#recent-list"))
+        run("document.querySelector('.nav[data-view=history]').click()")
+        results["days"] = run("[...document.querySelectorAll('#history-days .day')].map((node) => node.textContent)")
+        results["filters"] = run("[...document.querySelectorAll('#history-filters label')].map((node) => node.textContent)")
+        run("const s = document.getElementById('history-search'); s.value = 'mysql'; s.dispatchEvent(new Event('input'))", wait=0.8)
+        results["search"] = run(texts.format("#history-days"))
+        run("const s = document.getElementById('history-search'); s.value = ''; s.dispatchEvent(new Event('input'))", wait=0.8)
+        run("document.querySelector('#history-filters input[value=Discord]').click()")
+        results["filtered"] = run(texts.format("#history-days"))
+        run("document.querySelector('#history-filters input[value=\"\"]').click()")
+        history.add("This one arrives while the window is open.", "Notepad", 2.0)
+        time.sleep(1.5)
+        results["live"] = run(texts.format("#history-days"))
+        run("document.getElementById('clear-history').click()")
+        results["question"] = run("document.getElementById('clear-question').textContent")
+        run("document.getElementById('clear-yes').click()", wait=1.5)
+        results["cleared"] = run("[document.getElementById('history-empty').hidden, document.querySelectorAll('.entry').length]")
+
+    _open_page(api, drive, tmp_path)
+
+    assert results["today"] == ["11", "2"]
+    assert results["recent"] == ["Deploy the MySQL backup tonight", "gg, queue up again in five",
+                                 "Book the ceramic coating for Friday."]
+    assert results["days"] == ["Today", "Yesterday"]
+    assert results["filters"] == ["All", "Windows Terminal", "Discord", "Google Chrome"]  # ties go to the latest
+    assert results["search"] == ["Deploy the MySQL backup tonight"]
+    assert results["filtered"] == ["gg, queue up again in five"]
+    assert results["live"][0] == "This one arrives while the window is open." and len(results["live"]) == 4
+    assert results["question"] == "Delete all 4 dictations?"
+    assert results["cleared"] == [False, 0]
+    assert history.search()["total"] == 0
 
 
 def _wait_for(check, timeout: float = 20.0) -> bool:

@@ -1,6 +1,6 @@
 """The Ghostwriter app window. It runs as its own small program next to the tray app, so closing it frees all its
-memory and a problem in it can never stop dictation. It only reads and writes settings.json and dictionary.txt;
-the tray app notices those changes and applies them.
+memory and a problem in it can never stop dictation. It only reads and writes settings.json, dictionary.txt, and
+history.db; the tray app notices those changes and applies them.
 
 Start it with: python -m ghostwriter.window
 """
@@ -16,8 +16,9 @@ from pathlib import Path
 
 from ghostwriter import __version__, updates, win32
 from ghostwriter.dictionary import DictionaryFile
-from ghostwriter.paths import (DICTIONARY_PATH, ICON_PATH, LOG_PATH, PROJECT, SETTINGS_PATH, UI_DIR, WEB_DATA_DIR,
-                               WINDOW_LOG_PATH)
+from ghostwriter.history import PAGE_SIZE, History
+from ghostwriter.paths import (DICTIONARY_PATH, HISTORY_PATH, ICON_PATH, LOG_PATH, PROJECT, SETTINGS_PATH, UI_DIR,
+                               WEB_DATA_DIR, WINDOW_LOG_PATH)
 from ghostwriter.recorder import list_microphones
 from ghostwriter.settings import HANDS_FREE_MINUTES, HOTKEYS, Settings
 from ghostwriter.win32 import dwmapi, kernel32, user32
@@ -44,9 +45,11 @@ class Api:
     """What the page can ask for, through window.pywebview.api. Every call reads the files fresh, because the tray
     menu can change the same settings while the window is open."""
 
-    def __init__(self, settings_path: Path = SETTINGS_PATH, dictionary_path: Path = DICTIONARY_PATH) -> None:
+    def __init__(self, settings_path: Path = SETTINGS_PATH, dictionary_path: Path = DICTIONARY_PATH,
+                 history_path: Path = HISTORY_PATH) -> None:
         self._settings_path = settings_path
         self._dictionary = DictionaryFile(dictionary_path)
+        self._history = History(history_path)
         self._window = None
         self._maximized = False
         self._gpu = None
@@ -65,6 +68,7 @@ class Api:
                 "hands_free": settings.hands_free,
                 "hands_free_minutes": settings.hands_free_minutes,
                 "theme": settings.theme,
+                "history": settings.history,
             },
             "hotkeys": list(HOTKEYS),
             "microphones": list_microphones(),
@@ -92,6 +96,18 @@ class Api:
 
     def remove_fix(self, heard: str, write: str) -> dict:
         return self._edit(self._dictionary.remove_fix, heard, write)
+
+    def history(self, query: str = "", app: str = "", limit: int = PAGE_SIZE) -> dict:
+        return {**self._history.search(query, app or None, limit), "apps": self._history.apps()}
+
+    def history_summary(self) -> dict:
+        return self._history.summary()
+
+    def history_stamp(self) -> str:
+        return self._history.stamp()
+
+    def clear_history(self) -> None:
+        self._history.clear()
 
     def open_log(self) -> None:
         os.startfile(LOG_PATH if LOG_PATH.exists() else LOG_PATH.parent)

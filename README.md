@@ -18,7 +18,7 @@ irm https://raw.githubusercontent.com/Vultify/ghostwriter/main/get.ps1 | iex
 
 That downloads the latest version into a `Ghostwriter` folder in your user folder, installs its own copy of Python and its packages inside that folder, adds Ghostwriter to the Start menu, and starts it. The first start downloads the speech model (about 1.6 GB, one time only), and a notification tells you when it's ready.
 
-**Updating:** right click the ghost in the tray and choose **Check for updates**, or run the same command again. Your dictionary and settings are kept.
+**Updating:** right click the ghost in the tray and choose **Check for updates**, or run the same command again. Your dictionary, settings, and history are kept.
 
 **Without the command:** click **Code**, then **Download ZIP** on GitHub, unzip it wherever you want Ghostwriter to live, and double click **install.bat** in that folder.
 
@@ -46,12 +46,15 @@ For longer stretches, **double tap the hotkey** to lock recording on and talk ha
 
 ## The window
 
-- **Home:** your hotkey, a box to try dictating in, and quick switches for sounds, hands free, and the mic
+- **Home:** your hotkey, a box to try dictating in, today's word and dictation counts, your latest dictations, and quick switches for sounds, hands free, and the mic
+- **History:** everything you've dictated, grouped by day, with search, a filter for each app you use most, and a copy button on each one
 - **Dictionary:** add and remove words and fixes
-- **Settings:** hotkey, hands free and when it stops, microphone, speech model, light or dark theme (or follow Windows), sounds, and buttons to open the log, the folder, and `dictionary.txt`
+- **Settings:** hotkey, hands free and when it stops, microphone, speech model, light or dark theme (or follow Windows), sounds, saving history on or off, and buttons to open the log, the folder, and `dictionary.txt`
 - **Check for updates** at the bottom of the sidebar
 
 The tray menu (right click the ghost) has the hotkey, mic, and sounds too, plus Quit. Changes apply right away and are saved to `settings.json`. The log is at `logs/ghostwriter.log`.
+
+History is saved in `history.db` in the Ghostwriter folder and never leaves your PC. Turn it off in Settings to stop saving new dictations, and **Clear history** on the History page deletes everything saved so far.
 
 The window uses Microsoft WebView2, which comes with Windows 11 and Microsoft Edge.
 

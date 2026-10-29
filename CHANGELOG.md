@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The Dictionary page explains the difference: a word is a hint Whisper gets before it listens; a fix swaps what it heard for what you want, every time.
 - Hands free can be turned off, and its time limit set to 5, 15, or 30 minutes.
 - Settings changed in the window apply right away to the running app.
+- History: every dictation is saved on this PC, with the time, how long you talked, and the app it went to. The History page groups them by day, searches them, filters by your most used apps, and copies any of them. New dictations show up while the window is open.
+- Home shows today's words and dictations, this month's words, and your three latest dictations.
+- Saving history can be turned off in Settings, and Clear history deletes everything saved.
+- A dictation is saved to History even if pasting it fails, so the words aren't lost.
 
 ### Changed
 - Starting Ghostwriter while it's already running opens the window instead of showing an "already running" message.

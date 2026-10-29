@@ -6,6 +6,7 @@ PROJECT = Path(__file__).resolve().parent.parent
 SETTINGS_PATH = PROJECT / "settings.json"
 DICTIONARY_PATH = PROJECT / "dictionary.txt"  # personal, so it isn't in git
 STARTER_PATH = PROJECT / "dictionary.example.txt"  # copied to dictionary.txt on first run
+HISTORY_PATH = PROJECT / "history.db"  # personal, so it isn't in git
 LOG_DIR = PROJECT / "logs"
 LOG_PATH = LOG_DIR / "ghostwriter.log"
 WINDOW_LOG_PATH = LOG_DIR / "window.log"

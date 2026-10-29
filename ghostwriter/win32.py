@@ -7,6 +7,7 @@ user32 = ctypes.WinDLL("user32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
 dwmapi = ctypes.WinDLL("dwmapi", use_last_error=True)
+version = ctypes.WinDLL("version", use_last_error=True)
 
 LRESULT = ctypes.c_ssize_t
 ULONG_PTR = ctypes.c_size_t
@@ -228,6 +229,10 @@ for _func, _argtypes, _restype in (
     (kernel32.QueryFullProcessImageNameW, [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, wintypes.LPDWORD],
      wintypes.BOOL),
     (kernel32.CloseHandle, [wintypes.HANDLE], wintypes.BOOL),
+    (version.GetFileVersionInfoSizeW, [wintypes.LPCWSTR, wintypes.LPDWORD], wintypes.DWORD),
+    (version.GetFileVersionInfoW, [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID], wintypes.BOOL),
+    (version.VerQueryValueW, [wintypes.LPCVOID, wintypes.LPCWSTR, ctypes.POINTER(wintypes.LPVOID), wintypes.PUINT],
+     wintypes.BOOL),
     (kernel32.CreateMutexW, [wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR], wintypes.HANDLE),
     (kernel32.GetModuleHandleW, [wintypes.LPCWSTR], wintypes.HMODULE),
     (kernel32.GetCurrentThreadId, [], wintypes.DWORD),

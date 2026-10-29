@@ -53,6 +53,7 @@ class Settings:
     hands_free: bool = True  # double tap locks recording on
     hands_free_minutes: int = 15
     theme: str = "system"
+    history: bool = True  # save each dictation in history.db
     path: Path = field(default=SETTINGS_PATH, repr=False, compare=False)
     _modified: int | None = field(default=None, repr=False, compare=False)
 
@@ -114,6 +115,7 @@ _CHECKS = {
     "hands_free": lambda value: isinstance(value, bool),
     "hands_free_minutes": lambda value: value in HANDS_FREE_MINUTES and not isinstance(value, bool),
     "theme": lambda value: value in THEMES,
+    "history": lambda value: isinstance(value, bool),
 }
 
 

@@ -19,8 +19,9 @@ settings.json
 *.wav
 !ghostwriter/assets/*.wav
 
-# Personal word list (made from dictionary.example.txt on first run)
+# Personal word list (made from dictionary.example.txt on first run) and dictation history
 /dictionary.txt
+/history.db
 
 # Tools install.bat downloads
 .tools/

@@ -26,6 +26,10 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
       <span>Home</span>
     </button>
+    <button type="button" class="nav" data-view="history">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span>History</span>
+    </button>
     <button type="button" class="nav" data-view="dictionary">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><path d="M9 8h6"/></svg>
       <span>Dictionary</span>
@@ -78,9 +82,33 @@
         </div>
       </div>
 
-      <div class="card">
-        <h2>Quick settings</h2>
-        <div class="quick-grid">
+      <section class="stats" aria-label="Your numbers">
+        <div class="card stat">
+          <div class="stat-label">Words today</div>
+          <div class="stat-value" id="words-today">0</div>
+        </div>
+        <div class="card stat">
+          <div class="stat-label">Dictations today</div>
+          <div class="stat-value" id="dictations-today">0</div>
+        </div>
+        <div class="card stat">
+          <div class="stat-label">Words this month · no limit</div>
+          <div class="stat-value" id="words-month">0</div>
+        </div>
+      </section>
+
+      <div class="home-bottom">
+        <section class="card recent" aria-labelledby="recent-title">
+          <div class="card-head">
+            <h2 id="recent-title">Recent</h2>
+            <button type="button" class="text-link" data-view="history">View all</button>
+          </div>
+          <ul class="entries" id="recent-list"></ul>
+          <p class="empty" id="recent-empty" hidden></p>
+        </section>
+
+        <section class="card" aria-labelledby="quick-title">
+          <h2 id="quick-title">Quick settings</h2>
           <div class="setting-row">
             <div>
               <div>Sounds</div>
@@ -99,7 +127,44 @@
             <label for="home-mic">Microphone</label>
             <select id="home-mic" data-setting="microphone"></select>
           </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="view" id="history" aria-labelledby="history-title" hidden>
+      <header class="view-header">
+        <div>
+          <h1 id="history-title">History</h1>
+          <p>Everything you've dictated, kept only on this PC.</p>
         </div>
+        <button type="button" class="button danger" id="clear-history" disabled>Clear history</button>
+        <div class="confirm" id="clear-confirm" hidden>
+          <span id="clear-question"></span>
+          <button type="button" class="button" id="clear-cancel">Cancel</button>
+          <button type="button" class="button danger" id="clear-yes">Delete all</button>
+        </div>
+      </header>
+
+      <p class="notice" id="history-off" hidden>
+        History is off, so new dictations aren't saved.
+        <button type="button" class="text-link" id="history-on">Turn it on</button>
+      </p>
+
+      <div class="history-tools">
+        <div class="search">
+          <label class="sr-only" for="history-search">Search history</label>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          <input type="search" class="text-input" id="history-search" placeholder="Search what you said…" autocomplete="off" spellcheck="false">
+        </div>
+        <fieldset class="filters" id="history-filters">
+          <legend class="sr-only">Show dictations from</legend>
+        </fieldset>
+      </div>
+
+      <div class="card history-list">
+        <div id="history-days"></div>
+        <p class="empty" id="history-empty" hidden></p>
+        <button type="button" class="button" id="history-more" hidden>Show more</button>
       </div>
     </section>
 
@@ -218,6 +283,17 @@
                 <div class="setting-hint">Soft chime when listening starts and stops</div>
               </div>
               <button type="button" class="switch" data-setting="sounds" aria-label="Sounds" aria-pressed="false"><span></span></button>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="history-settings-title">
+            <h2 id="history-settings-title">History</h2>
+            <div class="setting-row">
+              <div>
+                <div>Save dictations</div>
+                <div class="setting-hint">Kept only on this PC, to search and copy later</div>
+              </div>
+              <button type="button" class="switch" data-setting="history" aria-label="Save dictations" aria-pressed="false"><span></span></button>
             </div>
           </section>
 

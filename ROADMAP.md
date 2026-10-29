@@ -82,9 +82,9 @@ Built from Caleb's design (dark and light themes, mint accent, Geist font), show
 - **Checkpoint 8 passed 2026-10-28:** Caleb changed settings and dictionary words from the window, and his next dictations used them
 
 ## Phase 9: history
-- [ ] Save each dictation on this PC, with an on/off switch and Clear history
-- [ ] History page: search, filter by app, copy
-- [ ] Home: recent dictations and word counts
+- [x] Save each dictation on this PC (`history.db`), with an on/off switch and Clear history
+- [x] History page: search, filter by app, copy
+- [x] Home: recent dictations and word counts
 - **Checkpoint 9:** a day of dictations shows up in History and on Home
 
 ## Phase 10: first run

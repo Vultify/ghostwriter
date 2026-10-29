@@ -1,13 +1,15 @@
 """Paste text into whatever app has focus, then put the old clipboard back."""
 
 import ctypes
+import functools
 import time
 from ctypes import wintypes
 from pathlib import Path
 
 from ghostwriter import win32
 from ghostwriter.clipboard import Clipboard
-from ghostwriter.win32 import kernel32, user32
+from ghostwriter.paths import PROJECT
+from ghostwriter.win32 import kernel32, user32, version
 
 # Long enough for slow apps (browsers, terminals) to read the clipboard before we restore it.
 RESTORE_DELAY_SECONDS = 0.5
@@ -35,21 +37,52 @@ class Paster:
         return self.clipboard.restore(previous, sequence)
 
 
-def foreground_app() -> str:
-    """The program name of the window in front, for the log."""
+def foreground_app() -> Path | None:
+    """The program file of the window in front, or None if Windows won't say."""
     process_id = wintypes.DWORD()
     user32.GetWindowThreadProcessId(user32.GetForegroundWindow(), ctypes.byref(process_id))
     process = kernel32.OpenProcess(win32.PROCESS_QUERY_LIMITED_INFORMATION, False, process_id.value)
     if not process:
-        return f"process {process_id.value}"
+        return None
     try:
         name = ctypes.create_unicode_buffer(1024)
         size = wintypes.DWORD(len(name))
         if kernel32.QueryFullProcessImageNameW(process, 0, name, ctypes.byref(size)):
-            return Path(name.value).name
-        return f"process {process_id.value}"
+            return Path(name.value)
+        return None
     finally:
         kernel32.CloseHandle(process)
+
+
+@functools.lru_cache(maxsize=64)
+def app_name(program: Path | None) -> str:
+    """A program's everyday name, like "Google Chrome" for chrome.exe, taken from its file details."""
+    if program is None:
+        return "Unknown app"
+    if program.is_relative_to(PROJECT):
+        return "Ghostwriter"  # the app window's own Python
+    details = _file_details(program)
+    # Store apps keep their real name in the product name; other programs in the description.
+    keys = ("ProductName", "FileDescription") if "WindowsApps" in program.parts else ("FileDescription", "ProductName")
+    return next((details[key] for key in keys if details.get(key)), program.stem)
+
+
+def _file_details(program: Path) -> dict[str, str]:
+    """The description and product name from a program's version info, when it has them."""
+    size = version.GetFileVersionInfoSizeW(str(program), None)
+    data = ctypes.create_string_buffer(size) if size else None
+    if not data or not version.GetFileVersionInfoW(str(program), 0, size, data):
+        return {}
+    value, length = wintypes.LPVOID(), wintypes.UINT()
+    if not version.VerQueryValueW(data, r"\VarFileInfo\Translation", ctypes.byref(value), ctypes.byref(length)):
+        return {}
+    language, codepage = ctypes.cast(value, ctypes.POINTER(wintypes.WORD * 2)).contents
+    details = {}
+    for key in ("FileDescription", "ProductName"):
+        path = f"\\StringFileInfo\\{language:04x}{codepage:04x}\\{key}"
+        if version.VerQueryValueW(data, path, ctypes.byref(value), ctypes.byref(length)) and length.value:
+            details[key] = ctypes.wstring_at(value.value).strip()
+    return details
 
 
 def _wait_for_modifiers_released() -> None:

@@ -4,20 +4,23 @@ import ctypes
 import logging
 import os
 import queue
+import sqlite3
 import sys
 import threading
 import time
 from collections.abc import Callable
 from enum import Enum
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 import numpy as np
 
 from ghostwriter import __version__, sounds, updates, win32
 from ghostwriter.dictionary import DICTIONARY_PATH, DictionaryFile
+from ghostwriter.history import History
 from ghostwriter.hotkey import KeyHook
 from ghostwriter.indicator import Indicator
-from ghostwriter.paster import Paster, foreground_app
+from ghostwriter.paster import Paster, app_name, foreground_app
 from ghostwriter.paths import LOG_PATH
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import Settings
@@ -80,12 +83,14 @@ class Dictation:
         allow_injected: bool = False,
         on_state: Callable[[State], None] = lambda state: None,
         dictionary: DictionaryFile | None = None,
+        history: History | None = None,
     ) -> None:
         self.transcriber = transcriber
         self.recorder = recorder
         self.paster = paster
         self.on_state = on_state
         self.dictionary = dictionary or DictionaryFile()
+        self.history = history  # None saves nothing, like when history is turned off
         self.max_recording_seconds = MAX_RECORDING_SECONDS
         self.hands_free = True  # with this off, a double tap is just two ignored taps
         self._key_events: queue.Queue[_Key | None] = queue.Queue()
@@ -216,11 +221,25 @@ class Dictation:
         if not text:
             log.info("Heard nothing")
             return
+        seconds = len(audio) / SAMPLE_RATE
+        program = foreground_app()
         log.info("%.1fs of audio, transcribed in %.2fs, pasting into %s: %s",
-                 len(audio) / SAMPLE_RATE, elapsed, foreground_app(), text)
-        # The trailing space keeps back to back dictations from running together.
-        if not self.paster.paste(text + " "):
-            log.info("Clipboard changed during the paste, so it was left as is")
+                 seconds, elapsed, program.name if program else "an unknown app", text)
+        try:
+            # The trailing space keeps back to back dictations from running together.
+            if not self.paster.paste(text + " "):
+                log.info("Clipboard changed during the paste, so it was left as is")
+        finally:
+            # Saved even when the paste fails, so the words can still be copied from History.
+            if history := self.history:
+                self._save(history, text, program, seconds)
+
+    @staticmethod
+    def _save(history: History, text: str, program: Path | None, seconds: float) -> None:
+        try:
+            history.add(text, app_name(program), seconds)
+        except sqlite3.Error:
+            log.exception("Couldn't save the dictation to history")
 
 
 class StatusDisplay:
@@ -285,6 +304,7 @@ def _run() -> None:
     recorder = Recorder(microphone=settings.microphone)
     dictionary = DictionaryFile()
     dictionary.current()
+    history = History()
     indicator = Indicator(level=lambda: recorder.level)
     dictation = Dictation(
         transcriber, recorder, Paster(), hotkey=settings.hotkey_code,
@@ -295,11 +315,13 @@ def _run() -> None:
         dictation.set_hotkey(settings.hotkey_code)
         dictation.hands_free = settings.hands_free
         dictation.max_recording_seconds = settings.hands_free_minutes * 60
+        dictation.history = history if settings.history else None
         recorder.microphone = settings.microphone
         tray.refresh()
-        log.info("Settings: hotkey %s, mic %s, sounds %s, hands free %s",
+        log.info("Settings: hotkey %s, mic %s, sounds %s, hands free %s, history %s",
                  settings.hotkey, settings.microphone or "Windows default", "on" if settings.sounds else "off",
-                 f"on, up to {settings.hands_free_minutes} min" if settings.hands_free else "off")
+                 f"on, up to {settings.hands_free_minutes} min" if settings.hands_free else "off",
+                 "on" if settings.history else "off")
 
     tray.on_change = apply_settings
     apply_settings()
