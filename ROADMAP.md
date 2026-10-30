@@ -91,6 +91,9 @@ Built from Caleb's design (dark and light themes, mint accent, Geist font), show
 - [x] A 3 step welcome: speech model download with a progress bar, pick a hotkey, try it
 - **Checkpoint 10 passed 2026-10-28:** a first run with an empty model folder downloaded the real model (1.6 GB in about 90 seconds) with live progress, and Caleb walked through the welcome and dictated into it
 
+## Version 1.3.0 released 2026-10-30
+Phases 8 to 10: the app window, history, and the first run welcome.
+
 ## Phase 11: pill and polish
 - [ ] Pill on/off (it stays at the bottom center, no position setting)
 - [ ] Start with Windows

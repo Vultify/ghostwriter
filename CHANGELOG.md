@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-30
+
+Ghostwriter gets a window: Home, History, Dictionary, and Settings in dark and light, plus a welcome for new installs.
+
 ### Added
 - The Ghostwriter window, in dark and light: Home with your hotkey, a box to try dictating, and quick switches; a Dictionary page to add and remove words and fixes; and Settings for the hotkey, hands free, microphone, theme, sounds, and files. Check for updates sits at the bottom of the sidebar.
 - Starting Ghostwriter opens the window; closing it keeps Ghostwriter running in the tray. Click the ghost, or start it again from the Start menu, to bring the window back. `--tray` starts it without the window.
@@ -71,7 +75,8 @@ The first release: local, unlimited dictation that replaces Wispr Flow for my da
 - A log at `logs/ghostwriter.log`, one copy running at a time, and an error message if it can't start.
 - Tests for the clipboard, hotkey, mic, dictionary, lock mode, settings, and the full dictation loop.
 
-[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/Vultify/ghostwriter/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/Vultify/ghostwriter/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Vultify/ghostwriter/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Vultify/ghostwriter/compare/v1.0.0...v1.1.0
