@@ -50,7 +50,7 @@ def test_tray_menu_changes_are_saved_and_reported(tmp_path):
     tray._change(hotkey="Right Ctrl")
     tray._change(sounds=False)
     saved = json.loads(settings.path.read_text(encoding="utf-8"))
-    assert saved == {"hotkey": "Right Ctrl", "microphone": None, "sounds": False,
+    assert saved == {"hotkey": "Right Ctrl", "microphone": None, "sounds": False, "sound": "soft", "pill": True,
                      "hands_free": True, "hands_free_minutes": 15, "theme": "system", "history": True}
     assert changes == ["Right Ctrl", "Right Ctrl"]
     tray.set_state(State.READY)
@@ -74,26 +74,44 @@ def test_switching_the_hotkey_takes_effect_right_away():
     assert states == [State.LISTENING, State.WORKING, State.READY]
 
 
-def test_turning_sounds_off_silences_them(monkeypatch):
+class _Quiet:
+    """Stands in for the tray and the pill, remembering what the pill was asked to show."""
+
+    def __init__(self) -> None:
+        self.shown = []
+
+    def set_state(self, state):
+        pass
+
+    def show(self, mode):
+        self.shown.append(mode)
+
+
+def test_sounds_play_in_the_chosen_style_and_turn_off(monkeypatch):
     played = []
-    monkeypatch.setattr(sounds, "play_start", lambda: played.append("start"))
-    monkeypatch.setattr(sounds, "play_stop", lambda: played.append("stop"))
-
-    class Quiet:
-        def set_state(self, state):
-            pass
-
-        def show(self, mode):
-            pass
-
-    settings = Settings()
-    display = StatusDisplay(Quiet(), Quiet(), settings)
+    monkeypatch.setattr(sounds, "play_start", lambda style: played.append(("start", style)))
+    monkeypatch.setattr(sounds, "play_stop", lambda style: played.append(("stop", style)))
+    settings = Settings(sound="wood")
+    display = StatusDisplay(_Quiet(), _Quiet(), settings)
     display(State.LISTENING)
     display(State.READY)
     settings.sounds = False
     display(State.LISTENING)
     display(State.READY)
-    assert played == ["start", "stop"]
+    assert played == [("start", "wood"), ("stop", "wood")]
+
+
+def test_turning_the_pill_off_keeps_it_hidden(monkeypatch):
+    monkeypatch.setattr(sounds, "play_start", lambda style: None)
+    monkeypatch.setattr(sounds, "play_stop", lambda style: None)
+    pill = _Quiet()
+    settings = Settings(sounds=False)
+    display = StatusDisplay(_Quiet(), pill, settings)
+    display(State.LISTENING)
+    settings.pill = False
+    display(State.WORKING)
+    display(State.READY)
+    assert pill.shown == [State.LISTENING, None, None]
 
 
 def test_a_chosen_mic_records_and_an_unplugged_one_falls_back_to_default():
@@ -113,9 +131,11 @@ def test_only_one_copy_can_run_at_a_time():
 
 def test_new_settings_load_with_safe_defaults(tmp_path):
     path = tmp_path / "settings.json"
-    path.write_text(json.dumps({"hands_free": "yes", "hands_free_minutes": 7, "theme": "blue"}), encoding="utf-8")
+    path.write_text(json.dumps({"hands_free": "yes", "hands_free_minutes": 7, "theme": "blue", "sound": "kazoo",
+                                "pill": "off"}), encoding="utf-8")
     loaded = Settings.load(path)
     assert (loaded.hands_free, loaded.hands_free_minutes, loaded.theme) == (True, 15, "system")
+    assert (loaded.sound, loaded.pill) == ("soft", True)
 
 
 def test_the_running_app_picks_up_what_the_window_saves(tmp_path):

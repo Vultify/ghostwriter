@@ -95,9 +95,10 @@ Built from Caleb's design (dark and light themes, mint accent, Geist font), show
 Phases 8 to 10: the app window, history, and the first run welcome.
 
 ## Phase 11: pill and polish
-- [ ] Pill on/off (it stays at the bottom center, no position setting)
-- [ ] Start with Windows
-- [ ] Mic test meter in Settings
+- [x] Pill on/off (it stays at the bottom center, no position setting)
+- [x] Start with Windows
+- [x] Mic test meter in Settings
+- [x] Six sound styles to pick from (Caleb's sound sheet, added 2026-10-30)
 - **Checkpoint 11:** Caleb uses each one for a day
 
 ## Phase 12: local AI cleanup (on/off switch, its own page in the app)

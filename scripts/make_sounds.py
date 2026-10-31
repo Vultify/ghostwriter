@@ -1,4 +1,4 @@
-"""Make Ghostwriter's start and stop sounds: soft, low "bloops" that swell in gently and fade fast."""
+"""Make Ghostwriter's Soft start and stop sounds: low "bloops" that swell in gently and fade fast."""
 
 import wave
 from pathlib import Path
@@ -34,6 +34,6 @@ def save(name: str, samples: np.ndarray) -> None:
 
 if __name__ == "__main__":
     ASSETS.mkdir(exist_ok=True)
-    save("start", bloop(start_hz=470, end_hz=523, glide=0.02, attack=0.022, decay=0.009, seconds=0.12))  # settles up onto C
-    save("stop", bloop(start_hz=523, end_hz=349, glide=0.035, attack=0.03, decay=0.02, seconds=0.17))  # slides down to F
-    print(f"Saved start.wav and stop.wav to {ASSETS}")
+    save("soft-start", bloop(start_hz=470, end_hz=523, glide=0.02, attack=0.022, decay=0.009, seconds=0.12))  # settles up onto C
+    save("soft-stop", bloop(start_hz=523, end_hz=349, glide=0.035, attack=0.03, decay=0.02, seconds=0.17))  # slides down to F
+    print(f"Saved soft-start.wav and soft-stop.wav to {ASSETS}")

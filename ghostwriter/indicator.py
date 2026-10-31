@@ -15,6 +15,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from ghostwriter import win32
+from ghostwriter.audio import loudness
 from ghostwriter.state import State
 from ghostwriter.win32 import gdi32, kernel32, user32
 
@@ -33,21 +34,12 @@ BORDER = (255, 255, 255, 38)
 RED = (255, 69, 58, 255)
 WHITE = (255, 255, 255, 235)
 
-# Mic loudness range mapped onto the bars, from room quiet to normal speaking.
-QUIET_DB, LOUD_DB = -55.0, -15.0
-
 _CLASS_NAME = "GhostwriterIndicator"
 _EX_STYLE = (
     win32.WS_EX_LAYERED | win32.WS_EX_TRANSPARENT | win32.WS_EX_TOPMOST | win32.WS_EX_TOOLWINDOW | win32.WS_EX_NOACTIVATE
 )
 _window_proc = win32.WNDPROC(lambda window, message, wparam, lparam: user32.DefWindowProcW(window, message, wparam, lparam))
 _class_lock = threading.Lock()
-
-
-def loudness(rms: float) -> float:
-    """Map a mic RMS level onto 0 to 1 for the bars."""
-    db = 20 * math.log10(max(rms, 1e-9))
-    return min(1.0, max(0.0, (db - QUIET_DB) / (LOUD_DB - QUIET_DB)))
 
 
 class Indicator:

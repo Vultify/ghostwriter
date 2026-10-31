@@ -19,7 +19,8 @@ STARTER = "# notes stay put\nGhostwriter\n\n# a section\nsea whiz -> CIWS\n"
 def api(tmp_path):
     (tmp_path / "dictionary.txt").write_text(STARTER, encoding="utf-8")
     return Api(settings_path=tmp_path / "settings.json", dictionary_path=tmp_path / "dictionary.txt",
-               history_path=tmp_path / "history.db", startup_path=tmp_path / "startup.json")
+               history_path=tmp_path / "history.db", startup_path=tmp_path / "startup.json",
+               login_folder=tmp_path / "Startup")
 
 
 def test_state_has_everything_the_page_shows(api):
@@ -27,10 +28,23 @@ def test_state_has_everything_the_page_shows(api):
     assert state["settings"]["theme"] == "system"
     assert state["settings"]["hands_free"] is True
     assert state["settings"]["history"] is True
+    assert (state["settings"]["sound"], state["settings"]["pill"]) == ("soft", True)
+    assert state["soundStyles"] == ["soft", "glass", "bubble", "wood", "tap", "chime"]
+    assert state["startWithWindows"] is False
     assert state["firstRun"] is False
     assert state["hotkeys"] == list(HOTKEYS)
     assert state["handsFreeMinutes"] == [5, 15, 30]
     assert state["microphones"] and state["gpu"]
+
+
+def test_the_mic_test_opens_the_mic_and_reports_its_level(api):
+    assert api.start_mic_test()
+    time.sleep(0.3)
+    level = api.mic_level()
+    api.stop_mic_test()
+    assert 0.0 <= level <= 1.0
+    assert api.mic_level() == 0.0  # closed again
+    api.stop_mic_test()  # stopping twice is fine
 
 
 def test_settings_save_and_bad_values_are_refused(api, tmp_path):
@@ -157,6 +171,35 @@ def test_the_page_changes_settings_and_the_dictionary(api, tmp_path):
     assert results["chips"] == "Brightwater"
     dictionary = (tmp_path / "dictionary.txt").read_text(encoding="utf-8")
     assert "my sequel -> MySQL" in dictionary and "Ghostwriter" not in dictionary.replace("# notes", "")
+
+
+def test_the_settings_page_sounds_pill_start_with_windows_and_mic_test(api, tmp_path):
+    results = {}
+
+    def drive(run):
+        run("showView('settings')")
+        run("document.querySelector('#sound-styles input[value=tap]').click()", wait=1.2)  # also plays a preview
+        results["note"] = run("document.getElementById('sound-note').textContent")
+        run("document.querySelector('#settings .switch[data-setting=pill]').click()")
+        run("document.getElementById('start-with-windows').click()", wait=2)
+        results["startup"] = run("document.getElementById('start-with-windows').getAttribute('aria-pressed')")
+        run("document.querySelector('#settings .switch[data-setting=sounds]').click()")
+        results["styles_off"] = run("document.getElementById('sound-styles').disabled")
+        run("document.getElementById('mic-test').click()", wait=1)
+        results["testing"] = run("[document.getElementById('mic-test').textContent, "
+                                 "document.getElementById('mic-meter').classList.contains('live')]")
+        run("showView('home')")
+        results["stopped"] = run("document.getElementById('mic-test').textContent")
+
+    _open_page(api, drive, tmp_path)
+
+    saved = json.loads((tmp_path / "settings.json").read_text(encoding="utf-8"))
+    assert (saved["sound"], saved["pill"], saved["sounds"]) == ("tap", False, False)
+    assert "click" in results["note"]
+    assert results["startup"] == "true" and (tmp_path / "Startup" / "Ghostwriter.lnk").exists()
+    assert results["styles_off"] is True
+    assert results["testing"] == ["Stop test", True]
+    assert results["stopped"] == "Test mic"  # leaving Settings closes the mic
 
 
 def test_home_and_the_history_page_show_dictations(api, tmp_path):

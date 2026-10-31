@@ -1,6 +1,7 @@
 """The Ghostwriter app window. It runs as its own small program next to the tray app, so closing it frees all its
 memory and a problem in it can never stop dictation. It only reads and writes settings.json, dictionary.txt, and
-history.db, and reads startup.json to follow the first download; the tray app notices changes and applies them.
+history.db (plus the Start with Windows shortcut), and reads startup.json to follow the first download; the tray app
+notices changes and applies them.
 
 Start it with: python -m ghostwriter.window
 """
@@ -14,12 +15,13 @@ import winreg
 from ctypes import wintypes
 from pathlib import Path
 
-from ghostwriter import __version__, startup, updates, win32
+from ghostwriter import __version__, shortcuts, sounds, startup, updates, win32
+from ghostwriter.audio import loudness
 from ghostwriter.dictionary import DictionaryFile
 from ghostwriter.history import PAGE_SIZE, History
 from ghostwriter.paths import (DICTIONARY_PATH, HISTORY_PATH, ICON_PATH, LOG_PATH, PROJECT, SETTINGS_PATH,
                                STARTUP_PATH, UI_DIR, WEB_DATA_DIR, WINDOW_LOG_PATH)
-from ghostwriter.recorder import list_microphones
+from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import HANDS_FREE_MINUTES, HOTKEYS, Settings
 from ghostwriter.win32 import dwmapi, kernel32, user32
 
@@ -46,11 +48,14 @@ class Api:
     menu can change the same settings while the window is open."""
 
     def __init__(self, settings_path: Path = SETTINGS_PATH, dictionary_path: Path = DICTIONARY_PATH,
-                 history_path: Path = HISTORY_PATH, startup_path: Path = STARTUP_PATH) -> None:
+                 history_path: Path = HISTORY_PATH, startup_path: Path = STARTUP_PATH,
+                 login_folder: Path | None = None) -> None:
         self._settings_path = settings_path
         self._dictionary = DictionaryFile(dictionary_path)
         self._history = History(history_path)
         self._startup_path = startup_path
+        self._login_folder = login_folder  # where the Start with Windows shortcut goes; None is Windows' own
+        self._mic_test: Recorder | None = None
         # The tray app is downloading the speech model, so this is a new install: open on the welcome.
         self._first_run = startup.read(startup_path).get("model") == "downloading"
         self._window = None
@@ -73,7 +78,11 @@ class Api:
                 "hands_free_minutes": settings.hands_free_minutes,
                 "theme": settings.theme,
                 "history": settings.history,
+                "sound": settings.sound,
+                "pill": settings.pill,
             },
+            "startWithWindows": shortcuts.starts_with_windows(self._login_folder),
+            "soundStyles": list(sounds.STYLES),
             "hotkeys": list(HOTKEYS),
             "microphones": list_microphones(),
             "handsFreeMinutes": list(HANDS_FREE_MINUTES),
@@ -100,6 +109,35 @@ class Api:
 
     def remove_fix(self, heard: str, write: str) -> dict:
         return self._edit(self._dictionary.remove_fix, heard, write)
+
+    def set_start_with_windows(self, on: bool) -> dict:
+        shortcuts.set_start_with_windows(bool(on), self._login_folder)
+        return self.state()
+
+    def preview_sound(self, style: str) -> None:
+        if style in sounds.STYLES:
+            sounds.preview(style)
+
+    def start_mic_test(self) -> bool:
+        """Open the chosen mic so the page can show its level. Returns whether it opened."""
+        self.stop_mic_test()
+        test = Recorder(microphone=Settings.load(self._settings_path).microphone)
+        try:
+            test.start()
+        except Exception as error:
+            log.warning("Couldn't open the mic for a test: %s", error)
+            return False
+        self._mic_test = test
+        return True
+
+    def mic_level(self) -> float:
+        test = self._mic_test
+        return loudness(test.level) if test else 0.0
+
+    def stop_mic_test(self) -> None:
+        test, self._mic_test = self._mic_test, None
+        if test:
+            test.stop()
 
     def startup_status(self) -> dict:
         return startup.read(self._startup_path)
@@ -150,6 +188,7 @@ class Api:
         self._maximized = not self._maximized
 
     def close(self) -> None:
+        self.stop_mic_test()
         self._window.destroy()
 
     def _edit(self, change, *values) -> dict:

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ghostwriter import win32
 from ghostwriter.paths import SETTINGS_PATH
+from ghostwriter.sounds import STYLES
 from ghostwriter.win32 import user32
 
 # Single keys that make good hotkeys: easy to reach and rarely needed on their own.
@@ -50,6 +51,8 @@ class Settings:
     hotkey: str = field(default_factory=default_hotkey)
     microphone: str | None = None  # None follows the Windows default mic
     sounds: bool = True
+    sound: str = "soft"  # which start and stop sounds, from sounds.STYLES
+    pill: bool = True  # the listening pill at the bottom of the screen
     hands_free: bool = True  # double tap locks recording on
     hands_free_minutes: int = 15
     theme: str = "system"
@@ -112,6 +115,8 @@ _CHECKS = {
     "hotkey": lambda value: isinstance(value, str) and value in HOTKEYS,
     "microphone": lambda value: value is None or isinstance(value, str),
     "sounds": lambda value: isinstance(value, bool),
+    "sound": lambda value: value in STYLES,
+    "pill": lambda value: isinstance(value, bool),
     "hands_free": lambda value: isinstance(value, bool),
     "hands_free_minutes": lambda value: value in HANDS_FREE_MINUTES and not isinstance(value, bool),
     "theme": lambda value: value in THEMES,

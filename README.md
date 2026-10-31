@@ -42,14 +42,14 @@ For longer stretches, **double tap the hotkey** to lock recording on and talk ha
 
 - A ghost icon in the system tray shows Ghostwriter is running, and turns red while it listens.
 - A small pill at the bottom of the screen shows a live mic level while you talk, then dots while it types. In hands free mode its red dot becomes a stop square.
-- A soft sound plays when listening starts and stops. Locking on plays it twice.
+- A short sound plays when listening starts and stops (pick Soft, Glass, Bubble, Wood, Tap, or Chime in Settings). Locking on plays it twice.
 
 ## The window
 
 - **Home:** your hotkey, a box to try dictating in, today's word and dictation counts, your latest dictations, and quick switches for sounds, hands free, and the mic
 - **History:** everything you've dictated, grouped by day, with search, a filter for each app you use most, and a copy button on each one
 - **Dictionary:** add and remove words and fixes
-- **Settings:** hotkey, hands free and when it stops, microphone, speech model, light or dark theme (or follow Windows), sounds, saving history on or off, and buttons to open the log, the folder, and `dictionary.txt`
+- **Settings:** hotkey, hands free and when it stops, microphone with a live test meter, speech model, light or dark theme (or follow Windows), six sound styles to pick from (or no sound), the listening pill on or off, start with Windows, saving history on or off, and buttons to open the log and the folder
 - **Check for updates** at the bottom of the sidebar
 
 The tray menu (right click the ghost) has the hotkey, mic, and sounds too, plus Quit. Changes apply right away and are saved to `settings.json`. The log is at `logs/ghostwriter.log`.

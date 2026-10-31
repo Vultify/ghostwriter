@@ -246,7 +246,11 @@
           <section class="card" aria-labelledby="mic-title">
             <h2 id="mic-title">Microphone</h2>
             <select id="settings-mic" data-setting="microphone" aria-labelledby="mic-title"></select>
-            <p class="hint">The mic only opens while you dictate. Plugged in a new one? Restart Ghostwriter to see it.</p>
+            <div class="mic-test">
+              <div class="meter" id="mic-meter" aria-hidden="true"></div>
+              <button type="button" class="button" id="mic-test">Test mic</button>
+            </div>
+            <p class="hint" id="mic-hint">The mic only opens while you dictate or test it. Plugged in a new one? Restart Ghostwriter to see it.</p>
           </section>
 
           <section class="card" aria-labelledby="model-title">
@@ -280,29 +284,46 @@
             <div class="setting-row">
               <div>
                 <div>Sounds</div>
-                <div class="setting-hint">Soft chime when listening starts and stops</div>
+                <div class="setting-hint">A short sound when listening starts and stops</div>
               </div>
               <button type="button" class="switch" data-setting="sounds" aria-label="Sounds" aria-pressed="false"><span></span></button>
             </div>
-          </section>
-
-          <section class="card" aria-labelledby="history-settings-title">
-            <h2 id="history-settings-title">History</h2>
+            <fieldset class="choices" id="sound-styles">
+              <legend class="sr-only">Sound</legend>
+            </fieldset>
+            <p class="hint" id="sound-note"></p>
+            <div class="divider"></div>
             <div class="setting-row">
               <div>
-                <div>Save dictations</div>
-                <div class="setting-hint">Kept only on this PC, to search and copy later</div>
+                <div>Listening pill</div>
+                <div class="setting-hint">Mic level on screen while you talk</div>
               </div>
-              <button type="button" class="switch" data-setting="history" aria-label="Save dictations" aria-pressed="false"><span></span></button>
+              <button type="button" class="switch" data-setting="pill" aria-label="Listening pill" aria-pressed="false"><span></span></button>
             </div>
           </section>
 
-          <section class="card" aria-labelledby="files-title">
-            <h2 id="files-title">Files</h2>
-            <div class="button-row">
-              <button type="button" class="button" data-open="log">Open log</button>
-              <button type="button" class="button" data-open="folder">Open folder</button>
-              <button type="button" class="button" data-open="dictionary">Open dictionary.txt</button>
+          <section class="card" aria-labelledby="general-title">
+            <h2 id="general-title">General</h2>
+            <div class="setting-row">
+              <div>
+                <div>Start with Windows</div>
+                <div class="setting-hint">Ghost is in the tray when you log in</div>
+              </div>
+              <button type="button" class="switch" id="start-with-windows" aria-label="Start with Windows" aria-pressed="false"><span></span></button>
+            </div>
+            <div class="setting-row">
+              <div>
+                <div>Save dictation history</div>
+                <div class="setting-hint">Stored only on this PC</div>
+              </div>
+              <button type="button" class="switch" data-setting="history" aria-label="Save dictation history" aria-pressed="false"><span></span></button>
+            </div>
+            <div class="setting-row">
+              <div>Files</div>
+              <div class="button-row">
+                <button type="button" class="button" data-open="log">Open log</button>
+                <button type="button" class="button" data-open="folder">Open folder</button>
+              </div>
             </div>
           </section>
         </div>

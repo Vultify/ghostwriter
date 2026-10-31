@@ -256,12 +256,12 @@ class StatusDisplay:
         # Locking on plays the start sound a second time, so a double tap is heard as two blips.
         if self.settings.sounds:
             if state.is_recording:
-                sounds.play_start()
+                sounds.play_start(self.settings.sound)
             elif self._state.is_recording:
-                sounds.play_stop()
+                sounds.play_stop(self.settings.sound)
         self._state = state
         self.tray.set_state(state)
-        self.indicator.show(None if state is State.READY else state)
+        self.indicator.show(state if state is not State.READY and self.settings.pill else None)
 
 
 def main() -> None:
@@ -325,8 +325,9 @@ def _run() -> None:
         dictation.history = history if settings.history else None
         recorder.microphone = settings.microphone
         tray.refresh()
-        log.info("Settings: hotkey %s, mic %s, sounds %s, hands free %s, history %s",
-                 settings.hotkey, settings.microphone or "Windows default", "on" if settings.sounds else "off",
+        log.info("Settings: hotkey %s, mic %s, sounds %s, pill %s, hands free %s, history %s",
+                 settings.hotkey, settings.microphone or "Windows default",
+                 settings.sound if settings.sounds else "off", "on" if settings.pill else "off",
                  f"on, up to {settings.hands_free_minutes} min" if settings.hands_free else "off",
                  "on" if settings.history else "off")
 

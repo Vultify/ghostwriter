@@ -743,6 +743,40 @@ kbd {
 
 /* Settings */
 
+.choices { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; border: 0; }
+
+.choices:disabled { opacity: 0.5; }
+
+.choices input { position: absolute; opacity: 0; pointer-events: none; }
+
+.choice {
+  height: 32px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--field-line);
+  border-radius: 999px;
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.choices:disabled .choice { cursor: default; }
+
+.choice:hover { border-color: var(--cap-line); }
+
+.choices input:checked + .choice { border-color: var(--ink); background: var(--accent-soft); color: var(--ink); }
+
+.choices input:focus-visible + .choice { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.mic-test { display: flex; align-items: center; gap: 12px; }
+
+.meter { flex-grow: 1; height: 28px; display: flex; align-items: center; gap: 3px; }
+
+.meter span { width: 4px; height: 4px; flex-shrink: 0; border-radius: 2px; background: var(--cap-line); transition: height 0.06s linear; }
+
+.meter.live span { background: var(--ink); }
+
 .model-facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 13px; }
 
 .model-facts dt { color: var(--faint); }

@@ -43,12 +43,14 @@ def test_tray_starts_switches_state_and_stops(tmp_path):
     tray.stop()
 
 
-def test_sounds_are_short_and_play():
-    for name in ("start", "stop"):
-        with wave.open(str(sounds.ASSETS / f"{name}.wav")) as clip:
-            assert clip.getnframes() / clip.getframerate() < 0.2
-    sounds.play_start()
-    sounds.play_stop()
+def test_every_sound_style_is_short_and_plays():
+    for style in sounds.STYLES:
+        for part in ("start", "stop"):
+            with wave.open(str(sounds.sound_path(style, part))) as clip:
+                assert clip.getnframes() / clip.getframerate() < 1.0, f"{style} {part} is too long"
+    sounds.play_start("soft")
+    sounds.play_stop("soft")
+    sounds.preview("tap")
 
 
 class FakeRecorder:

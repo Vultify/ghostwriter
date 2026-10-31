@@ -42,8 +42,22 @@ function bindPage() {
   });
 
   document.querySelectorAll("select[data-setting='microphone']").forEach((select) => {
-    select.addEventListener("change", () => change("microphone", select.value || null));
+    select.addEventListener("change", async () => {
+      await change("microphone", select.value || null);
+      if (micTest.timer) startMicTest();  // switch the test over to the new mic
+    });
   });
+
+  document.getElementById("start-with-windows").addEventListener("click", async () => {
+    render(await api().set_start_with_windows(!state.startWithWindows));
+  });
+  const styles = document.getElementById("sound-styles");
+  styles.addEventListener("change", (event) => change("sound", event.target.value));
+  styles.addEventListener("click", (event) => { if (event.target.matches("input")) api().preview_sound(event.target.value); });
+
+  const meter = document.getElementById("mic-meter");
+  meter.replaceChildren(...Array.from({ length: METER_BARS }, () => document.createElement("span")));
+  document.getElementById("mic-test").addEventListener("click", () => (micTest.timer ? stopMicTest() : startMicTest()));
   document.getElementById("hands-free-minutes").addEventListener("change", (event) => {
     change("hands_free_minutes", Number(event.target.value));
   });
@@ -52,7 +66,7 @@ function bindPage() {
   document.getElementById("setup-hotkeys").addEventListener("change", (event) => change("hotkey", event.target.value));
   document.getElementById("themes").addEventListener("change", (event) => change("theme", event.target.value));
 
-  const openers = { log: "open_log", folder: "open_folder", dictionary: "open_dictionary_file" };
+  const openers = { log: "open_log", folder: "open_folder" };
   document.querySelectorAll("[data-open]").forEach((button) => {
     button.addEventListener("click", () => api()[openers[button.dataset.open]]());
   });
@@ -88,6 +102,7 @@ async function change(name, value) {
 function showView(name) {
   document.querySelectorAll(".view").forEach((view) => { view.hidden = view.id !== name; });
   showClearQuestion(false);
+  if (name !== "settings") stopMicTest();
   document.querySelectorAll(".nav[data-view]").forEach((button) => {
     if (button.dataset.view === name) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
@@ -121,6 +136,8 @@ function render(next) {
   document.querySelectorAll("#themes input").forEach((input) => { input.checked = input.value === settings.theme; });
   document.getElementById("history-off").hidden = settings.history;
   document.getElementById("setup-tip").hidden = !settings.hands_free;
+  document.getElementById("start-with-windows").setAttribute("aria-pressed", String(state.startWithWindows));
+  fillSoundStyles(settings);
   if (shown.summary) renderSummary(shown.summary);
 }
 
@@ -155,6 +172,71 @@ function fillHotkeys(id, chosen) {
     return label;
   });
   fieldset.replaceChildren(legend, ...caps);
+}
+
+const SOUND_NOTES = {
+  soft: "Soft, low bloops. Short, so they never step on your first word.",
+  glass: "A struck-glass note. Press rings high, release answers lower, and it rings out a little.",
+  bubble: "A round water-drop pop that bends up on press and down on release.",
+  wood: "A warm marimba tap that sits under game audio instead of cutting through it.",
+  tap: "A quiet keyboard-style click with a low thump. Barely there.",
+  chime: "Two quick notes, rising on press and falling on release.",
+};
+
+// Picking a sound plays it, and so does clicking the one already picked. Built once, so arrow keys keep their place.
+function fillSoundStyles(settings) {
+  const fieldset = document.getElementById("sound-styles");
+  if (!fieldset.querySelector("input")) {
+    fieldset.append(...state.soundStyles.map((style) => {
+      const label = document.createElement("label");
+      label.append(Object.assign(document.createElement("input"), { type: "radio", name: "sound", value: style }),
+        element("span", "choice", style[0].toUpperCase() + style.slice(1)));
+      return label;
+    }));
+  }
+  fieldset.querySelectorAll("input").forEach((input) => { input.checked = input.value === settings.sound; });
+  fieldset.disabled = !settings.sounds;
+  document.getElementById("sound-note").textContent = SOUND_NOTES[settings.sound];
+}
+
+// Mic test: opens the chosen mic and draws its level as bars that scroll left, newest on the right.
+
+const METER_BARS = 24;
+const MIC_TEST_SECONDS = 20;  // stops by itself, so the mic never stays open by accident
+const micTest = { timer: null, levels: [], startedAt: 0, hint: null };
+
+async function startMicTest() {
+  stopMicTest();
+  const button = document.getElementById("mic-test");
+  const hint = document.getElementById("mic-hint");
+  micTest.hint ??= hint.textContent;
+  const opened = await api().start_mic_test();
+  hint.textContent = opened ? micTest.hint : "Couldn't open that mic. Check that it's plugged in, or pick another one.";
+  if (!opened) return;
+  micTest.levels = [];
+  micTest.startedAt = performance.now();
+  micTest.timer = setInterval(drawMicLevel, 60);
+  button.textContent = "Stop test";
+  document.getElementById("mic-meter").classList.add("live");
+}
+
+function stopMicTest() {
+  if (!micTest.timer) return;
+  clearInterval(micTest.timer);
+  micTest.timer = null;
+  api().stop_mic_test();
+  document.getElementById("mic-test").textContent = "Test mic";
+  const meter = document.getElementById("mic-meter");
+  meter.classList.remove("live");
+  meter.querySelectorAll("span").forEach((bar) => { bar.style.height = ""; });
+}
+
+async function drawMicLevel() {
+  if (performance.now() - micTest.startedAt > MIC_TEST_SECONDS * 1000) return stopMicTest();
+  micTest.levels = [...micTest.levels, await api().mic_level()].slice(-METER_BARS);
+  const bars = document.getElementById("mic-meter").children;
+  const offset = METER_BARS - micTest.levels.length;
+  micTest.levels.forEach((level, index) => { bars[offset + index].style.height = `${4 + Math.round(level * 24)}px`; });
 }
 
 // Dictionary

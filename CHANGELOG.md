@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- Six sound styles to pick from in Settings: Soft (the original), Glass, Bubble, Wood, Tap, and Chime. Picking one plays it.
+- The listening pill can be turned off in Settings.
+- Start with Windows: Ghostwriter waits in the tray when you log in.
+- A mic test in Settings with a live level meter. It closes the mic by itself after 20 seconds or when you leave Settings.
+
+### Changed
+- Settings is laid out like the design: Feedback holds the sounds and the pill, and a new General card holds Start with Windows, history, and the file buttons. Open dictionary.txt moved to Edit as text on the Dictionary page.
+
 ## [1.3.0] - 2026-10-30
 
 Ghostwriter gets a window: Home, History, Dictionary, and Settings in dark and light, plus a welcome for new installs.
