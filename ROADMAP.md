@@ -101,6 +101,9 @@ Phases 8 to 10: the app window, history, and the first run welcome.
 - [x] Six sound styles to pick from (Caleb's sound sheet, added 2026-10-30)
 - **Checkpoint 11:** Caleb uses each one for a day
 
+## Version 1.4.0 released 2026-10-30
+Phase 11: sound styles, pill on/off, Start with Windows, and the mic test.
+
 ## Phase 12: local AI cleanup (on/off switch, its own page in the app)
 - [ ] Small local model on the GPU removes filler words, formats lists, and fixes punctuation
 - [ ] Voice commands ("new line", "scratch that")

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-30
+
+Pick your sounds, hide the pill, test your mic, and start with Windows.
+
 ### Added
 - Six sound styles to pick from in Settings: Soft (the original), Glass, Bubble, Wood, Tap, and Chime. Picking one plays it.
 - The listening pill can be turned off in Settings.
@@ -84,7 +88,8 @@ The first release: local, unlimited dictation that replaces Wispr Flow for my da
 - A log at `logs/ghostwriter.log`, one copy running at a time, and an error message if it can't start.
 - Tests for the clipboard, hotkey, mic, dictionary, lock mode, settings, and the full dictation loop.
 
-[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/Vultify/ghostwriter/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Vultify/ghostwriter/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/Vultify/ghostwriter/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Vultify/ghostwriter/compare/v1.1.0...v1.2.0
