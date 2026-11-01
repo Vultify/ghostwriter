@@ -18,6 +18,7 @@ window.addEventListener("pywebviewready", async () => {
   bindPage();
   render(await api().state());
   if (state.firstRun) startSetup();
+  else watchEngine();  // in case an engine switch is still going
   app.classList.add("loaded");
   renderDictionary(await api().dictionary());
   await watchHistory();
@@ -50,6 +51,10 @@ function bindPage() {
 
   document.getElementById("start-with-windows").addEventListener("click", async () => {
     render(await api().set_start_with_windows(!state.startWithWindows));
+  });
+  document.getElementById("engines").addEventListener("change", async (event) => {
+    await change("engine", event.target.value);
+    watchEngine(true);
   });
   const styles = document.getElementById("sound-styles");
   styles.addEventListener("change", (event) => change("sound", event.target.value));
@@ -117,7 +122,8 @@ function render(next) {
   const settings = state.settings;
   applyTheme();
 
-  const text = { hotkey: settings.hotkey, version: `v${state.version}`, model: state.model, gpu: state.gpu, modelSize: `${state.modelSize} · downloaded` };
+  const text = { hotkey: settings.hotkey, version: `v${state.version}`, model: state.model, gpu: state.gpu,
+    modelSize: `${state.modelSize} · ${state.modelDownloaded ? "downloaded" : "downloading"}` };
   document.querySelectorAll("[data-text]").forEach((node) => { node.textContent = text[node.dataset.text]; });
 
   document.querySelectorAll(".switch[data-setting]").forEach((button) => {
@@ -138,7 +144,53 @@ function render(next) {
   document.getElementById("setup-tip").hidden = !settings.hands_free;
   document.getElementById("start-with-windows").setAttribute("aria-pressed", String(state.startWithWindows));
   fillSoundStyles(settings);
+  fillEngines();
   if (shown.summary) renderSummary(shown.summary);
+}
+
+// Only PCs with an NVIDIA card have a choice; everywhere else whisper.cpp is the one engine that runs.
+function fillEngines() {
+  const fieldset = document.getElementById("engines");
+  if (!fieldset.querySelector("input")) {
+    fieldset.append(...state.engines.map((engine) => {
+      const label = document.createElement("label");
+      label.append(Object.assign(document.createElement("input"), { type: "radio", name: "engine", value: engine }),
+        element("span", "choice", engine));
+      return label;
+    }));
+  }
+  fieldset.querySelectorAll("input").forEach((input) => { input.checked = input.value === state.engine; });
+  fieldset.hidden = state.engines.length < 2;
+  document.getElementById("engine-hint").hidden = state.engines.length < 2;
+}
+
+// While the tray app switches engines it reports progress in startup.json; this shows it until the new one is ready.
+// Right after a pick, it allows a few seconds for the tray app to notice the new setting.
+async function watchEngine(picked = false) {
+  clearTimeout(watchEngine.timer);
+  if (picked) watchEngine.pickedAt = performance.now();
+  const status = await api().startup_status();
+  const line = document.getElementById("engine-status");
+  const current = status.engine === state.engine;
+  const noticing = !current && performance.now() - (watchEngine.pickedAt ?? -Infinity) < 10000;
+  const busy = current && (status.model === "downloading" || status.model === "loading");
+  const failed = current && status.model === "failed";
+  const messages = {
+    downloading: status.total ? `Downloading the ${state.engine} model: ${gigabytes(status.done)} of ${gigabytes(status.total)} GB` : `Downloading the ${state.engine} model…`,
+    loading: `Loading ${state.engine} onto your graphics card…`,
+    failed: `Couldn't switch to ${state.engine}. Details are in the log.`,
+  };
+  line.hidden = !(noticing || busy || failed);
+  line.textContent = noticing ? `Switching to ${state.engine}…` : messages[status.model] || "";
+  line.classList.toggle("failed", failed);
+  if (noticing || busy) {
+    watchEngine.watching = true;
+    watchEngine.timer = setTimeout(watchEngine, 500);
+  } else if (watchEngine.watching) {
+    watchEngine.watching = false;
+    watchEngine.pickedAt = null;
+    if (current && status.model === "ready") render(await api().state());  // picks up which graphics it runs on
+  }
 }
 
 function applyTheme() {
@@ -463,7 +515,7 @@ function element(tag, className, text) {
 // First run
 
 const DOWNLOAD_TEXT = {
-  downloading: ["Getting the speech model", "A one-time 1.6 GB download. After this, Ghostwriter never needs the internet to hear you."],
+  downloading: ["Getting the speech model", "A one-time {size} download. After this, Ghostwriter never needs the internet to hear you."],
   loading: ["Setting it up", "Loading the speech model onto your graphics card. This takes a few seconds."],
   ready: ["Ready to go", "The speech model is on this PC now, so nothing you say ever needs the internet."],
   failed: ["The download stopped", "Check your internet connection, then start Ghostwriter again from the Start menu. It picks up where it left off."],
@@ -511,7 +563,7 @@ async function watchDownload() {
 function renderDownload(status) {
   const [title, text] = DOWNLOAD_TEXT[status.model];
   document.getElementById("download-title").textContent = title;
-  document.getElementById("download-text").textContent = text;
+  document.getElementById("download-text").textContent = text.replace("{size}", state.modelSize);
   const downloading = status.model === "downloading";
   const bar = document.getElementById("download-bar");
   bar.classList.toggle("stopped", status.model === "failed");

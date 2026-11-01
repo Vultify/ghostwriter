@@ -35,6 +35,13 @@ def test_state_has_everything_the_page_shows(api):
     assert state["hotkeys"] == list(HOTKEYS)
     assert state["handsFreeMinutes"] == [5, 15, 30]
     assert state["microphones"] and state["gpu"]
+    assert state["engine"] in state["engines"] and state["modelSize"] in ("1.6 GB", "0.6 GB")
+
+
+def test_an_engine_switch_in_progress_isnt_mistaken_for_a_new_install(tmp_path):
+    startup.write(tmp_path / "startup.json", model="downloading", done=1, total=10, engine="whisper.cpp")
+    assert Api(settings_path=tmp_path / "settings.json", startup_path=tmp_path / "startup.json",
+               history_path=tmp_path / "history.db", dictionary_path=tmp_path / "dictionary.txt").state()["firstRun"] is False
 
 
 def test_the_mic_test_opens_the_mic_and_reports_its_level(api):
@@ -247,7 +254,7 @@ def test_home_and_the_history_page_show_dictations(api, tmp_path):
 
 def test_a_new_install_opens_on_the_welcome(tmp_path):
     startup_path = tmp_path / "startup.json"
-    startup.write(startup_path, model="downloading", done=400_000_000, total=1_600_000_000)
+    startup.write(startup_path, model="downloading", done=400_000_000, total=1_600_000_000, first_run=True)
     api = Api(settings_path=tmp_path / "settings.json", dictionary_path=tmp_path / "dictionary.txt",
               history_path=tmp_path / "history.db", startup_path=startup_path)
     results = {}

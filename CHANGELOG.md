@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- Ghostwriter now runs on AMD and Intel graphics cards, and on graphics built into the processor, through whisper.cpp and Vulkan. It's about as accurate as the NVIDIA engine, and on an RTX 4090 just as fast.
+- On PCs with an NVIDIA card, Settings can switch between faster-whisper and whisper.cpp while Ghostwriter runs. The first switch downloads whisper.cpp's model and shows the progress.
+- NVIDIA cards run whisper.cpp with the full-size model (1.6 GB), which matched faster-whisper almost word for word on the same recordings. Other graphics use the compressed model (0.6 GB), which is smaller and faster on chips built into the processor.
+- whisper.cpp picks a real graphics card over a chip built into the processor when a PC has both.
+
+### Changed
+- The installer no longer turns away PCs without an NVIDIA card. Those PCs skip the 1.3 GB of NVIDIA-only files, so the whole install is about 1 GB.
+
 ## [1.4.0] - 2026-10-30
 
 Pick your sounds, hide the pill, test your mic, and start with Windows.

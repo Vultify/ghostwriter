@@ -75,6 +75,11 @@ CF_UNICODETEXT = 13
 GMEM_MOVEABLE = 0x0002
 HWND_MESSAGE = wintypes.HWND(-3)
 
+PROCESS_SET_QUOTA = 0x0100
+PROCESS_TERMINATE = 0x0001
+JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
+JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000
+
 
 class KBDLLHOOKSTRUCT(ctypes.Structure):
     _fields_ = [
@@ -168,6 +173,31 @@ class BLENDFUNCTION(ctypes.Structure):
     ]
 
 
+class JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
+    _fields_ = [
+        ("PerProcessUserTimeLimit", wintypes.LARGE_INTEGER),
+        ("PerJobUserTimeLimit", wintypes.LARGE_INTEGER),
+        ("LimitFlags", wintypes.DWORD),
+        ("MinimumWorkingSetSize", ctypes.c_size_t),
+        ("MaximumWorkingSetSize", ctypes.c_size_t),
+        ("ActiveProcessLimit", wintypes.DWORD),
+        ("Affinity", ULONG_PTR),
+        ("PriorityClass", wintypes.DWORD),
+        ("SchedulingClass", wintypes.DWORD),
+    ]
+
+
+class JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
+    _fields_ = [
+        ("BasicLimitInformation", JOBOBJECT_BASIC_LIMIT_INFORMATION),
+        ("IoInfo", ctypes.c_ulonglong * 6),  # IO_COUNTERS, which Ghostwriter never reads
+        ("ProcessMemoryLimit", ctypes.c_size_t),
+        ("JobMemoryLimit", ctypes.c_size_t),
+        ("PeakProcessMemoryUsed", ctypes.c_size_t),
+        ("PeakJobMemoryUsed", ctypes.c_size_t),
+    ]
+
+
 for _func, _argtypes, _restype in (
     (user32.SetWindowsHookExW, [ctypes.c_int, HOOKPROC, wintypes.HINSTANCE, wintypes.DWORD], wintypes.HHOOK),
     (user32.UnhookWindowsHookEx, [wintypes.HHOOK], wintypes.BOOL),
@@ -229,6 +259,9 @@ for _func, _argtypes, _restype in (
     (kernel32.QueryFullProcessImageNameW, [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, wintypes.LPDWORD],
      wintypes.BOOL),
     (kernel32.CloseHandle, [wintypes.HANDLE], wintypes.BOOL),
+    (kernel32.CreateJobObjectW, [wintypes.LPVOID, wintypes.LPCWSTR], wintypes.HANDLE),
+    (kernel32.SetInformationJobObject, [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD], wintypes.BOOL),
+    (kernel32.AssignProcessToJobObject, [wintypes.HANDLE, wintypes.HANDLE], wintypes.BOOL),
     (version.GetFileVersionInfoSizeW, [wintypes.LPCWSTR, wintypes.LPDWORD], wintypes.DWORD),
     (version.GetFileVersionInfoW, [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID], wintypes.BOOL),
     (version.VerQueryValueW, [wintypes.LPCVOID, wintypes.LPCWSTR, ctypes.POINTER(wintypes.LPVOID), wintypes.PUINT],

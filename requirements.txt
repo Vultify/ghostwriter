@@ -4,10 +4,9 @@
 # never under AppData:
 #   set UV_PYTHON_INSTALL_DIR=D:\Projects\ghostwriter\.python
 #   python -m uv venv .venv --python 3.11 --managed-python
-#   python -m uv pip install --python .venv\Scripts\python.exe -r requirements.txt
+#   python -m uv pip install --python .venv\Scripts\python.exe -r requirements.txt -r requirements-nvidia.txt
+# (requirements-nvidia.txt only on PCs with an NVIDIA card.)
 faster-whisper
-nvidia-cublas-cu12      # CUDA math library faster-whisper needs on the GPU
-nvidia-cudnn-cu12==9.*  # cuDNN 9, matched to ctranslate2 4.x
 sounddevice
 numpy
 pystray                 # system tray icon

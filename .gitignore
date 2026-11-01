@@ -24,8 +24,9 @@ startup.json
 /dictionary.txt
 /history.db
 
-# Tools install.bat downloads
+# Tools install.bat downloads, and the whisper.cpp speech engine for non-NVIDIA PCs
 .tools/
+.whisper-cpp/
 
 # Private notes, kept on this PC only
 docs/research.md

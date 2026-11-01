@@ -9,24 +9,26 @@ import sys
 import threading
 import time
 from collections.abc import Callable
+from datetime import datetime
 from enum import Enum
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 import numpy as np
 
-from ghostwriter import __version__, sounds, startup, updates, win32
+from ghostwriter import __version__, models, sounds, startup, updates, win32
+from ghostwriter.audio import SAMPLE_RATE, wav_bytes
 from ghostwriter.dictionary import DICTIONARY_PATH, DictionaryFile
 from ghostwriter.history import History
 from ghostwriter.hotkey import KeyHook
 from ghostwriter.indicator import Indicator
 from ghostwriter.paster import Paster, app_name, foreground_app
-from ghostwriter.paths import LOG_PATH, STARTUP_PATH
+from ghostwriter.paths import LOG_PATH, RECORDINGS_DIR
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import Settings
+from ghostwriter.speech import SpeechEngine
 from ghostwriter.state import State
-from ghostwriter.transcriber import (SAMPLE_RATE, DownloadProgress, Transcriber, gpu_available, model_downloaded,
-                                     model_path)
+from ghostwriter.transcriber import Transcriber, gpu_available
 from ghostwriter.tray import Tray
 from ghostwriter.window import close_window, open_window
 from ghostwriter.win32 import kernel32, user32
@@ -34,12 +36,14 @@ from ghostwriter.win32 import kernel32, user32
 HOTKEY = win32.VK_RMENU
 INSTANCE_NAME = "Local\\Ghostwriter"
 TRAY_ONLY_FLAG = "--tray"  # start in the tray without opening the window
-NO_GPU_MESSAGE = (
-    "Ghostwriter needs an NVIDIA graphics card to turn speech into text, and it couldn't find one on this PC.\n\n"
-    "If you do have one, updating its driver from nvidia.com usually fixes this."
+# With this set, every dictation's audio is also saved in recordings\, for scripts\compare_engines.py.
+KEEP_RECORDINGS_VARIABLE = "GHOSTWRITER_KEEP_RECORDINGS"
+NO_ENGINE_MESSAGE = (
+    "Ghostwriter couldn't find its speech engine for this graphics card. Run the install command again to get it:\n\n"
+    "irm https://raw.githubusercontent.com/Vultify/ghostwriter/main/get.ps1 | iex"
 )
 DOWNLOAD_MESSAGE = (
-    "Downloading the speech model (about 1.6 GB). This only happens once and can take a few minutes. "
+    "Downloading the speech model (about {size}). This only happens once and can take a few minutes. "
     "I'll let you know when it's ready."
 )
 # A release sooner than this is a tap, not a hold. A lone tap is thrown away as accidental.
@@ -77,7 +81,7 @@ class Dictation:
 
     def __init__(
         self,
-        transcriber: Transcriber,
+        transcriber: SpeechEngine | Transcriber,
         recorder: Recorder,
         paster: Paster,
         hotkey: int = HOTKEY,
@@ -92,6 +96,7 @@ class Dictation:
         self.on_state = on_state
         self.dictionary = dictionary or DictionaryFile()
         self.history = history  # None saves nothing, like when history is turned off
+        self.keep_recordings = False
         self.max_recording_seconds = MAX_RECORDING_SECONDS
         self.hands_free = True  # with this off, a double tap is just two ignored taps
         self._key_events: queue.Queue[_Key | None] = queue.Queue()
@@ -215,6 +220,9 @@ class Dictation:
                 self._update_state(-1)
 
     def _type_out(self, audio: np.ndarray) -> None:
+        if self.keep_recordings:
+            RECORDINGS_DIR.mkdir(exist_ok=True)
+            (RECORDINGS_DIR / f"{datetime.now():%Y-%m-%d %H-%M-%S}.wav").write_bytes(wav_bytes(audio))
         dictionary = self.dictionary.current()
         started = time.perf_counter()
         text = dictionary.apply(self.transcriber.transcribe(audio, prompt=dictionary.prompt))
@@ -278,9 +286,10 @@ def main() -> None:
 
 def _run() -> None:
     user32.SetProcessDpiAwarenessContext(win32.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)  # crisp on scaled screens
-    if not gpu_available():
-        log.error("No NVIDIA GPU found")
-        _show_message(NO_GPU_MESSAGE, win32.MB_ICONERROR)
+    has_nvidia = gpu_available()
+    if not models.available(has_nvidia):
+        log.error("No NVIDIA GPU, and whisper.cpp isn't installed")
+        _show_message(NO_ENGINE_MESSAGE, win32.MB_ICONERROR)
         return
     settings = Settings.load()
     quitting = threading.Event()
@@ -289,24 +298,24 @@ def _run() -> None:
                 on_check_updates=lambda: threading.Thread(target=check_for_updates, args=(tray,), daemon=True).start(),
                 on_open=open_window)
     tray.start()  # the ghost shows up right away while Whisper loads
-    first_run = not model_downloaded()
-    startup.write(model="downloading" if first_run else "loading")  # before the window opens, so it knows
+    engine = models.resolve(settings.engine, has_nvidia)
+    first_run = not models.downloaded(engine, has_nvidia)
+    # Written before the window opens, so on the first run it opens on the welcome and shows the download.
+    startup.write(model="downloading" if first_run else "loading", engine=engine, first_run=first_run)
     show_window = TRAY_ONLY_FLAG not in sys.argv
     if show_window:
-        open_window()  # on the first run it opens on the welcome, which shows the download
+        open_window()
     if first_run:
-        log.info("Downloading the speech model for the first time")
+        log.info("Downloading the speech model for %s for the first time", engine)
         if not show_window:
-            tray.notify(DOWNLOAD_MESSAGE)
+            tray.notify(DOWNLOAD_MESSAGE.format(size=models.size(engine, has_nvidia)))
 
-    log.info("Loading Whisper...")
+    log.info("Loading Whisper with %s...", engine)
+    speech = SpeechEngine(has_nvidia)
     try:
-        path = model_path(on_progress=_download_reporter())
-        startup.write(model="loading")
-        transcriber = Transcriber(path)
-        transcriber.warm_up()
+        speech.load(engine, first_run)
     except Exception:
-        startup.write(model="failed")
+        startup.write(model="failed", engine=engine, first_run=first_run)
         raise
     recorder = Recorder(microphone=settings.microphone)
     dictionary = DictionaryFile()
@@ -314,7 +323,7 @@ def _run() -> None:
     history = History()
     indicator = Indicator(level=lambda: recorder.level)
     dictation = Dictation(
-        transcriber, recorder, Paster(), hotkey=settings.hotkey_code,
+        speech, recorder, Paster(), hotkey=settings.hotkey_code,
         on_state=StatusDisplay(tray, indicator, settings), dictionary=dictionary,
     )
 
@@ -324,19 +333,23 @@ def _run() -> None:
         dictation.max_recording_seconds = settings.hands_free_minutes * 60
         dictation.history = history if settings.history else None
         recorder.microphone = settings.microphone
+        speech.switch_to(models.resolve(settings.engine, has_nvidia))
         tray.refresh()
-        log.info("Settings: hotkey %s, mic %s, sounds %s, pill %s, hands free %s, history %s",
+        log.info("Settings: hotkey %s, mic %s, sounds %s, pill %s, hands free %s, history %s, engine %s",
                  settings.hotkey, settings.microphone or "Windows default",
                  settings.sound if settings.sounds else "off", "on" if settings.pill else "off",
                  f"on, up to {settings.hands_free_minutes} min" if settings.hands_free else "off",
-                 "on" if settings.history else "off")
+                 "on" if settings.history else "off", settings.engine)
 
+    dictation.keep_recordings = KEEP_RECORDINGS_VARIABLE in os.environ
+    if dictation.keep_recordings:
+        log.info("Saving every dictation's audio in %s", RECORDINGS_DIR)
     tray.on_change = apply_settings
     apply_settings()
     indicator.start()
     dictation.start()
     tray.set_state(State.READY)
-    startup.write(model="ready")
+    startup.write(model="ready", engine=engine, device=speech.device)
     log.info("Ready. Hold %s to talk, or double tap it for hands free.", settings.hotkey)
     if first_run:
         tray.notify(f"Ready! Hold {settings.hotkey} to talk, or double tap it for hands free.")
@@ -349,24 +362,10 @@ def _run() -> None:
     finally:
         close_window()
         dictation.stop()
+        speech.close()
         indicator.stop()
         tray.stop()
         log.info("Stopped.")
-
-
-def _download_reporter(path: Path = STARTUP_PATH, every: float = 0.25) -> DownloadProgress:
-    """Save the model download's progress for the window, a few times a second at most."""
-    lock = threading.Lock()
-    last = float("-inf")
-
-    def report(done: int, total: int) -> None:
-        nonlocal last
-        with lock:  # the download reports from several threads
-            if time.perf_counter() - last >= every or done >= total:
-                last = time.perf_counter()
-                startup.write(path, model="downloading", done=done, total=total)
-
-    return report
 
 
 def check_for_updates(tray: Tray) -> None:

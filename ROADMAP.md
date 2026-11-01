@@ -104,6 +104,17 @@ Phases 8 to 10: the app window, history, and the first run welcome.
 ## Version 1.4.0 released 2026-10-30
 Phase 11: sound styles, pill on/off, Start with Windows, and the mic test.
 
+## Any graphics card (whisper.cpp)
+Added 2026-10-31: AMD and Intel cards, and graphics built into the processor, run whisper.cpp through Vulkan. Caleb chose to skip a CPU-only mode.
+- [x] Build whisper.cpp with Vulkan ourselves (`scripts/build_whisper_cpp.ps1`); whisper.cpp publishes no Vulkan build for Windows
+- [x] Measure it: same words as faster-whisper on every test sentence, 0.06 to 0.24 s on the RTX 4090, about 4 s on the Intel UHD 770 built into the i9
+- [x] Compare on Caleb's own voice (`scripts/compare_engines.py`, same recordings through every engine): the full-size model differed from faster-whisper by one word in 90 seconds, so NVIDIA cards get the full-size model and other graphics the compressed one
+- [x] whisper.cpp engine in Ghostwriter, picking a real graphics card over a built-in chip
+- [x] Switch engines in Settings on NVIDIA PCs, live
+- [x] Installer: no more NVIDIA-only refusal; non-NVIDIA PCs skip the NVIDIA files and get whisper.cpp
+- [ ] Caleb dictates with whisper.cpp on his 4090 for a few days; if it holds up, it becomes the engine for NVIDIA too and the 1.3 GB of NVIDIA files go away
+- [ ] A friend's AMD or Intel PC runs the one-line install
+
 ## Phase 12: local AI cleanup (on/off switch, its own page in the app)
 - [ ] Small local model on the GPU removes filler words, formats lists, and fixes punctuation
 - [ ] Voice commands ("new line", "scratch that")
@@ -112,6 +123,7 @@ Phase 11: sound styles, pill on/off, Start with Windows, and the mic test.
 - **Checkpoint 12:** Caleb tries both and picks his default
 
 ## Later
+- macOS (Apple chips only): needs a Mac to test on, and Apple's $99 a year developer program to avoid "unidentified developer" warnings. Shares the window, dictionary, history, sounds, and whisper.cpp (Metal); rebuilds the hotkey (Fn/Globe works on Mac), paste, pill, menu bar icon, start at login, installer, and permission prompts. Step one, doable on Windows: split the Windows-only code from the shared code.
 - winget (`winget install Vultify.Ghostwriter`), which needs a setup .exe and Microsoft's review
 - A real setup wizard (.exe) for people who want a classic installer
 - Let Jarvis use Ghostwriter as its ears

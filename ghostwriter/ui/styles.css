@@ -783,4 +783,8 @@ kbd {
 
 .model-facts dd { margin: 0; font-family: "Geist Mono", monospace; }
 
+.engine-status { margin: 0; font-size: 12px; color: var(--ink); }
+
+.engine-status.failed { color: var(--danger); }
+
 .offline { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink); }

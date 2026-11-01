@@ -3,9 +3,9 @@ to the app window."""
 
 import json
 
-from ghostwriter import startup, transcriber
-from ghostwriter.app import _download_reporter
-from ghostwriter.transcriber import gpu_available, model_downloaded, model_path
+from ghostwriter import models, startup
+from ghostwriter.speech import _download_reporter
+from ghostwriter.transcriber import gpu_available, model_path
 
 
 def test_this_pc_has_a_gpu_whisper_can_use():
@@ -13,7 +13,7 @@ def test_this_pc_has_a_gpu_whisper_can_use():
 
 
 def test_this_pc_already_has_the_speech_model():
-    assert model_downloaded()
+    assert models.downloaded(models.FASTER_WHISPER, has_nvidia=True)
 
 
 def _fake_hub(monkeypatch, downloaded: bool) -> list[bool]:
@@ -33,7 +33,7 @@ def _fake_hub(monkeypatch, downloaded: bool) -> list[bool]:
             files.update(5)
         return "models/turbo"
 
-    monkeypatch.setattr(transcriber, "snapshot_download", snapshot_download)
+    monkeypatch.setattr(models, "snapshot_download", snapshot_download)
     return calls
 
 
@@ -64,9 +64,10 @@ def test_the_window_reads_what_the_tray_app_writes(tmp_path):
 
 def test_download_progress_is_saved_a_few_times_a_second_and_always_at_the_end(tmp_path):
     path = tmp_path / "startup.json"
-    report = _download_reporter(path, every=60)
+    report = _download_reporter({"engine": "whisper.cpp", "first_run": True}, path, every=60)
     report(1, 10)
     report(2, 10)  # too soon after the last one
-    assert json.loads(path.read_text(encoding="utf-8"))["done"] == 1
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    assert (saved["done"], saved["engine"], saved["first_run"]) == (1, "whisper.cpp", True)
     report(10, 10)
     assert json.loads(path.read_text(encoding="utf-8"))["done"] == 10

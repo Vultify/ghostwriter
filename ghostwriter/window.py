@@ -15,7 +15,7 @@ import winreg
 from ctypes import wintypes
 from pathlib import Path
 
-from ghostwriter import __version__, shortcuts, sounds, startup, updates, win32
+from ghostwriter import __version__, models, shortcuts, sounds, startup, updates, win32
 from ghostwriter.audio import loudness
 from ghostwriter.dictionary import DictionaryFile
 from ghostwriter.history import PAGE_SIZE, History
@@ -30,7 +30,6 @@ WIDTH, HEIGHT = 1120, 740
 MIN_WIDTH, MIN_HEIGHT = 940, 640
 INSTANCE_NAME = "Local\\GhostwriterWindow"
 MODEL_LABEL = "Whisper large-v3-turbo"
-MODEL_SIZE = "1.6 GB"
 BACKGROUNDS = {"dark": "#121316", "light": "#F4F5F6"}  # shown before the page paints, so it never flashes white
 NO_WEBVIEW_MESSAGE = (
     "Ghostwriter's window needs Microsoft WebView2, which comes with Windows 11 and Microsoft Edge, and it isn't "
@@ -56,17 +55,21 @@ class Api:
         self._startup_path = startup_path
         self._login_folder = login_folder  # where the Start with Windows shortcut goes; None is Windows' own
         self._mic_test: Recorder | None = None
-        # The tray app is downloading the speech model, so this is a new install: open on the welcome.
-        self._first_run = startup.read(startup_path).get("model") == "downloading"
+        # The tray app is downloading the speech model for a new install, so open on the welcome.
+        status = startup.read(startup_path)
+        self._first_run = status.get("model") == "downloading" and status.get("first_run", False)
         self._window = None
         self._maximized = False
-        self._gpu = None
+        self._nvidia: str | None = None
+        self._nvidia_checked = False
 
     def attach(self, window) -> None:
         self._window = window
 
     def state(self) -> dict:
         settings = Settings.load(self._settings_path)
+        nvidia = self._nvidia_name()
+        engine = models.resolve(settings.engine, nvidia is not None)
         return {
             "version": __version__,
             "firstRun": self._first_run,
@@ -86,9 +89,12 @@ class Api:
             "hotkeys": list(HOTKEYS),
             "microphones": list_microphones(),
             "handsFreeMinutes": list(HANDS_FREE_MINUTES),
-            "model": MODEL_LABEL,
-            "modelSize": MODEL_SIZE,
-            "gpu": self._gpu_name(),
+            "engine": engine,
+            "engines": models.available(nvidia is not None),
+            "model": MODEL_LABEL if models.size(engine, nvidia is not None) == "1.6 GB" else f"{MODEL_LABEL}, compressed",
+            "modelSize": models.size(engine, nvidia is not None),
+            "modelDownloaded": models.downloaded(engine, nvidia is not None),
+            "gpu": self._runs_on(engine, nvidia),
         }
 
     def set_setting(self, name: str, value) -> dict:
@@ -198,16 +204,25 @@ class Api:
             return {**self._dictionary.entries(), "error": str(error)}
         return self._dictionary.entries()
 
-    def _gpu_name(self) -> str:
-        if self._gpu is None:
+    def _nvidia_name(self) -> str | None:
+        """The NVIDIA card's name, or None on a PC without one."""
+        if not self._nvidia_checked:
+            self._nvidia_checked = True
             try:
                 result = subprocess.run(["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
                                         capture_output=True, text=True, timeout=5,
                                         creationflags=subprocess.CREATE_NO_WINDOW)
-                self._gpu = result.stdout.strip().splitlines()[0] if result.returncode == 0 else "NVIDIA GPU"
-            except (OSError, IndexError, subprocess.SubprocessError):
-                self._gpu = "NVIDIA GPU"
-        return self._gpu
+                if result.returncode == 0 and result.stdout.strip():
+                    self._nvidia = result.stdout.strip().splitlines()[0]
+            except (OSError, subprocess.SubprocessError):
+                pass
+        return self._nvidia
+
+    def _runs_on(self, engine: str, nvidia: str | None) -> str:
+        if engine == models.FASTER_WHISPER and nvidia:
+            return nvidia
+        status = startup.read(self._startup_path)  # whisper.cpp says which graphics it picked once it's running
+        return status.get("device") if status.get("engine") == engine and status.get("device") else "Your graphics card"
 
 
 def open_window() -> None:

@@ -30,12 +30,6 @@
     Say 'Ghostwriter installer'
     Say '====================='
 
-    if (-not (Get-CimInstance Win32_VideoController | Where-Object Name -like '*NVIDIA*')) {
-        Say "Ghostwriter needs an NVIDIA graphics card to turn speech into text, and this PC doesn't seem to have one."
-        Say 'Nothing was installed.'
-        return
-    }
-
     $work = Join-Path ([IO.Path]::GetTempPath()) ('ghostwriter-' + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $work | Out-Null
     try {

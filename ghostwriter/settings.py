@@ -7,6 +7,7 @@ from ctypes import wintypes
 from pathlib import Path
 
 from ghostwriter import win32
+from ghostwriter.models import ENGINE_SETTINGS
 from ghostwriter.paths import SETTINGS_PATH
 from ghostwriter.sounds import STYLES
 from ghostwriter.win32 import user32
@@ -57,6 +58,7 @@ class Settings:
     hands_free_minutes: int = 15
     theme: str = "system"
     history: bool = True  # save each dictation in history.db
+    engine: str = "auto"  # speech engine, from models.ENGINE_SETTINGS
     path: Path = field(default=SETTINGS_PATH, repr=False, compare=False)
     _modified: int | None = field(default=None, repr=False, compare=False)
 
@@ -121,6 +123,7 @@ _CHECKS = {
     "hands_free_minutes": lambda value: value in HANDS_FREE_MINUTES and not isinstance(value, bool),
     "theme": lambda value: value in THEMES,
     "history": lambda value: isinstance(value, bool),
+    "engine": lambda value: value in ENGINE_SETTINGS,
 }
 
 

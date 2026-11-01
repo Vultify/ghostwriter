@@ -1,0 +1,4 @@
+# Extra packages for PCs with an NVIDIA graphics card, so faster-whisper can run on it through CUDA.
+# install.bat adds these only when it finds an NVIDIA card; everywhere else whisper.cpp runs on the graphics card.
+nvidia-cublas-cu12      # CUDA math library faster-whisper needs on the GPU
+nvidia-cudnn-cu12==9.*  # cuDNN 9, matched to ctranslate2 4.x

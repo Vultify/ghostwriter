@@ -16,13 +16,13 @@ Open **PowerShell** and paste:
 irm https://raw.githubusercontent.com/Vultify/ghostwriter/main/get.ps1 | iex
 ```
 
-That downloads the latest version into a `Ghostwriter` folder in your user folder, installs its own copy of Python and its packages inside that folder, adds Ghostwriter to the Start menu, and starts it. The first start opens a short welcome: it downloads the speech model (about 1.6 GB, one time only) with a progress bar, then lets you pick your hotkey and try it out.
+That downloads the latest version into a `Ghostwriter` folder in your user folder, installs its own copy of Python and its packages inside that folder, adds Ghostwriter to the Start menu, and starts it. The first start opens a short welcome: it downloads the speech model (about 1.6 GB, or 0.6 GB without an NVIDIA card, one time only) with a progress bar, then lets you pick your hotkey and try it out.
 
 **Updating:** right click the ghost in the tray and choose **Check for updates**, or run the same command again. Your dictionary, settings, and history are kept.
 
 **Without the command:** click **Code**, then **Download ZIP** on GitHub, unzip it wherever you want Ghostwriter to live, and double click **install.bat** in that folder.
 
-Ghostwriter needs an NVIDIA graphics card; the installer checks for one before downloading anything. If an install gets interrupted, running it again picks up where it left off.
+Ghostwriter runs on any graphics card. NVIDIA cards use faster-whisper; AMD, Intel, and graphics built into the processor use whisper.cpp, and skip the 1.3 GB of NVIDIA-only files. If an install gets interrupted, running it again picks up where it left off.
 
 ## Usage
 
@@ -49,7 +49,7 @@ For longer stretches, **double tap the hotkey** to lock recording on and talk ha
 - **Home:** your hotkey, a box to try dictating in, today's word and dictation counts, your latest dictations, and quick switches for sounds, hands free, and the mic
 - **History:** everything you've dictated, grouped by day, with search, a filter for each app you use most, and a copy button on each one
 - **Dictionary:** add and remove words and fixes
-- **Settings:** hotkey, hands free and when it stops, microphone with a live test meter, speech model, light or dark theme (or follow Windows), six sound styles to pick from (or no sound), the listening pill on or off, start with Windows, saving history on or off, and buttons to open the log and the folder
+- **Settings:** hotkey, hands free and when it stops, microphone with a live test meter, speech model (and on PCs with an NVIDIA card, a choice of engine), light or dark theme (or follow Windows), six sound styles to pick from (or no sound), the listening pill on or off, start with Windows, saving history on or off, and buttons to open the log and the folder
 - **Check for updates** at the bottom of the sidebar
 
 The tray menu (right click the ghost) has the hotkey, mic, and sounds too, plus Quit. Changes apply right away and are saved to `settings.json`. The log is at `logs/ghostwriter.log`.
@@ -76,11 +76,21 @@ A plain line is a word to spell right. A line with `->` is a fix: what Whisper h
 .venv\Scripts\python -m pytest tests
 ```
 
-The tests briefly use the clipboard (and put it back) and pop up a small test window to paste into. Leave the PC alone for the 20 or so seconds they take; if another window grabs focus, the paste tests fail on purpose rather than type into it.
+The tests briefly use the clipboard (and put it back) and pop up a small test window to paste into. Leave the PC alone for the minute or so they take; if another window grabs focus, the paste tests fail on purpose rather than type into it.
+
+## Building whisper.cpp
+
+whisper.cpp doesn't publish a Vulkan build for Windows, so I build it myself and attach it to a GitHub release for the installer to download. Building needs CMake, the Visual Studio C++ build tools, and the [Vulkan SDK](https://vulkan.lunarg.com/sdk/home):
+
+```
+powershell -ExecutionPolicy Bypass -File scripts\build_whisper_cpp.ps1
+```
+
+That puts the server in `.whisper-cpp\` and a zip in `.tools\`, which goes on the GitHub prerelease named after the whisper.cpp version (like `whisper-cpp-v1.9.5`).
 
 ## How it works
 
-- Speech to text: [faster-whisper](https://github.com/SYSTRAN/faster-whisper) running the Whisper large-v3-turbo model on an NVIDIA GPU
+- Speech to text: the Whisper large-v3-turbo model, run by [faster-whisper](https://github.com/SYSTRAN/faster-whisper) on NVIDIA cards, or by [whisper.cpp](https://github.com/ggml-org/whisper.cpp) through Vulkan on any graphics card. whisper.cpp runs as a small local server that closes with Ghostwriter.
 - A low level keyboard hook catches the hotkey (Right Alt by default) and hides it from the app in front
 - Pastes with the clipboard and Ctrl+V, then restores your clipboard and keeps dictations out of Win+V history
 - The mic only opens while you're dictating, and recording ends as soon as you go quiet after letting go
@@ -91,8 +101,8 @@ The tests briefly use the clipboard (and put it back) and pop up a small test wi
 ## Requirements
 
 - Windows 10 or 11
-- An NVIDIA GPU with CUDA (built and tested on an RTX 4090)
-- About 4 GB of disk: 2.4 GB in the Ghostwriter folder plus the 1.6 GB speech model
+- A graphics card: NVIDIA (built and tested on an RTX 4090), or AMD or Intel with Vulkan drivers. Graphics built into the processor work too, just slower: about 4 seconds per dictation on a basic Intel UHD 770.
+- Disk: about 4 GB with an NVIDIA card (2.4 GB in the Ghostwriter folder plus the 1.6 GB speech model), about 1 GB without (0.4 GB plus the 0.6 GB model)
 
 ## License
 
