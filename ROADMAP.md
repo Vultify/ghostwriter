@@ -115,6 +115,9 @@ Added 2026-10-31: AMD and Intel cards, and graphics built into the processor, ru
 - [ ] Caleb dictates with whisper.cpp on his 4090 for a few days; if it holds up, it becomes the engine for NVIDIA too and the 1.3 GB of NVIDIA files go away
 - [ ] A friend's AMD or Intel PC runs the one-line install
 
+## Version 1.5.0 released 2026-10-31
+Any graphics card: whisper.cpp for AMD, Intel, and built-in graphics, and an engine switch on NVIDIA PCs.
+
 ## Phase 12: local AI cleanup (on/off switch, its own page in the app)
 - [ ] Small local model on the GPU removes filler words, formats lists, and fixes punctuation
 - [ ] Voice commands ("new line", "scratch that")

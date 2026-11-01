@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-31
+
+Ghostwriter runs on any graphics card now, not just NVIDIA.
+
 ### Added
 - Ghostwriter now runs on AMD and Intel graphics cards, and on graphics built into the processor, through whisper.cpp and Vulkan. It's about as accurate as the NVIDIA engine, and on an RTX 4090 just as fast.
 - On PCs with an NVIDIA card, Settings can switch between faster-whisper and whisper.cpp while Ghostwriter runs. The first switch downloads whisper.cpp's model and shows the progress.
@@ -97,7 +101,8 @@ The first release: local, unlimited dictation that replaces Wispr Flow for my da
 - A log at `logs/ghostwriter.log`, one copy running at a time, and an error message if it can't start.
 - Tests for the clipboard, hotkey, mic, dictionary, lock mode, settings, and the full dictation loop.
 
-[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/Vultify/ghostwriter/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Vultify/ghostwriter/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Vultify/ghostwriter/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/Vultify/ghostwriter/compare/v1.2.0...v1.2.1
