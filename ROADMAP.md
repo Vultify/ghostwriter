@@ -1,13 +1,13 @@
 # Ghostwriter roadmap
 
-Build order I recommend. We check items off as we go.
+My build order. I check items off as I go.
 
 ## Phase 1: foundation
 - [x] Python 3.11 kept inside the project (`.python`), venv in `.venv`
 - [x] Install faster-whisper with GPU support
 - [x] Smoke test: transcribe a short recording on the 4090 and print the time it took (0.16s warm)
-- [x] Mic test with Caleb's real voice (`scripts/mic_test.py`): 0.40s, every word right with the word list
-- **Checkpoint 1 passed 2026-10-23:** Caleb's voice comes back as correct text in under half a second
+- [x] Mic test with my real voice (`scripts/mic_test.py`): 0.40s, every word right with the word list
+- **Checkpoint 1 passed 2026-10-23:** my voice comes back as correct text in under half a second
 
 ## Phase 2: design
 - [x] Pasting: clipboard and Ctrl+V, with the old clipboard put back afterward
@@ -22,36 +22,36 @@ Build order I recommend. We check items off as we go.
 - [x] Open the mic on key press and record until release, plus a short tail; measure how fast it opens (first audio in 35 to 55 ms)
 - [x] Transcribe with the model kept warm in memory
 - [x] Paste the text where the cursor is, then put the old clipboard back
-- **Checkpoint 3 passed 2026-10-24:** Caleb's dictations landed correctly; mic opens in 10 to 18 ms, transcription takes 0.13 to 0.18s
+- **Checkpoint 3 passed 2026-10-24:** my dictations landed correctly; mic opens in 10 to 18 ms, transcription takes 0.13 to 0.18s
 
 ## Phase 4: tray, indicator, and sound
 Moved ahead of lock mode, because lock mode keeps recording after you let go and you need to see that.
 - [x] Ghost icon in the system tray that turns red while listening, with Quit
 - [x] Listening pill at the bottom center of the screen with a live mic level, then "typing" dots; never takes focus and lets clicks through
 - [x] Soft sound when listening starts and stops
-- **Checkpoint 4 passed 2026-10-24:** tray ghost, listening pill, and sounds all confirmed by Caleb
+- **Checkpoint 4 passed 2026-10-24:** tray ghost, listening pill, and sounds all working
 
 ## Phase 5: lock mode
 - [x] Double tap the hotkey to keep recording hands free; tap again to stop (tap under 0.3s, second press within 0.4s, 15 minute safety limit)
 - [x] Pill shows a stop square and the start sound plays twice while locked
-- **Checkpoint 5 passed 2026-10-24:** Caleb's 66 second ramble came out complete, transcribed in 0.67s
+- **Checkpoint 5 passed 2026-10-24:** my 66 second ramble came out complete, transcribed in 0.67s
 
 ## Phase 6: custom dictionary
 Pulled ahead of lock mode on 2026-10-24 so terms that sound different from how they're spelled come out right.
 - [x] `dictionary.txt` of words Whisper should know (names, places, and game terms); edits apply without a restart
 - [x] Optional find and replace rules for words it still gets wrong (like `my sequel -> MySQL`)
-- **Checkpoint 6 passed 2026-10-24:** every dictionary word comes out right in a spoken test run, and a sound-alike game term came out right in Caleb's own voice
+- **Checkpoint 6 passed 2026-10-24:** every dictionary word comes out right in a spoken test run, and a sound-alike game term came out right in my own voice
 
 ## Phase 7: settings and launching
 - [x] Settings in the tray menu, saved to `settings.json` (hotkey, mic, sounds), plus Edit dictionary and Open log
 - [x] Runs with no console window, logs to `logs/ghostwriter.log`, one copy at a time, error box if it can't start
-- [x] Start menu shortcut that launches it with no console window (`scripts/make_shortcut.py`; Caleb runs it himself so it lands in his real Start menu)
-- **Checkpoint 7 passed 2026-10-25:** Caleb used it all day on 2026-10-24, including 13 dictations into a game's chat. Felt a little slow to paste while gaming (transcription ~1s with the game on the GPU, vs ~0.2s on the desktop).
+- [x] Start menu shortcut that launches it with no console window (`scripts/make_shortcut.py`, run by hand so it lands in my real Start menu)
+- **Checkpoint 7 passed 2026-10-25:** I used it all day on 2026-10-24, including 13 dictations into a game's chat. Felt a little slow to paste while gaming (transcription ~1s with the game on the GPU, vs ~0.2s on the desktop).
 
 ## Speed pass (after Checkpoint 7)
-- [x] End recording as soon as Caleb goes quiet after letting go (tail ~0.08s, was 0.3s)
+- [x] End recording as soon as I go quiet after letting go (tail ~0.08s, was 0.3s)
 - [x] Whisper beam size 5 to 1 (88 ms vs 112 ms per short phrase, same text)
-- **Check passed 2026-10-25:** Caleb says it feels faster even on the desktop; transcription 0.09 to 0.15s, no last words clipped
+- **Check passed 2026-10-25:** it feels faster even on the desktop; transcription 0.09 to 0.15s, no last words clipped
 
 ## Version 1.0.0 released 2026-10-25
 Phases 1 to 7 plus the speed pass.
@@ -71,7 +71,7 @@ Phases 1 to 7 plus the speed pass.
 - [ ] Make the GitHub repo public, then try the one-line install on a second PC
 
 ## Phase 8: the app window
-Built from Caleb's design (dark and light themes, mint accent, Geist font), shown in a real window through the web engine built into Windows (pywebview).
+Built from my design (dark and light themes, mint accent, Geist font), shown in a real window through the web engine built into Windows (pywebview).
 - [x] Window with its own title bar and a sidebar: Home, Dictionary, Settings, the version, and Check for updates (History joins in Phase 9)
 - [x] Closing the window keeps Ghostwriter running in the tray; the tray menu gets Open Ghostwriter (also a left click on the ghost)
 - [x] Home: ready card showing the hotkey, a box to try dictating, and quick switches
@@ -79,7 +79,7 @@ Built from Caleb's design (dark and light themes, mint accent, Geist font), show
 - [x] Dictionary editor for words and fixes, saved to `dictionary.txt`
 - [x] The window is its own small program: closing it frees its memory, and settings it saves reach the running app within half a second
 - [x] Each Dictionary tab explains what a word or a fix does
-- **Checkpoint 8 passed 2026-10-28:** Caleb changed settings and dictionary words from the window, and his next dictations used them
+- **Checkpoint 8 passed 2026-10-28:** I changed settings and dictionary words from the window, and my next dictations used them
 
 ## Phase 9: history
 - [x] Save each dictation on this PC (`history.db`), with an on/off switch and Clear history
@@ -89,7 +89,7 @@ Built from Caleb's design (dark and light themes, mint accent, Geist font), show
 
 ## Phase 10: first run
 - [x] A 3 step welcome: speech model download with a progress bar, pick a hotkey, try it
-- **Checkpoint 10 passed 2026-10-28:** a first run with an empty model folder downloaded the real model (1.6 GB in about 90 seconds) with live progress, and Caleb walked through the welcome and dictated into it
+- **Checkpoint 10 passed 2026-10-28:** a first run with an empty model folder downloaded the real model (1.6 GB in about 90 seconds) with live progress, and I walked through the welcome and dictated into it
 
 ## Version 1.3.0 released 2026-10-30
 Phases 8 to 10: the app window, history, and the first run welcome.
@@ -98,21 +98,21 @@ Phases 8 to 10: the app window, history, and the first run welcome.
 - [x] Pill on/off (it stays at the bottom center, no position setting)
 - [x] Start with Windows
 - [x] Mic test meter in Settings
-- [x] Six sound styles to pick from (Caleb's sound sheet, added 2026-10-30)
-- **Checkpoint 11:** Caleb uses each one for a day
+- [x] Six sound styles to pick from (from my sound sheet, added 2026-10-30)
+- **Checkpoint 11:** I use each one for a day
 
 ## Version 1.4.0 released 2026-10-30
 Phase 11: sound styles, pill on/off, Start with Windows, and the mic test.
 
 ## Any graphics card (whisper.cpp)
-Added 2026-10-31: AMD and Intel cards, and graphics built into the processor, run whisper.cpp through Vulkan. Caleb chose to skip a CPU-only mode.
+Added 2026-10-31: AMD and Intel cards, and graphics built into the processor, run whisper.cpp through Vulkan. I chose to skip a CPU-only mode.
 - [x] Build whisper.cpp with Vulkan ourselves (`scripts/build_whisper_cpp.ps1`); whisper.cpp publishes no Vulkan build for Windows
 - [x] Measure it: same words as faster-whisper on every test sentence, 0.06 to 0.24 s on the RTX 4090, about 4 s on the Intel UHD 770 built into the i9
-- [x] Compare on Caleb's own voice (`scripts/compare_engines.py`, same recordings through every engine): the full-size model differed from faster-whisper by one word in 90 seconds, so NVIDIA cards get the full-size model and other graphics the compressed one
+- [x] Compare on my own voice (`scripts/compare_engines.py`, same recordings through every engine): the full-size model differed from faster-whisper by one word in 90 seconds, so NVIDIA cards get the full-size model and other graphics the compressed one
 - [x] whisper.cpp engine in Ghostwriter, picking a real graphics card over a built-in chip
 - [x] Switch engines in Settings on NVIDIA PCs, live
 - [x] Installer: no more NVIDIA-only refusal; non-NVIDIA PCs skip the NVIDIA files and get whisper.cpp
-- [ ] Caleb dictates with whisper.cpp on his 4090 for a few days; if it holds up, it becomes the engine for NVIDIA too and the 1.3 GB of NVIDIA files go away
+- [ ] I dictate with whisper.cpp on my 4090 for a few days; if it holds up, it becomes the engine for NVIDIA too and the 1.3 GB of NVIDIA files go away
 - [ ] A friend's AMD or Intel PC runs the one-line install
 
 ## Version 1.5.0 released 2026-10-31
@@ -123,10 +123,10 @@ Any graphics card: whisper.cpp for AMD, Intel, and built-in graphics, and an eng
 - [ ] Voice commands ("new line", "scratch that")
 - [ ] Style by app (raw, casual, or polished per app)
 - [ ] Measure the delay against raw mode
-- **Checkpoint 12:** Caleb tries both and picks his default
+- **Checkpoint 12:** I try both and pick my default
 
 ## Phase 13: Linux (Omarchy, Hyprland on Wayland)
-Added 2026-11-03. Built and tested on Caleb's Omarchy laptop (Intel UHD 600, so slow but usable on a small model); a stronger Omarchy laptop comes later. Windows must keep working exactly as it does now.
+Added 2026-11-03. Built and tested on my Omarchy laptop (Intel UHD 600, so slow but usable on a small model); a stronger Omarchy laptop comes later. Windows must keep working exactly as it does now.
 - [ ] Split the Windows-only code from the shared code behind a platform layer (also step one for macOS)
 - [ ] whisper.cpp built for Linux with Vulkan
 - [ ] Hold-to-talk hotkey by reading the keyboard directly (`evdev`, user in the `input` group)
@@ -137,8 +137,8 @@ Added 2026-11-03. Built and tested on Caleb's Omarchy laptop (Intel UHD 600, so 
 - [ ] Listening pill as a Wayland overlay (`gtk-layer-shell`)
 - [ ] Start at login (Hyprland autostart) and an app launcher entry (`.desktop` file)
 - [ ] One-line install script for Linux (`get.sh`)
-- [ ] Caleb checks the Windows build still works on his PC before release
-- **Checkpoint 13:** Caleb dictates into apps on the laptop for a day
+- [ ] Check the Windows build still works on my PC before release
+- **Checkpoint 13:** I dictate into apps on the laptop for a day
 
 ## Later
 - macOS (Apple chips only): needs a Mac to test on, and Apple's $99 a year developer program to avoid "unidentified developer" warnings. Shares the window, dictionary, history, sounds, and whisper.cpp (Metal); rebuilds the hotkey (Fn/Globe works on Mac), paste, pill, menu bar icon, start at login, installer, and permission prompts. Step one, doable on Windows: split the Windows-only code from the shared code (done in Phase 13).

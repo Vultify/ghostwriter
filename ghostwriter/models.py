@@ -30,7 +30,7 @@ VAD_MODEL = "ggml-silero-v5.1.2.bin"  # skips silence, like faster-whisper's bui
 
 
 def whisper_cpp_model(has_nvidia: bool) -> str:
-    """NVIDIA cards have the memory for the full model, which came closest to faster-whisper in Caleb's test. Other
+    """NVIDIA cards have the memory for the full model, which came closest to faster-whisper in my test. Other
     graphics get the compressed one: a third of the download, and faster on chips built into the processor."""
     return WHISPER_CPP_FULL if has_nvidia else WHISPER_CPP_COMPRESSED
 
