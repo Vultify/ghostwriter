@@ -125,8 +125,23 @@ Any graphics card: whisper.cpp for AMD, Intel, and built-in graphics, and an eng
 - [ ] Measure the delay against raw mode
 - **Checkpoint 12:** Caleb tries both and picks his default
 
+## Phase 13: Linux (Omarchy, Hyprland on Wayland)
+Added 2026-11-03. Built and tested on Caleb's Omarchy laptop (Intel UHD 600, so slow but usable on a small model); a stronger Omarchy laptop comes later. Windows must keep working exactly as it does now.
+- [ ] Split the Windows-only code from the shared code behind a platform layer (also step one for macOS)
+- [ ] whisper.cpp built for Linux with Vulkan
+- [ ] Hold-to-talk hotkey by reading the keyboard directly (`evdev`, user in the `input` group)
+- [ ] Paste with `wtype` and save/restore the clipboard with `wl-clipboard`
+- [ ] Knowing which app is in front (Hyprland's `hyprctl activewindow`) for History
+- [ ] Tray ghost in Waybar
+- [ ] App window through GTK WebKit
+- [ ] Listening pill as a Wayland overlay (`gtk-layer-shell`)
+- [ ] Start at login (Hyprland autostart) and an app launcher entry (`.desktop` file)
+- [ ] One-line install script for Linux (`get.sh`)
+- [ ] Caleb checks the Windows build still works on his PC before release
+- **Checkpoint 13:** Caleb dictates into apps on the laptop for a day
+
 ## Later
-- macOS (Apple chips only): needs a Mac to test on, and Apple's $99 a year developer program to avoid "unidentified developer" warnings. Shares the window, dictionary, history, sounds, and whisper.cpp (Metal); rebuilds the hotkey (Fn/Globe works on Mac), paste, pill, menu bar icon, start at login, installer, and permission prompts. Step one, doable on Windows: split the Windows-only code from the shared code.
+- macOS (Apple chips only): needs a Mac to test on, and Apple's $99 a year developer program to avoid "unidentified developer" warnings. Shares the window, dictionary, history, sounds, and whisper.cpp (Metal); rebuilds the hotkey (Fn/Globe works on Mac), paste, pill, menu bar icon, start at login, installer, and permission prompts. Step one, doable on Windows: split the Windows-only code from the shared code (done in Phase 13).
 - winget (`winget install Vultify.Ghostwriter`), which needs a setup .exe and Microsoft's review
 - A real setup wizard (.exe) for people who want a classic installer
 - Let Jarvis use Ghostwriter as its ears
