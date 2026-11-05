@@ -3,54 +3,24 @@
 import json
 import logging
 from dataclasses import dataclass, field
-from ctypes import wintypes
 from pathlib import Path
 
-from ghostwriter import win32
 from ghostwriter.models import ENGINE_SETTINGS
 from ghostwriter.paths import SETTINGS_PATH
 from ghostwriter.sounds import STYLES
-from ghostwriter.win32 import user32
+from ghostwriter.system import hotkey as system_hotkey
 
-# Single keys that make good hotkeys: easy to reach and rarely needed on their own.
-HOTKEYS = {
-    "Right Alt": win32.VK_RMENU,
-    "Right Ctrl": win32.VK_RCONTROL,
-    "Caps Lock": win32.VK_CAPITAL,
-    "Scroll Lock": win32.VK_SCROLL,
-    "Pause": win32.VK_PAUSE,
-}
+HOTKEYS = system_hotkey.HOTKEYS  # the keys to pick from, by name; the names are the same on every system
 HANDS_FREE_MINUTES = (5, 15, 30)  # how long hands free can run before it stops by itself
-THEMES = ("system", "light", "dark")  # for the app window; "system" follows Windows
-
-# Characters that keyboards with an AltGr key (Right Alt on most non-US layouts) type through it.
-_ALTGR_CHARACTERS = "@€{}[]\\|~#$^`<>"
-_CTRL_AND_ALT = 0x06  # in the shift state VkKeyScanEx reports
+THEMES = ("system", "light", "dark")  # for the app window; "system" follows the system's own setting
 
 log = logging.getLogger("ghostwriter")
 
 
-def keyboard_uses_altgr() -> bool:
-    """Whether any installed keyboard layout types characters with AltGr, which would make Right Alt a bad hotkey."""
-    count = user32.GetKeyboardLayoutList(0, None)
-    layouts = (wintypes.HKL * count)()
-    user32.GetKeyboardLayoutList(count, layouts)
-    for layout in layouts:
-        for character in _ALTGR_CHARACTERS:
-            key = user32.VkKeyScanExW(character, layout)
-            if key != -1 and (key >> 8) & _CTRL_AND_ALT == _CTRL_AND_ALT:
-                return True
-    return False
-
-
-def default_hotkey() -> str:
-    return "Right Ctrl" if keyboard_uses_altgr() else "Right Alt"
-
-
 @dataclass
 class Settings:
-    hotkey: str = field(default_factory=default_hotkey)
-    microphone: str | None = None  # None follows the Windows default mic
+    hotkey: str = field(default_factory=system_hotkey.default_hotkey)
+    microphone: str | None = None  # None follows the system's default mic
     sounds: bool = True
     sound: str = "soft"  # which start and stop sounds, from sounds.STYLES
     pill: bool = True  # the listening pill at the bottom of the screen

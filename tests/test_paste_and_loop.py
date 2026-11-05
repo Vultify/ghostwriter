@@ -8,11 +8,11 @@ import pytest
 from conftest import GuardedPaster, fixed_dictionary, press_key, pump_until, run_in_thread, speak_to_wav, text_of
 from faster_whisper import decode_audio
 
-from ghostwriter import win32
 from ghostwriter.app import Dictation
-from ghostwriter.clipboard import Clipboard
 from ghostwriter.transcriber import SAMPLE_RATE
-from ghostwriter.win32 import user32
+from ghostwriter.windows import win32
+from ghostwriter.windows.clipboard import Clipboard
+from ghostwriter.windows.win32 import user32
 
 SENTENCE = "Book the ceramic coating for Friday morning in Gloucester."
 RAMBLE = (

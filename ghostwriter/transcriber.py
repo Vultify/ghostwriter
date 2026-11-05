@@ -2,6 +2,7 @@
 
 import os
 import site
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -14,7 +15,7 @@ BEAM_SIZE = 1
 
 
 def _add_cuda_dll_dirs() -> None:
-    """Let ctranslate2 find the cuBLAS and cuDNN DLLs that ship inside the nvidia pip packages."""
+    """On Windows, let ctranslate2 find the cuBLAS and cuDNN DLLs that ship inside the nvidia pip packages."""
     for packages_dir in site.getsitepackages():
         for lib in ("cublas", "cudnn", "cuda_nvrtc"):
             bin_dir = Path(packages_dir) / "nvidia" / lib / "bin"
@@ -23,7 +24,8 @@ def _add_cuda_dll_dirs() -> None:
                 os.environ["PATH"] = f"{bin_dir}{os.pathsep}{os.environ['PATH']}"
 
 
-_add_cuda_dll_dirs()
+if sys.platform == "win32":
+    _add_cuda_dll_dirs()
 
 import ctranslate2  # noqa: E402  (needs the DLL paths above)
 from faster_whisper import WhisperModel  # noqa: E402

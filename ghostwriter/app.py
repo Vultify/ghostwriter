@@ -1,6 +1,5 @@
 """Hold Right Alt, talk, let go: Ghostwriter pastes what you said wherever the cursor is."""
 
-import ctypes
 import logging
 import os
 import queue
@@ -16,31 +15,31 @@ from pathlib import Path
 
 import numpy as np
 
-from ghostwriter import __version__, models, sounds, startup, updates, win32
+from ghostwriter import __version__, models, sounds, startup, updates
 from ghostwriter.audio import SAMPLE_RATE, wav_bytes
 from ghostwriter.dictionary import DICTIONARY_PATH, DictionaryFile
 from ghostwriter.history import History
-from ghostwriter.hotkey import KeyHook
 from ghostwriter.indicator import Indicator
-from ghostwriter.paster import Paster, app_name, foreground_app
 from ghostwriter.paths import LOG_PATH, RECORDINGS_DIR
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import Settings
 from ghostwriter.speech import SpeechEngine
 from ghostwriter.state import State
+from ghostwriter.system import desktop, install
+from ghostwriter.system import hotkey as system_hotkey
+from ghostwriter.system import paster as system_paster
 from ghostwriter.transcriber import Transcriber, gpu_available
 from ghostwriter.tray import Tray
 from ghostwriter.window import close_window, open_window
-from ghostwriter.win32 import kernel32, user32
 
-HOTKEY = win32.VK_RMENU
-INSTANCE_NAME = "Local\\Ghostwriter"
+HOTKEY = system_hotkey.HOTKEYS["Right Alt"]
+INSTANCE_NAME = "Ghostwriter"
 TRAY_ONLY_FLAG = "--tray"  # start in the tray without opening the window
 # With this set, every dictation's audio is also saved in recordings\, for scripts\compare_engines.py.
 KEEP_RECORDINGS_VARIABLE = "GHOSTWRITER_KEEP_RECORDINGS"
 NO_ENGINE_MESSAGE = (
     "Ghostwriter couldn't find its speech engine for this graphics card. Run the install command again to get it:\n\n"
-    "irm https://raw.githubusercontent.com/Vultify/ghostwriter/main/get.ps1 | iex"
+    + install.INSTALL_COMMAND
 )
 DOWNLOAD_MESSAGE = (
     "Downloading the speech model (about {size}). This only happens once and can take a few minutes. "
@@ -54,7 +53,6 @@ DOUBLE_TAP_SECONDS = 0.4
 MAX_RECORDING_SECONDS = 15 * 60
 
 log = logging.getLogger("ghostwriter")
-_instance_mutex = None
 
 
 class _Key(Enum):
@@ -83,7 +81,7 @@ class Dictation:
         self,
         transcriber: SpeechEngine | Transcriber,
         recorder: Recorder,
-        paster: Paster,
+        paster: system_paster.Paster,
         hotkey: int = HOTKEY,
         allow_injected: bool = False,
         on_state: Callable[[State], None] = lambda state: None,
@@ -107,7 +105,7 @@ class Dictation:
         self._unfinished = 0  # finished recordings not yet typed out
         self._state = State.READY
         self._state_lock = threading.Lock()
-        self._hook = KeyHook(
+        self._hook = system_hotkey.KeyHook(
             hotkey,
             on_press=lambda: self._key_events.put(_Key.PRESS),
             on_release=lambda: self._key_events.put(_Key.RELEASE),
@@ -124,8 +122,8 @@ class Dictation:
         self._key_events.put(None)
         self._clips.put(None)
 
-    def set_hotkey(self, vk_code: int) -> None:
-        self._hook.set_key(vk_code)
+    def set_hotkey(self, key_code: int) -> None:
+        self._hook.set_key(key_code)
 
     def _update_state(self, unfinished_change: int = 0) -> None:
         with self._state_lock:
@@ -231,7 +229,7 @@ class Dictation:
             log.info("Heard nothing")
             return
         seconds = len(audio) / SAMPLE_RATE
-        program = foreground_app()
+        program = system_paster.foreground_app()
         log.info("%.1fs of audio, transcribed in %.2fs, pasting into %s: %s",
                  seconds, elapsed, program.name if program else "an unknown app", text)
         try:
@@ -246,7 +244,7 @@ class Dictation:
     @staticmethod
     def _save(history: History, text: str, program: Path | None, seconds: float) -> None:
         try:
-            history.add(text, app_name(program), seconds)
+            history.add(text, system_paster.app_name(program), seconds)
         except sqlite3.Error:
             log.exception("Couldn't save the dictation to history")
 
@@ -281,15 +279,15 @@ def main() -> None:
         _run()
     except Exception as error:
         log.exception("Ghostwriter stopped because of an error")
-        _show_message(f"Ghostwriter stopped because of an error:\n\n{error}\n\nDetails are in {LOG_PATH}", win32.MB_ICONERROR)
+        desktop.show_error(f"Ghostwriter stopped because of an error:\n\n{error}\n\nDetails are in {LOG_PATH}")
 
 
 def _run() -> None:
-    user32.SetProcessDpiAwarenessContext(win32.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)  # crisp on scaled screens
+    desktop.prepare()
     has_nvidia = gpu_available()
     if not models.available(has_nvidia):
         log.error("No NVIDIA GPU, and whisper.cpp isn't installed")
-        _show_message(NO_ENGINE_MESSAGE, win32.MB_ICONERROR)
+        desktop.show_error(NO_ENGINE_MESSAGE)
         return
     settings = Settings.load()
     quitting = threading.Event()
@@ -323,7 +321,7 @@ def _run() -> None:
     history = History()
     indicator = Indicator(level=lambda: recorder.level)
     dictation = Dictation(
-        speech, recorder, Paster(), hotkey=settings.hotkey_code,
+        speech, recorder, system_paster.Paster(), hotkey=settings.hotkey_code,
         on_state=StatusDisplay(tray, indicator, settings), dictionary=dictionary,
     )
 
@@ -336,7 +334,7 @@ def _run() -> None:
         speech.switch_to(models.resolve(settings.engine, has_nvidia))
         tray.refresh()
         log.info("Settings: hotkey %s, mic %s, sounds %s, pill %s, hands free %s, history %s, engine %s",
-                 settings.hotkey, settings.microphone or "Windows default",
+                 settings.hotkey, settings.microphone or f"{desktop.NAME} default",
                  settings.sound if settings.sounds else "off", "on" if settings.pill else "off",
                  f"on, up to {settings.hands_free_minutes} min" if settings.hands_free else "off",
                  "on" if settings.history else "off", settings.engine)
@@ -384,17 +382,14 @@ def check_for_updates(tray: Tray) -> None:
         return
     question = (f"Ghostwriter {latest} is available (you have {__version__}).\n\n"
                 "Update now? Ghostwriter will close, update, and start again.")
-    if user32.MessageBoxW(None, question, "Ghostwriter", win32.MB_YESNO | win32.MB_ICONQUESTION) == win32.IDYES:
+    if desktop.ask_yes_no(question):
         log.info("Updating to %s", latest)
         updates.start_update()
 
 
 def claim_single_instance(name: str = INSTANCE_NAME) -> bool:
     """Return False if another copy of Ghostwriter is already running."""
-    global _instance_mutex
-    ctypes.set_last_error(0)
-    _instance_mutex = kernel32.CreateMutexW(None, False, name)  # held until the process exits
-    return ctypes.get_last_error() != win32.ERROR_ALREADY_EXISTS
+    return desktop.claim_single_instance(name)
 
 
 def _set_up_logging() -> None:
@@ -410,6 +405,3 @@ def _set_up_logging() -> None:
                         handlers=handlers)
     log.setLevel(logging.INFO)
 
-
-def _show_message(text: str, icon: int) -> None:
-    user32.MessageBoxW(None, text, "Ghostwriter", icon)

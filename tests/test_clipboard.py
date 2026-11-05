@@ -2,9 +2,9 @@
 
 from conftest import text_of
 
-from ghostwriter import win32
-from ghostwriter.clipboard import Clipboard
-from ghostwriter.win32 import user32
+from ghostwriter.windows import win32
+from ghostwriter.windows.clipboard import Clipboard
+from ghostwriter.windows.win32 import user32
 
 HTML = "Version:0.9\r\nStartHTML:0\r\nEndHTML:0\r\n<b>bold</b>".encode() + b"\0"
 

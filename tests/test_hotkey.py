@@ -5,8 +5,8 @@ import time
 
 from conftest import press_key
 
-from ghostwriter import win32
-from ghostwriter.hotkey import KeyHook
+from ghostwriter.windows import win32
+from ghostwriter.windows.hotkey import KeyHook
 
 
 class Recorded:

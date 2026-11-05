@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+- The Windows-only code now lives in its own folder (`ghostwriter/windows`), and `ghostwriter/system.py` picks the right code for the system Ghostwriter runs on. This gets Ghostwriter ready for Linux; nothing works differently on Windows.
+
 ## [1.5.0] - 2026-10-31
 
 Ghostwriter runs on any graphics card now, not just NVIDIA.

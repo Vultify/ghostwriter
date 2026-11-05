@@ -5,8 +5,8 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from ghostwriter import win32
-from ghostwriter.win32 import kernel32, user32
+from ghostwriter.windows import win32
+from ghostwriter.windows.win32 import kernel32, user32
 
 Snapshot = list[tuple[int, bytes]]
 

@@ -127,7 +127,7 @@ Any graphics card: whisper.cpp for AMD, Intel, and built-in graphics, and an eng
 
 ## Phase 13: Linux (Omarchy, Hyprland on Wayland)
 Added 2026-11-03. Built and tested on my Omarchy laptop (Intel UHD 600, so slow but usable on a small model); a stronger Omarchy laptop comes later. Windows must keep working exactly as it does now.
-- [ ] Split the Windows-only code from the shared code behind a platform layer (also step one for macOS)
+- [x] Split the Windows-only code from the shared code behind a platform layer (also step one for macOS): `ghostwriter/windows`, picked by `ghostwriter/system.py`
 - [ ] whisper.cpp built for Linux with Vulkan
 - [ ] Hold-to-talk hotkey by reading the keyboard directly (`evdev`, user in the `input` group)
 - [ ] Paste with `wtype` and save/restore the clipboard with `wl-clipboard`

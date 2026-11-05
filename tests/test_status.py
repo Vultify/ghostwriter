@@ -5,13 +5,14 @@ import wave
 
 from conftest import press_key, pump_until
 
-from ghostwriter import sounds, win32
+from ghostwriter import sounds
 from ghostwriter.app import Dictation
 from ghostwriter.indicator import Indicator
 from ghostwriter.settings import Settings
 from ghostwriter.state import State
 from ghostwriter.tray import Tray
-from ghostwriter.win32 import user32
+from ghostwriter.windows import win32
+from ghostwriter.windows.win32 import user32
 
 
 def test_pill_shows_and_hides_without_taking_focus(text_box):
@@ -22,14 +23,14 @@ def test_pill_shows_and_hides_without_taking_focus(text_box):
     try:
         indicator.show(State.LISTENING)
         pump_until(root, lambda: False, timeout=0.4)
-        assert user32.IsWindowVisible(indicator.window)
+        assert user32.IsWindowVisible(indicator.window.handle)
         assert user32.GetForegroundWindow() == front
-        style = user32.GetWindowLongPtrW(indicator.window, win32.GWL_EXSTYLE)
+        style = user32.GetWindowLongPtrW(indicator.window.handle, win32.GWL_EXSTYLE)
         assert style & win32.WS_EX_NOACTIVATE and style & win32.WS_EX_TRANSPARENT
 
         indicator.show(None)
         pump_until(root, lambda: False, timeout=0.4)
-        assert not user32.IsWindowVisible(indicator.window)
+        assert not user32.IsWindowVisible(indicator.window.handle)
     finally:
         indicator.stop()
 

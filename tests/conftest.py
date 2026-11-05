@@ -10,12 +10,12 @@ from pathlib import Path
 
 import pytest
 
-from ghostwriter import win32
-from ghostwriter.clipboard import Clipboard, Snapshot
 from ghostwriter.dictionary import DictionaryFile
-from ghostwriter.paster import Paster
 from ghostwriter.transcriber import Transcriber
-from ghostwriter.win32 import kernel32, user32
+from ghostwriter.windows import win32
+from ghostwriter.windows.clipboard import Clipboard, Snapshot
+from ghostwriter.windows.paster import Paster
+from ghostwriter.windows.win32 import kernel32, user32
 
 TEST_DICTIONARY = Path(__file__).resolve().parent / "dictionary.txt"
 

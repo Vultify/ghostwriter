@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from ghostwriter import app, updates, win32
+from ghostwriter import app, updates
 
 
 @pytest.mark.parametrize(("latest", "current", "newer"), [
@@ -42,14 +42,14 @@ def update_check(monkeypatch):
     monkeypatch.setattr(app, "__version__", "1.1.0")
     monkeypatch.setattr(updates, "__version__", "1.1.0")
 
-    def run(latest, answer=win32.IDYES):
+    def run(latest, answer=True):
         if isinstance(latest, Exception):
             def fail():
                 raise latest
             monkeypatch.setattr(updates, "latest_version", fail)
         else:
             monkeypatch.setattr(updates, "latest_version", lambda: latest)
-        monkeypatch.setattr(app.user32, "MessageBoxW", lambda *args: answer)
+        monkeypatch.setattr(app.desktop, "ask_yes_no", lambda question: answer)
         tray = FakeTray()
         app.check_for_updates(tray)
         return tray.messages, bool(started)
@@ -68,11 +68,11 @@ def test_offline_or_unreachable(update_check):
 
 
 def test_a_newer_version_updates_only_when_you_say_yes(update_check):
-    assert update_check("1.2.0", answer=win32.IDYES) == ([], True)
+    assert update_check("1.2.0", answer=True) == ([], True)
 
 
 def test_saying_no_leaves_everything_alone(update_check):
-    assert update_check("1.2.0", answer=7) == ([], False)
+    assert update_check("1.2.0", answer=False) == ([], False)
 
 
 def test_a_git_checkout_is_never_overwritten(monkeypatch):

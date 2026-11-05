@@ -9,7 +9,7 @@ PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
 
 from ghostwriter.paths import ICON_PATH  # noqa: E402
-from ghostwriter.shortcuts import make_shortcut, start_menu_folder  # noqa: E402
+from ghostwriter.windows.shortcuts import make_shortcut, start_menu_folder  # noqa: E402
 from ghostwriter.tray import draw_ghost  # noqa: E402
 
 ICON_SIZES = [16, 24, 32, 48, 64, 128, 256]

@@ -37,11 +37,11 @@ $link.Save()
     return path
 
 
-def starts_with_windows(folder: Path | None = None) -> bool:
+def starts_at_login(folder: Path | None = None) -> bool:
     return ((folder or startup_folder()) / SHORTCUT_NAME).exists()
 
 
-def set_start_with_windows(on: bool, folder: Path | None = None) -> None:
+def set_start_at_login(on: bool, folder: Path | None = None) -> None:
     folder = folder or startup_folder()
     if on:
         folder.mkdir(parents=True, exist_ok=True)

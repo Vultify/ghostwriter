@@ -1,8 +1,6 @@
 """The system tray icon: a little ghost by the clock that turns red while listening, with Ghostwriter's settings menu."""
 
-import os
 import threading
-import winreg
 from collections.abc import Callable
 from pathlib import Path
 
@@ -11,6 +9,7 @@ from PIL import Image, ImageDraw
 
 from ghostwriter.settings import HOTKEYS, Settings
 from ghostwriter.state import State
+from ghostwriter.system import desktop
 
 ICON_SIZE = 64
 SUPERSAMPLE = 4
@@ -34,7 +33,7 @@ class Tray:
         self.settings = settings
         self.on_change: Callable[[], None] = lambda: None
         self._state: State | None = None  # None until startup finishes
-        normal = draw_ghost(LIGHT_TASKBAR_COLOR if _taskbar_is_light() else DARK_TASKBAR_COLOR)
+        normal = draw_ghost(LIGHT_TASKBAR_COLOR if desktop.taskbar_is_light() else DARK_TASKBAR_COLOR)
         listening = draw_ghost(RED)
         self._icons = {State.READY: normal, State.LISTENING: listening, State.LOCKED: listening, State.WORKING: normal}
         menu = pystray.Menu(
@@ -45,7 +44,7 @@ class Tray:
             pystray.MenuItem(
                 "Microphone",
                 pystray.Menu(
-                    self._choice("microphone", None, label="Windows default"),
+                    self._choice("microphone", None, label=f"{desktop.NAME} default"),
                     *(self._choice("microphone", name) for name in microphones),
                 ),
             ),
@@ -70,7 +69,7 @@ class Tray:
         shown.wait(5)
 
     def notify(self, message: str) -> None:
-        """Pop up a Windows notification from the tray icon."""
+        """Pop up a notification from the tray icon."""
         self._tray.notify(message, "Ghostwriter")
 
     def set_state(self, state: State) -> None:
@@ -114,7 +113,7 @@ class Tray:
 
 
 def _opener(path: Path) -> Callable[[], None]:
-    return lambda: os.startfile(path)
+    return lambda: desktop.open_path(path)
 
 
 def draw_ghost(color: tuple[int, int, int, int], final_size: int = ICON_SIZE) -> Image.Image:
@@ -137,10 +136,3 @@ def draw_ghost(color: tuple[int, int, int, int], final_size: int = ICON_SIZE) ->
     icon.putalpha(shape)
     return icon.resize((final_size, final_size), Image.LANCZOS)
 
-
-def _taskbar_is_light() -> bool:
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
-            return winreg.QueryValueEx(key, "SystemUsesLightTheme")[0] == 1
-    except OSError:
-        return False

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from ghostwriter import startup, updates, window
+from ghostwriter.windows import app_window
 from ghostwriter.history import History
 from ghostwriter.paths import ICON_PATH, UI_DIR
 from ghostwriter.settings import HOTKEYS
@@ -295,12 +296,12 @@ def _wait_for(check, timeout: float = 20.0) -> bool:
 
 
 def test_opening_twice_gives_one_window_and_quitting_closes_it():
-    if window._app_windows():
+    if app_window._app_windows(window.TITLE):
         pytest.skip("Ghostwriter's window is open, and this test would close it")
     window.open_window()
-    assert _wait_for(lambda: len(window._app_windows()) == 1), "the window never opened"
+    assert _wait_for(lambda: len(app_window._app_windows(window.TITLE)) == 1), "the window never opened"
     window.open_window()
     time.sleep(3)  # long enough for a second copy to start, see the first, and step aside
-    assert len(window._app_windows()) == 1
+    assert len(app_window._app_windows(window.TITLE)) == 1
     window.close_window()
-    assert _wait_for(lambda: not window._app_windows(), timeout=10), "the window didn't close"
+    assert _wait_for(lambda: not app_window._app_windows(window.TITLE), timeout=10), "the window didn't close"

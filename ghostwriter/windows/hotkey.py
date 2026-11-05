@@ -1,14 +1,44 @@
-"""A system wide hook for one key that reports presses and hides the key from every other app."""
+"""The hotkey on Windows: the keys to pick from, and a system wide hook for one key that reports presses and hides
+the key from every other app."""
 
 import ctypes
 import threading
 from collections.abc import Callable
 from ctypes import wintypes
 
-from ghostwriter import win32
-from ghostwriter.win32 import kernel32, user32
+from ghostwriter.windows import win32
+from ghostwriter.windows.win32 import kernel32, user32
 
+# Single keys that make good hotkeys: easy to reach and rarely needed on their own.
+HOTKEYS = {
+    "Right Alt": win32.VK_RMENU,
+    "Right Ctrl": win32.VK_RCONTROL,
+    "Caps Lock": win32.VK_CAPITAL,
+    "Scroll Lock": win32.VK_SCROLL,
+    "Pause": win32.VK_PAUSE,
+}
+
+# Characters that keyboards with an AltGr key (Right Alt on most non-US layouts) type through it.
+_ALTGR_CHARACTERS = "@€{}[]\\|~#$^`<>"
+_CTRL_AND_ALT = 0x06  # in the shift state VkKeyScanEx reports
 _KEY_DOWN_MESSAGES = (win32.WM_KEYDOWN, win32.WM_SYSKEYDOWN)
+
+
+def keyboard_uses_altgr() -> bool:
+    """Whether any installed keyboard layout types characters with AltGr, which would make Right Alt a bad hotkey."""
+    count = user32.GetKeyboardLayoutList(0, None)
+    layouts = (wintypes.HKL * count)()
+    user32.GetKeyboardLayoutList(count, layouts)
+    for layout in layouts:
+        for character in _ALTGR_CHARACTERS:
+            key = user32.VkKeyScanExW(character, layout)
+            if key != -1 and (key >> 8) & _CTRL_AND_ALT == _CTRL_AND_ALT:
+                return True
+    return False
+
+
+def default_hotkey() -> str:
+    return "Right Ctrl" if keyboard_uses_altgr() else "Right Alt"
 
 
 class KeyHook:

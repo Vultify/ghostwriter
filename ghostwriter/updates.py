@@ -1,18 +1,16 @@
-"""Checking GitHub for a newer release, and handing off to get.ps1 to install it."""
+"""Checking GitHub for a newer release, and handing off to the system's installer to install it."""
 
 import json
-import os
 import re
-import subprocess
 import urllib.request
 from pathlib import Path
 
 from ghostwriter import __version__
 from ghostwriter.paths import PROJECT as INSTALL_DIR
+from ghostwriter.system import install
 
 REPO = "Vultify/ghostwriter"
 LATEST_RELEASE_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
-INSTALL_COMMAND = f"irm https://raw.githubusercontent.com/{REPO}/main/get.ps1 | iex"
 
 
 def latest_version(timeout: float = 10) -> str:
@@ -31,13 +29,8 @@ def is_git_checkout(folder: Path = INSTALL_DIR) -> bool:
 
 
 def start_update(folder: Path = INSTALL_DIR) -> None:
-    """Open a PowerShell window that runs get.ps1 on this folder; it closes Ghostwriter, updates, and restarts it."""
-    command = f"{INSTALL_COMMAND}; Read-Host 'Press Enter to close this window'"
-    subprocess.Popen(
-        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
-        env={**os.environ, "GHOSTWRITER_HOME": str(folder)},
-        creationflags=subprocess.CREATE_NEW_CONSOLE,
-    )
+    """Start the installer on this folder; it closes Ghostwriter, updates it, and starts it again."""
+    install.start_update(folder)
 
 
 def _numbers(version: str) -> tuple[int, ...]:

@@ -7,12 +7,14 @@ import time
 from conftest import press_key
 from test_status import FakePaster, FakeRecorder, FakeTranscriber
 
-from ghostwriter import app, sounds, win32
+from ghostwriter import app, sounds
 from ghostwriter.app import Dictation, StatusDisplay, claim_single_instance
 from ghostwriter.recorder import Recorder, list_microphones
-from ghostwriter.settings import Settings, default_hotkey, keyboard_uses_altgr
+from ghostwriter.settings import Settings
 from ghostwriter.state import State
 from ghostwriter.tray import Tray
+from ghostwriter.windows import win32
+from ghostwriter.windows.hotkey import default_hotkey, keyboard_uses_altgr
 
 
 def test_missing_file_means_defaults(tmp_path):
@@ -123,7 +125,7 @@ def test_a_chosen_mic_records_and_an_unplugged_one_falls_back_to_default():
 
 
 def test_only_one_copy_can_run_at_a_time():
-    name = f"Local\\GhostwriterTest{time.time_ns()}"
+    name = f"GhostwriterTest{time.time_ns()}"
     assert claim_single_instance(name)
     assert not claim_single_instance(name)
     assert app.LOG_PATH.name == "ghostwriter.log"

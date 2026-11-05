@@ -11,8 +11,8 @@ from test_status import FakePaster, FakeRecorder, FakeTranscriber
 from ghostwriter.app import Dictation
 from ghostwriter.audio import SAMPLE_RATE
 from ghostwriter.history import FILTER_APPS, History
-from ghostwriter.paster import PasteError, app_name
 from ghostwriter.paths import PROJECT
+from ghostwriter.windows.paster import PasteError, app_name
 
 TWO_SECONDS = np.zeros(SAMPLE_RATE * 2, dtype=np.float32)
 

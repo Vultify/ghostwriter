@@ -1,4 +1,5 @@
-"""Paste text into whatever app has focus, then put the old clipboard back."""
+"""Pasting on Windows: put the text on the clipboard, press Ctrl+V in whatever app has focus, then put the old
+clipboard back. Also says which app is in front, for History."""
 
 import ctypes
 import functools
@@ -6,10 +7,10 @@ import time
 from ctypes import wintypes
 from pathlib import Path
 
-from ghostwriter import win32
-from ghostwriter.clipboard import Clipboard
 from ghostwriter.paths import PROJECT
-from ghostwriter.win32 import kernel32, user32, version
+from ghostwriter.windows import win32
+from ghostwriter.windows.clipboard import Clipboard
+from ghostwriter.windows.win32 import kernel32, user32, version
 
 # Long enough for slow apps (browsers, terminals) to read the clipboard before we restore it.
 RESTORE_DELAY_SECONDS = 0.5

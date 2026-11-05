@@ -7,6 +7,7 @@ import numpy as np
 import sounddevice as sd
 
 from ghostwriter.audio import SAMPLE_RATE
+from ghostwriter.system import desktop, microphones
 
 # After release, keep listening until the speaker has gone quiet, so the last word isn't clipped.
 TAIL_SECONDS = 0.3  # never longer than this
@@ -20,7 +21,7 @@ log = logging.getLogger("ghostwriter")
 class Recorder:
     def __init__(self, tail_seconds: float = TAIL_SECONDS, microphone: str | None = None) -> None:
         self.tail_seconds = tail_seconds
-        self.microphone = microphone  # a name from list_microphones(), or None for the Windows default
+        self.microphone = microphone  # a name from list_microphones(), or None for the system's default
         self.open_ms = 0.0
         self.level = 0.0  # loudness (RMS) of the latest chunk, for the listening pill
         self._stream: sd.InputStream | None = None
@@ -68,30 +69,14 @@ class Recorder:
 
 
 def list_microphones() -> list[str]:
-    """Names of the mics Windows has turned on, for the tray menu."""
-    return list(_microphones())
-
-
-def _microphones() -> dict[str, int]:
-    """Map each mic's full name to its device number in MME, the audio system Ghostwriter records through."""
-    apis = sd.query_hostapis()
-    devices = sd.query_devices()
-    inputs = [(index, device) for index, device in enumerate(devices) if device["max_input_channels"] > 0]
-    # MME cuts names off at 31 characters, so borrow the full name from DirectSound when one starts the same way.
-    full_names = [device["name"] for _, device in inputs if apis[device["hostapi"]]["name"] == "Windows DirectSound"]
-    microphones = {}
-    for index, device in inputs:
-        name = device["name"]
-        if apis[device["hostapi"]]["name"] != "MME" or name.startswith("Microsoft Sound Mapper"):
-            continue
-        microphones[next((full for full in full_names if full.startswith(name)), name)] = index
-    return microphones
+    """Names of the mics the system has turned on, for the tray menu."""
+    return list(microphones.microphones())
 
 
 def _device_index(microphone: str | None) -> int | None:
     if microphone is None:
         return None
-    index = _microphones().get(microphone)
+    index = microphones.microphones().get(microphone)
     if index is None:
-        log.warning("Mic %r isn't connected, using the Windows default", microphone)
+        log.warning("Mic %r isn't connected, using the %s default", microphone, desktop.NAME)
     return index

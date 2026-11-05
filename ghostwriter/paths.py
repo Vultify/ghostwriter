@@ -1,5 +1,6 @@
 """Where Ghostwriter keeps its files. Everything lives inside the folder it was installed to."""
 
+import sys
 from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parent.parent
@@ -13,7 +14,7 @@ LOG_DIR = PROJECT / "logs"
 LOG_PATH = LOG_DIR / "ghostwriter.log"
 WINDOW_LOG_PATH = LOG_DIR / "window.log"
 WHISPER_CPP_DIR = PROJECT / ".whisper-cpp"  # the speech engine for graphics cards that aren't NVIDIA
-WHISPER_SERVER = WHISPER_CPP_DIR / "whisper-server.exe"
+WHISPER_SERVER = WHISPER_CPP_DIR / ("whisper-server.exe" if sys.platform == "win32" else "whisper-server")
 WEB_DATA_DIR = PROJECT / ".webview"  # the app window's scratch space, cleared on every start
 UI_DIR = Path(__file__).resolve().parent / "ui"
 ICON_PATH = Path(__file__).resolve().parent / "assets" / "ghostwriter.ico"

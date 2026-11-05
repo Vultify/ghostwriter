@@ -1,12 +1,11 @@
 """Whisper speech to text with whisper.cpp, which runs on any graphics card through Vulkan.
 
-whisper.cpp runs as its own small server program (.whisper-cpp\\whisper-server.exe, built by
-scripts\\build_whisper_cpp.ps1) that keeps the model loaded on the graphics card, and each dictation is sent to it
-over a connection that never leaves this PC. A Windows job ties the server to Ghostwriter, so it closes when
+whisper.cpp runs as its own small server program (whisper-server in .whisper-cpp, built by
+scripts/build_whisper_cpp.ps1 on Windows) that keeps the model loaded on the graphics card, and each dictation is
+sent to it over a connection that never leaves this PC. The server is tied to Ghostwriter, so it closes when
 Ghostwriter does, even after a crash.
 """
 
-import ctypes
 import json
 import logging
 import re
@@ -20,11 +19,10 @@ from pathlib import Path
 
 import numpy as np
 
-from ghostwriter import win32
 from ghostwriter.audio import SAMPLE_RATE, wav_bytes
 from ghostwriter.models import VAD_MODEL, VAD_REPO, WHISPER_CPP_REPO, DownloadProgress, fetch
 from ghostwriter.paths import LOG_DIR, WHISPER_SERVER as SERVER
-from ghostwriter.win32 import kernel32
+from ghostwriter.system import processes
 
 SERVER_LOG = LOG_DIR / "whisper-cpp.log"
 START_SECONDS = 90  # loading the model onto a slow graphics chip can take a while
@@ -63,7 +61,7 @@ class WhisperCpp:
         self.vad = vad
         self.device = "the processor"  # until the server says which graphics it found
         self._device_index: int | None = None
-        self._job = _kill_on_close_job()
+        self._children = processes.Children()
         self._server: subprocess.Popen | None = None
         self._port = 0
         self._lock = threading.Lock()
@@ -99,7 +97,7 @@ class WhisperCpp:
     def close(self) -> None:
         with self._lock:
             self._stop()
-            kernel32.CloseHandle(self._job)
+            self._children.close()
 
     def _start(self) -> None:
         self._port = _free_port()
@@ -109,9 +107,8 @@ class WhisperCpp:
             args += ["-dev", str(self._device_index)]
         SERVER_LOG.parent.mkdir(exist_ok=True)
         with open(SERVER_LOG, "w", encoding="utf-8") as output:
-            self._server = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT,
-                                            creationflags=subprocess.CREATE_NO_WINDOW)
-        _add_to_job(self._job, self._server.pid)
+            self._server = self._children.start(args, stdin=subprocess.DEVNULL, stdout=output,
+                                                stderr=subprocess.STDOUT)
         deadline = time.perf_counter() + START_SECONDS
         while not self._answers():
             if self._server.poll() is not None:
@@ -151,23 +148,3 @@ def _free_port() -> int:
         probe.bind(("127.0.0.1", 0))
         return probe.getsockname()[1]
 
-
-def _kill_on_close_job() -> int:
-    """A Windows job that closes every program in it once Ghostwriter lets go of it, including when it crashes."""
-    job = kernel32.CreateJobObjectW(None, None)
-    limits = win32.JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
-    limits.BasicLimitInformation.LimitFlags = win32.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-    if not job or not kernel32.SetInformationJobObject(job, win32.JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
-                                                       ctypes.byref(limits), ctypes.sizeof(limits)):
-        raise ctypes.WinError(ctypes.get_last_error())
-    return job
-
-
-def _add_to_job(job: int, process_id: int) -> None:
-    process = kernel32.OpenProcess(win32.PROCESS_SET_QUOTA | win32.PROCESS_TERMINATE, False, process_id)
-    try:
-        if not process or not kernel32.AssignProcessToJobObject(job, process):
-            log.warning("Couldn't tie whisper.cpp to Ghostwriter (error %d)", ctypes.get_last_error())
-    finally:
-        if process:
-            kernel32.CloseHandle(process)
