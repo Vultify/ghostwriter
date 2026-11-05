@@ -27,6 +27,8 @@ if WINDOWS:
 
     user32.SetForegroundWindow.argtypes = [wintypes.HWND]
     user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+
+    collect_ignore = ["test_hotkey_linux.py"]
 else:
     # Tests for parts that only exist on Windows so far. Each one joins in once its Linux version lands.
     collect_ignore = [

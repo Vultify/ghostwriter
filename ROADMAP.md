@@ -130,7 +130,7 @@ Any graphics card: whisper.cpp for AMD, Intel, and built-in graphics, and an eng
 Added 2026-11-03. Built and tested on my Omarchy laptop (Intel UHD 600, so slow but usable on a small model); a stronger Omarchy laptop comes later. Windows must keep working exactly as it does now.
 - [x] Split the Windows-only code from the shared code behind a platform layer (also step one for macOS): `ghostwriter/windows`, picked by `ghostwriter/system.py`
 - [x] whisper.cpp built for Linux with Vulkan (`scripts/build_whisper_cpp.sh`). It runs on my laptop, but the UHD 600 is too slow for Whisper: Linux resets the chip mid dictation, so speed waits for a stronger laptop
-- [ ] Hold-to-talk hotkey by reading the keyboard directly (`evdev`, user in the `input` group)
+- [x] Hold-to-talk hotkey by reading the keyboard directly (`/dev/input`, user in the `input` group). I tried Hyprland's global shortcuts first: they reported presses but never releases, and binding Right Alt there locked up my typing. Unlike on Windows, apps still see the key
 - [ ] Paste with `wtype` and save/restore the clipboard with `wl-clipboard`
 - [ ] Knowing which app is in front (Hyprland's `hyprctl activewindow`) for History
 - [ ] Tray ghost in Waybar
