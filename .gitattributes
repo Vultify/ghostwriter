@@ -1,2 +1,5 @@
 # Batch files need Windows line endings, so git never converts them.
 *.bat -text
+
+# Shell scripts need Linux line endings, even in a Windows checkout.
+*.sh text eol=lf

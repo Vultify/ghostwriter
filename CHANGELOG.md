@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- whisper.cpp builds on Linux with `scripts/build_whisper_cpp.sh`. It includes processor code for every generation of x86 processor and picks the best one at startup, so it also runs on budget chips without AVX.
+
 ### Changed
 - The Windows-only code now lives in its own folder (`ghostwriter/windows`), and `ghostwriter/system.py` picks the right code for the system Ghostwriter runs on. This gets Ghostwriter ready for Linux; nothing works differently on Windows.
 

@@ -114,6 +114,7 @@ Added 2026-10-31: AMD and Intel cards, and graphics built into the processor, ru
 - [x] Installer: no more NVIDIA-only refusal; non-NVIDIA PCs skip the NVIDIA files and get whisper.cpp
 - [ ] I dictate with whisper.cpp on my 4090 for a few days; if it holds up, it becomes the engine for NVIDIA too and the 1.3 GB of NVIDIA files go away
 - [ ] A friend's AMD or Intel PC runs the one-line install
+- [ ] Build whisper.cpp for Windows the way the Linux build does it, once per processor generation, so PCs without AVX (budget Celerons and Pentiums) don't crash
 
 ## Version 1.5.0 released 2026-10-31
 Any graphics card: whisper.cpp for AMD, Intel, and built-in graphics, and an engine switch on NVIDIA PCs.
@@ -128,7 +129,7 @@ Any graphics card: whisper.cpp for AMD, Intel, and built-in graphics, and an eng
 ## Phase 13: Linux (Omarchy, Hyprland on Wayland)
 Added 2026-11-03. Built and tested on my Omarchy laptop (Intel UHD 600, so slow but usable on a small model); a stronger Omarchy laptop comes later. Windows must keep working exactly as it does now.
 - [x] Split the Windows-only code from the shared code behind a platform layer (also step one for macOS): `ghostwriter/windows`, picked by `ghostwriter/system.py`
-- [ ] whisper.cpp built for Linux with Vulkan
+- [x] whisper.cpp built for Linux with Vulkan (`scripts/build_whisper_cpp.sh`). It runs on my laptop, but the UHD 600 is too slow for Whisper: Linux resets the chip mid dictation, so speed waits for a stronger laptop
 - [ ] Hold-to-talk hotkey by reading the keyboard directly (`evdev`, user in the `input` group)
 - [ ] Paste with `wtype` and save/restore the clipboard with `wl-clipboard`
 - [ ] Knowing which app is in front (Hyprland's `hyprctl activewindow`) for History
@@ -138,7 +139,7 @@ Added 2026-11-03. Built and tested on my Omarchy laptop (Intel UHD 600, so slow 
 - [ ] Start at login (Hyprland autostart) and an app launcher entry (`.desktop` file)
 - [ ] One-line install script for Linux (`get.sh`)
 - [ ] Check the Windows build still works on my PC before release
-- **Checkpoint 13:** I dictate into apps on the laptop for a day
+- **Checkpoint 13:** I dictate into apps for a day on a Linux laptop strong enough for Whisper
 
 ## Later
 - macOS (Apple chips only): needs a Mac to test on, and Apple's $99 a year developer program to avoid "unidentified developer" warnings. Shares the window, dictionary, history, sounds, and whisper.cpp (Metal); rebuilds the hotkey (Fn/Globe works on Mac), paste, pill, menu bar icon, start at login, installer, and permission prompts. Step one, doable on Windows: split the Windows-only code from the shared code (done in Phase 13).

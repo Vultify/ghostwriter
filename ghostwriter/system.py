@@ -10,14 +10,22 @@ Every system's package has the same modules with the same names in them:
   pill         the window the listening pill is drawn in
   processes    starting helper programs that close when Ghostwriter does
   shortcuts    the app menu entry and starting at login
+
+Each module loads the first time it's used, so a program only loads the parts it needs.
 """
 
+import importlib
 import sys
 
-if sys.platform == "win32":
-    from ghostwriter.windows import (app_window, desktop, hotkey, install, microphones, paster, pill, processes,
-                                     shortcuts)
-else:
-    raise ImportError(f"Ghostwriter doesn't run on {sys.platform} yet")
+PACKAGE = "ghostwriter.windows" if sys.platform == "win32" else "ghostwriter.linux"
+MODULES = ("app_window", "desktop", "hotkey", "install", "microphones", "paster", "pill", "processes", "shortcuts")
 
-__all__ = ["app_window", "desktop", "hotkey", "install", "microphones", "paster", "pill", "processes", "shortcuts"]
+__all__ = list(MODULES)
+
+
+def __getattr__(name: str):
+    if name not in MODULES:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module = importlib.import_module(f"{PACKAGE}.{name}")
+    globals()[name] = module  # later lookups find it directly
+    return module

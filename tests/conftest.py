@@ -1,7 +1,10 @@
 """Shared test helpers: a real text box to paste into, fake key presses, and a guard for the user's clipboard."""
 
+from __future__ import annotations
+
 import ctypes
 import subprocess
+import sys
 import threading
 import time
 import tkinter as tk
@@ -11,21 +14,33 @@ from pathlib import Path
 import pytest
 
 from ghostwriter.dictionary import DictionaryFile
-from ghostwriter.transcriber import Transcriber
-from ghostwriter.windows import win32
-from ghostwriter.windows.clipboard import Clipboard, Snapshot
-from ghostwriter.windows.paster import Paster
-from ghostwriter.windows.win32 import kernel32, user32
+from ghostwriter.transcriber import Transcriber, gpu_available
 
+WINDOWS = sys.platform == "win32"
 TEST_DICTIONARY = Path(__file__).resolve().parent / "dictionary.txt"
 
-user32.SetForegroundWindow.argtypes = [wintypes.HWND]
-user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+if WINDOWS:
+    from ghostwriter.windows import win32
+    from ghostwriter.windows.clipboard import Clipboard, Snapshot
+    from ghostwriter.windows.paster import Paster
+    from ghostwriter.windows.win32 import kernel32, user32
+
+    user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+    user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+else:
+    # Tests for parts that only exist on Windows so far. Each one joins in once its Linux version lands.
+    collect_ignore = [
+        "test_clipboard.py", "test_history.py", "test_hotkey.py", "test_paste_and_loop.py", "test_recorder.py",
+        "test_settings.py", "test_shortcuts.py", "test_status.py", "test_updates.py", "test_window.py",
+    ]
 
 
 @pytest.fixture(scope="session", autouse=True)
 def keep_users_clipboard():
     """Tests overwrite the clipboard, so put back whatever was on it before the run."""
+    if not WINDOWS:  # no test touches the clipboard on Linux yet
+        yield
+        return
     clipboard = Clipboard()
     saved = clipboard.snapshot()
     yield
@@ -35,6 +50,8 @@ def keep_users_clipboard():
 @pytest.fixture(scope="session")
 def transcriber():
     # Loaded once, and before any test window opens, so a window never sits frozen while Whisper loads.
+    if not gpu_available():
+        pytest.skip("faster-whisper needs an NVIDIA card, and this PC doesn't have one")
     model = Transcriber()
     model.warm_up()
     return model
@@ -67,17 +84,19 @@ def text_box():
     root.destroy()
 
 
-class GuardedPaster(Paster):
-    """A Paster that refuses to paste unless the test window is in front, so tests never type into the user's apps."""
+if WINDOWS:
+    class GuardedPaster(Paster):
+        """A Paster that refuses to paste unless the test window is in front, so tests never type into the user's
+        apps."""
 
-    def __init__(self, window: int) -> None:
-        super().__init__()
-        self.window = window
+        def __init__(self, window: int) -> None:
+            super().__init__()
+            self.window = window
 
-    def paste(self, text: str) -> bool:
-        if user32.GetForegroundWindow() != self.window:
-            raise RuntimeError("The test window lost focus, so the paste was skipped")
-        return super().paste(text)
+        def paste(self, text: str) -> bool:
+            if user32.GetForegroundWindow() != self.window:
+                raise RuntimeError("The test window lost focus, so the paste was skipped")
+            return super().paste(text)
 
 
 def _new_tk(attempts: int = 3) -> tk.Tk:
@@ -130,7 +149,10 @@ def text_of(snapshot: Snapshot) -> str | None:
 
 
 def speak_to_wav(text: str, path: Path) -> None:
-    """Use the built-in Windows voice to save a sentence as a 16 kHz WAV."""
+    """Save a sentence as a WAV, spoken by the built-in Windows voice at 16 kHz, or by espeak-ng on Linux."""
+    if not WINDOWS:
+        subprocess.run(["espeak-ng", "-w", str(path), text], check=True)
+        return
     text = text.replace("'", "''")  # PowerShell's escape for a quote inside a quoted string
     script = (
         "Add-Type -AssemblyName System.Speech;"
