@@ -28,8 +28,11 @@ if WINDOWS:
     user32.SetForegroundWindow.argtypes = [wintypes.HWND]
     user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
 
-    collect_ignore = ["test_hotkey_linux.py"]
+    collect_ignore = ["test_hotkey_linux.py", "test_paste_linux.py"]
 else:
+    from ghostwriter.linux import hyprland
+    from ghostwriter.linux.clipboard import Clipboard
+
     # Tests for parts that only exist on Windows so far. Each one joins in once its Linux version lands.
     collect_ignore = [
         "test_clipboard.py", "test_history.py", "test_hotkey.py", "test_paste_and_loop.py", "test_recorder.py",
@@ -40,13 +43,16 @@ else:
 @pytest.fixture(scope="session", autouse=True)
 def keep_users_clipboard():
     """Tests overwrite the clipboard, so put back whatever was on it before the run."""
-    if not WINDOWS:  # no test touches the clipboard on Linux yet
+    if not WINDOWS and not hyprland.running():  # the clipboard tests only run on Hyprland
         yield
         return
     clipboard = Clipboard()
     saved = clipboard.snapshot()
     yield
-    clipboard.restore(saved, user32.GetClipboardSequenceNumber())
+    if WINDOWS:
+        clipboard.restore(saved, user32.GetClipboardSequenceNumber())
+    else:
+        clipboard.replace(saved)
 
 
 @pytest.fixture(scope="session")

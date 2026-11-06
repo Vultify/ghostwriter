@@ -131,7 +131,8 @@ Added 2026-11-03. Built and tested on my Omarchy laptop (Intel UHD 600, so slow 
 - [x] Split the Windows-only code from the shared code behind a platform layer (also step one for macOS): `ghostwriter/windows`, picked by `ghostwriter/system.py`
 - [x] whisper.cpp built for Linux with Vulkan (`scripts/build_whisper_cpp.sh`). It runs on my laptop, but the UHD 600 is too slow for Whisper: Linux resets the chip mid dictation, so speed waits for a stronger laptop
 - [x] Hold-to-talk hotkey by reading the keyboard directly (`/dev/input`, user in the `input` group). I tried Hyprland's global shortcuts first: they reported presses but never releases, and binding Right Alt there locked up my typing. Unlike on Windows, apps still see the key
-- [ ] Paste with `wtype` and save/restore the clipboard with `wl-clipboard`
+- [x] Paste: Hyprland presses Ctrl+V (Ctrl+Shift+V in terminals), and `wl-clipboard` saves and restores the clipboard, kept out of clipboard history. I tried `wtype` first, but its keys came out scrambled in older X11 apps like games and once left a key stuck. Only one clipboard format comes back, so formatted text returns as plain text
+- [ ] Paste on desktops other than Hyprland (GNOME, KDE), which need another way to press keys
 - [ ] Knowing which app is in front (Hyprland's `hyprctl activewindow`) for History
 - [ ] Tray ghost in Waybar
 - [ ] App window through GTK WebKit

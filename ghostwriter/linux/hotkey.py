@@ -7,15 +7,16 @@ group. Unlike on Windows the key isn't hidden from other apps; none of these key
 
 import ctypes
 import fcntl
-import json
 import os
 import select
 import struct
 import subprocess
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from pathlib import Path
+
+from ghostwriter.linux import hyprland
 
 # Single keys that make good hotkeys, by their Linux key codes.
 HOTKEYS = {
@@ -175,13 +176,8 @@ class KeyHook:
 
     def _catch_up(self, keyboard: int) -> None:
         # The kernel dropped events because the reader fell behind, so ask it whether the key is down right now.
-        state = bytearray(_KEY_STATE_SIZE)
-        try:
-            fcntl.ioctl(keyboard, _EVIOCGKEY, state)
-        except OSError:
-            return
-        down = state[self.key_code // 8] >> (self.key_code % 8) & 1
-        self._key(keyboard, _PRESSED if down else _RELEASED)
+        if (state := _key_state(keyboard)) is not None:
+            self._key(keyboard, _PRESSED if _is_down(state, self.key_code) else _RELEASED)
 
     def _open_new_keyboards(self) -> None:
         watched = set(self._keyboards.values())
@@ -200,6 +196,37 @@ class KeyHook:
         os.close(keyboard)
         if self._held_by == keyboard:  # a keyboard unplugged mid hold lets go of the key
             self._key(keyboard, _RELEASED)
+
+
+def keys_down(codes: Collection[int]) -> bool:
+    """Whether any of these keys is held on a real keyboard right now. Without access to the keyboards, it can't tell
+    and says no."""
+    for path in _keyboards(include_injected=False):
+        try:
+            keyboard = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+        except OSError:
+            continue
+        try:
+            state = _key_state(keyboard)
+        finally:
+            os.close(keyboard)
+        if state is not None and any(_is_down(state, code) for code in codes):
+            return True
+    return False
+
+
+def _key_state(keyboard: int) -> bytearray | None:
+    """The kernel's map of which keys are down on a keyboard, one bit per key."""
+    state = bytearray(_KEY_STATE_SIZE)
+    try:
+        fcntl.ioctl(keyboard, _EVIOCGKEY, state)
+    except OSError:
+        return None
+    return state
+
+
+def _is_down(state: bytearray, code: int) -> bool:
+    return bool(state[code // 8] >> (code % 8) & 1)
 
 
 def _keyboards(include_injected: bool) -> list[str]:
@@ -225,10 +252,10 @@ def _bitmap(text: str) -> int:
 def _keyboard_layout() -> tuple[str, str, str]:
     """The keyboard layout, variant, and options the desktop uses, or empty ones for xkb's defaults."""
     names = ("layout", "variant", "options")
-    if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
+    if hyprland.running():
         try:
-            return tuple(_hyprland_option(f"input:kb_{name}") for name in names)
-        except (OSError, ValueError, subprocess.SubprocessError):
+            return tuple(hyprland.option(f"input:kb_{name}") for name in names)
+        except (OSError, ValueError, hyprland.HyprlandError):
             pass
     try:
         status = subprocess.run(["localectl", "status"], capture_output=True, text=True, timeout=5).stdout
@@ -236,9 +263,3 @@ def _keyboard_layout() -> tuple[str, str, str]:
         return "", "", ""
     fields = dict(line.strip().split(": ", 1) for line in status.splitlines() if ": " in line)
     return tuple(fields.get(f"X11 {name.capitalize()}", "") for name in names)
-
-
-def _hyprland_option(name: str) -> str:
-    result = subprocess.run(["hyprctl", "-j", "getoption", name], capture_output=True, text=True, timeout=5,
-                            check=True)
-    return json.loads(result.stdout).get("str", "")
