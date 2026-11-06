@@ -11,7 +11,6 @@ from collections.abc import Callable
 from datetime import datetime
 from enum import Enum
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 
 import numpy as np
 
@@ -242,7 +241,7 @@ class Dictation:
                 self._save(history, text, program, seconds)
 
     @staticmethod
-    def _save(history: History, text: str, program: Path | None, seconds: float) -> None:
+    def _save(history: History, text: str, program: system_paster.App | None, seconds: float) -> None:
         try:
             history.add(text, system_paster.app_name(program), seconds)
         except sqlite3.Error:

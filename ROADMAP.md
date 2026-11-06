@@ -133,7 +133,7 @@ Added 2026-11-03. Built and tested on my Omarchy laptop (Intel UHD 600, so slow 
 - [x] Hold-to-talk hotkey by reading the keyboard directly (`/dev/input`, user in the `input` group). I tried Hyprland's global shortcuts first: they reported presses but never releases, and binding Right Alt there locked up my typing. Unlike on Windows, apps still see the key
 - [x] Paste: Hyprland presses Ctrl+V (Ctrl+Shift+V in terminals), and `wl-clipboard` saves and restores the clipboard, kept out of clipboard history. I tried `wtype` first, but its keys came out scrambled in older X11 apps like games and once left a key stuck. Only one clipboard format comes back, so formatted text returns as plain text
 - [ ] Paste on desktops other than Hyprland (GNOME, KDE), which need another way to press keys
-- [ ] Knowing which app is in front (Hyprland's `hyprctl activewindow`) for History
+- [x] Knowing which app is in front for History (Hyprland's active window). The name comes from the app's launcher entry, web apps are matched by their address (WhatsApp, YouTube), and Steam games by their window title
 - [ ] Tray ghost in Waybar
 - [ ] App window through GTK WebKit
 - [ ] Listening pill as a Wayland overlay (`gtk-layer-shell`)

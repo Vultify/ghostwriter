@@ -4,13 +4,14 @@ import os
 import subprocess
 import time
 import tkinter as tk
+from pathlib import Path
 
 import pytest
 
 from conftest import _new_tk, pump_until, run_in_thread
 from ghostwriter.linux import hyprland
 from ghostwriter.linux.clipboard import SENSITIVE, TEXT, Clipboard, Snapshot
-from ghostwriter.linux.paster import Paster, paste_keys
+from ghostwriter.linux.paster import Paster, app_name, foreground_app, paste_keys
 
 needs_hyprland = pytest.mark.skipif(not hyprland.running(), reason="pasting on Linux needs Hyprland")
 FAKE_PNG = b"\x89PNG\r\n\x1a\n" + bytes(range(256)) * 4
@@ -96,6 +97,13 @@ def test_an_empty_clipboard_stays_empty():
     assert clipboard.restore(None, clipboard.write_text("dictated words")) is True
     time.sleep(0.05)  # the replaced wl-copy lets go of the clipboard
     assert clipboard.snapshot() is None
+
+
+@needs_hyprland
+def test_knows_the_app_in_front(text_box):
+    app = foreground_app()
+    assert app.program == Path(os.readlink("/proc/self/exe"))
+    assert app_name(app) == "Ghostwriter"  # the test window runs on the project's own Python, like the app window
 
 
 @pytest.mark.parametrize("window, keys", [
