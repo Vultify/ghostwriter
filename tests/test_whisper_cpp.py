@@ -16,6 +16,7 @@ from ghostwriter import models, speech, startup
 from ghostwriter.audio import SAMPLE_RATE
 from ghostwriter.paths import PROJECT
 from ghostwriter.speech import SpeechEngine
+from ghostwriter.transcriber import gpu_available
 from ghostwriter.whisper_cpp import WhisperCpp, model_paths, pick_device
 
 NVIDIA = "ggml_vulkan: {} = NVIDIA GeForce RTX 4090 (NVIDIA) | uma: 0 | fp16: 1 | warp size: 32"
@@ -82,7 +83,8 @@ def test_the_server_closes_when_ghostwriter_is_killed():
               "time.sleep(60)") % (PROJECT, models.WHISPER_CPP_COMPRESSED)
     owner = subprocess.Popen([sys.executable, "-c", script], stdout=subprocess.PIPE, text=True)
     server = int(owner.stdout.readline())
-    subprocess.run(["taskkill", "/F", "/PID", str(owner.pid)], capture_output=True)
+    owner.kill()  # a forced quit: TerminateProcess on Windows, SIGKILL on Linux
+    owner.wait()
     deadline = time.perf_counter() + 10
     while time.perf_counter() < deadline and _running(server):
         time.sleep(0.2)
@@ -90,6 +92,12 @@ def test_the_server_closes_when_ghostwriter_is_killed():
 
 
 def _running(process_id: int) -> bool:
+    if sys.platform != "win32":
+        try:
+            state = Path(f"/proc/{process_id}/stat").read_text().rsplit(")", 1)[1].split()[0]
+        except FileNotFoundError:
+            return False
+        return state != "Z"  # a finished program waiting to be cleaned up counts as gone
     found = subprocess.run(["tasklist", "/FI", f"PID eq {process_id}", "/NH"], capture_output=True, text=True).stdout
     return str(process_id) in found
 
@@ -159,6 +167,7 @@ def test_an_engine_that_fails_to_load_leaves_the_old_one_running(monkeypatch):
 
 
 @needs_whisper_cpp
+@pytest.mark.skipif(not gpu_available(), reason="switching needs faster-whisper, which needs an NVIDIA card")
 def test_switching_real_engines_back_and_forth(spoken, tmp_path):
     status = tmp_path / "startup.json"
     engine = SpeechEngine(has_nvidia=False, status_path=status)

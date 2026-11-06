@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- whisper.cpp builds on Linux with `scripts/build_whisper_cpp.sh`. It includes processor code for every generation of x86 processor and picks the best one at startup, so it also runs on budget chips without AVX.
+- The hotkey works on Linux. Ghostwriter reads presses and releases straight from every keyboard, including ones plugged in or paired later, so it works on any desktop. It needs the user in the `input` group, and says so if they aren't. Keyboard layouts where Right Alt is AltGr get Right Ctrl by default, like on Windows.
+- Pasting works on Linux with Hyprland. Hyprland presses Ctrl+V, or Ctrl+Shift+V in terminals, so it works in every app, older X11 ones like games included. The dictated text stays out of clipboard history, and the old clipboard comes back afterward (images included; formatted text comes back as plain text).
+- History on Linux names the app each dictation went into, from the app's launcher entry. Web apps get their own name (WhatsApp, not Chromium), and Steam games their title.
+
 ### Changed
 - The Windows-only code now lives in its own folder (`ghostwriter/windows`), and `ghostwriter/system.py` picks the right code for the system Ghostwriter runs on. This gets Ghostwriter ready for Linux; nothing works differently on Windows.
 

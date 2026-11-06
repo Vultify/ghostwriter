@@ -3,15 +3,22 @@ to the app window."""
 
 import json
 
+import pytest
+
 from ghostwriter import models, startup
 from ghostwriter.speech import _download_reporter
 from ghostwriter.transcriber import gpu_available, model_path
 
+# These two check the NVIDIA PC Ghostwriter was built on; PCs without an NVIDIA card use whisper.cpp instead.
+needs_nvidia = pytest.mark.skipif(not gpu_available(), reason="this PC has no NVIDIA card")
 
+
+@needs_nvidia
 def test_this_pc_has_a_gpu_whisper_can_use():
     assert gpu_available()
 
 
+@needs_nvidia
 def test_this_pc_already_has_the_speech_model():
     assert models.downloaded(models.FASTER_WHISPER, has_nvidia=True)
 

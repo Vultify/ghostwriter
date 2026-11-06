@@ -15,6 +15,8 @@ from ghostwriter.windows.win32 import kernel32, user32, version
 # Long enough for slow apps (browsers, terminals) to read the clipboard before we restore it.
 RESTORE_DELAY_SECONDS = 0.5
 
+App = Path  # the app in front, known on Windows by its program file
+
 _MODIFIERS = (win32.VK_SHIFT, win32.VK_CONTROL, win32.VK_MENU, win32.VK_LWIN, win32.VK_RWIN)
 _MODIFIER_WAIT_SECONDS = 1.0
 
@@ -38,7 +40,7 @@ class Paster:
         return self.clipboard.restore(previous, sequence)
 
 
-def foreground_app() -> Path | None:
+def foreground_app() -> App | None:
     """The program file of the window in front, or None if Windows won't say."""
     process_id = wintypes.DWORD()
     user32.GetWindowThreadProcessId(user32.GetForegroundWindow(), ctypes.byref(process_id))
@@ -56,7 +58,7 @@ def foreground_app() -> Path | None:
 
 
 @functools.lru_cache(maxsize=64)
-def app_name(program: Path | None) -> str:
+def app_name(program: App | None) -> str:
     """A program's everyday name, like "Google Chrome" for chrome.exe, taken from its file details."""
     if program is None:
         return "Unknown app"
