@@ -66,6 +66,9 @@ function bindPage() {
   document.getElementById("hands-free-minutes").addEventListener("change", (event) => {
     change("hands_free_minutes", Number(event.target.value));
   });
+  document.getElementById("other-sounds").addEventListener("change", (event) => {
+    change("other_sounds", Number(event.target.value));
+  });
 
   document.getElementById("hotkeys").addEventListener("change", (event) => change("hotkey", event.target.value));
   document.getElementById("setup-hotkeys").addEventListener("change", (event) => change("hotkey", event.target.value));
@@ -137,6 +140,7 @@ function render(next) {
 
   document.querySelectorAll("select[data-setting='microphone']").forEach((select) => fillMicrophones(select, settings.microphone));
   fillMinutes(settings);
+  fillOtherSounds(settings);
   fillHotkeys("hotkeys", settings.hotkey);
   fillHotkeys("setup-hotkeys", settings.hotkey);
   document.querySelectorAll("#themes input").forEach((input) => { input.checked = input.value === settings.theme; });
@@ -203,6 +207,14 @@ function fillMicrophones(select, chosen) {
   if (chosen && !state.microphones.includes(chosen)) options.push([chosen, `${chosen} (not connected)`]);
   select.replaceChildren(...options.map(([value, label]) => new Option(label, value)));
   select.value = chosen || "";
+}
+
+// How loud other apps play while you talk: 100 leaves them be, 0 mutes them.
+function fillOtherSounds(settings) {
+  const label = (percent) => (percent === 100 ? "Keep playing" : percent === 0 ? "Mute" : `Lower to ${percent}%`);
+  const select = document.getElementById("other-sounds");
+  select.replaceChildren(...state.otherSounds.map((percent) => new Option(label(percent), String(percent))));
+  select.value = String(settings.other_sounds);
 }
 
 function fillMinutes(settings) {

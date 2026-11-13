@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- Other apps' sound (music, videos, games, calls) fades to 10% of its volume while Ghostwriter listens and back when you stop, so you can talk and think without it in the way. Settings can lower it to 50% or 30% instead, mute it, or keep it playing. An app whose volume you change in the meantime is left as you set it, and if Ghostwriter stops in the middle, the next start puts the volumes back.
+- If Ghostwriter can't find a graphics card it can use, it tells you once that it's running on the processor, which is slow, and suggests updating your graphics drivers. Settings shows "Your processor (slow)" under Runs on.
+
 ### Changed
 - The Windows-only code now lives in its own folder (`ghostwriter/windows`), and `ghostwriter/system.py` picks the right code for the system Ghostwriter runs on. This gets Ghostwriter ready for Linux; nothing works differently on Windows.
 

@@ -17,8 +17,9 @@ from ghostwriter.history import PAGE_SIZE, History
 from ghostwriter.paths import (DICTIONARY_PATH, HISTORY_PATH, ICON_PATH, LOG_PATH, PROJECT, SETTINGS_PATH,
                                STARTUP_PATH, UI_DIR, WEB_DATA_DIR, WINDOW_LOG_PATH)
 from ghostwriter.recorder import Recorder, list_microphones
-from ghostwriter.settings import HANDS_FREE_MINUTES, HOTKEYS, Settings
+from ghostwriter.settings import HANDS_FREE_MINUTES, HOTKEYS, OTHER_SOUNDS, Settings
 from ghostwriter.system import app_window, desktop, processes, shortcuts
+from ghostwriter.whisper_cpp import PROCESSOR
 
 TITLE = "Ghostwriter"
 WIDTH, HEIGHT = 1120, 740
@@ -71,12 +72,14 @@ class Api:
                 "history": settings.history,
                 "sound": settings.sound,
                 "pill": settings.pill,
+                "other_sounds": settings.other_sounds,
             },
             "startWithWindows": shortcuts.starts_at_login(self._login_folder),
             "soundStyles": list(sounds.STYLES),
             "hotkeys": list(HOTKEYS),
             "microphones": list_microphones(),
             "handsFreeMinutes": list(HANDS_FREE_MINUTES),
+            "otherSounds": list(OTHER_SOUNDS),
             "engine": engine,
             "engines": models.available(nvidia is not None),
             "model": MODEL_LABEL if models.size(engine, nvidia is not None) == "1.6 GB" else f"{MODEL_LABEL}, compressed",
@@ -210,7 +213,10 @@ class Api:
         if engine == models.FASTER_WHISPER and nvidia:
             return nvidia
         status = startup.read(self._startup_path)  # whisper.cpp says which graphics it picked once it's running
-        return status.get("device") if status.get("engine") == engine and status.get("device") else "Your graphics card"
+        device = status.get("device") if status.get("engine") == engine else None
+        if device == PROCESSOR:
+            return "Your processor (slow)"
+        return device or "Your graphics card"
 
 
 def open_window() -> None:

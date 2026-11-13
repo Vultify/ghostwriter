@@ -4,8 +4,11 @@ to the app window."""
 import json
 
 from ghostwriter import models, startup
+from ghostwriter.app import SLOW_MESSAGE, ready_notice
+from ghostwriter.settings import HOTKEYS
 from ghostwriter.speech import _download_reporter
 from ghostwriter.transcriber import gpu_available, model_path
+from ghostwriter.whisper_cpp import PROCESSOR
 
 
 def test_this_pc_has_a_gpu_whisper_can_use():
@@ -60,6 +63,16 @@ def test_the_window_reads_what_the_tray_app_writes(tmp_path):
     assert startup.read(path) == {"model": "downloading", "done": 5, "total": 10}
     path.write_text('{"model": "downl', encoding="utf-8")  # caught halfway through a write
     assert startup.read(path) == {}
+
+
+def test_the_ready_notice_welcomes_new_installs_and_warns_once_about_the_processor():
+    assert ready_notice("Right Alt", first_run=False, device="NVIDIA GeForce RTX 4090", last_device=None) is None
+    assert ready_notice("Right Alt", first_run=True, device="", last_device=None).startswith("Ready! Hold Right Alt")
+    assert ready_notice("Right Alt", first_run=False, device=PROCESSOR, last_device="Intel(R) UHD Graphics 770") == SLOW_MESSAGE
+    assert ready_notice("Right Alt", first_run=False, device=PROCESSOR, last_device=PROCESSOR) is None  # warned before
+    both = ready_notice(max(HOTKEYS, key=len), first_run=True, device=PROCESSOR, last_device=None)
+    assert both.startswith("Ready!") and both.endswith(SLOW_MESSAGE)
+    assert len(both) < 256  # the most a Windows notification holds
 
 
 def test_download_progress_is_saved_a_few_times_a_second_and_always_at_the_end(tmp_path):

@@ -10,14 +10,16 @@ Every system's package has the same modules with the same names in them:
   pill         the window the listening pill is drawn in
   processes    starting helper programs that close when Ghostwriter does
   shortcuts    the app menu entry and starting at login
+  volume       other apps' volumes, turned down while Ghostwriter listens
 """
 
 import sys
 
 if sys.platform == "win32":
     from ghostwriter.windows import (app_window, desktop, hotkey, install, microphones, paster, pill, processes,
-                                     shortcuts)
+                                     shortcuts, volume)
 else:
     raise ImportError(f"Ghostwriter doesn't run on {sys.platform} yet")
 
-__all__ = ["app_window", "desktop", "hotkey", "install", "microphones", "paster", "pill", "processes", "shortcuts"]
+__all__ = ["app_window", "desktop", "hotkey", "install", "microphones", "paster", "pill", "processes", "shortcuts",
+           "volume"]

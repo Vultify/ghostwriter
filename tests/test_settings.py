@@ -4,6 +4,7 @@ import json
 import os
 import time
 
+import pytest
 from conftest import press_key
 from test_status import FakePaster, FakeRecorder, FakeTranscriber
 
@@ -53,7 +54,8 @@ def test_tray_menu_changes_are_saved_and_reported(tmp_path):
     tray._change(sounds=False)
     saved = json.loads(settings.path.read_text(encoding="utf-8"))
     assert saved == {"hotkey": "Right Ctrl", "microphone": None, "sounds": False, "sound": "soft", "pill": True,
-                     "hands_free": True, "hands_free_minutes": 15, "theme": "system", "history": True, "engine": "auto"}
+                     "other_sounds": 10, "hands_free": True, "hands_free_minutes": 15, "theme": "system",
+                     "history": True, "engine": "auto"}
     assert changes == ["Right Ctrl", "Right Ctrl"]
     tray.set_state(State.READY)
     assert "Right Ctrl" in tray._tray.title
@@ -89,12 +91,23 @@ class _Quiet:
         self.shown.append(mode)
 
 
+class _FakeOtherSounds:
+    def __init__(self) -> None:
+        self.calls = []
+
+    def lower(self, level: float) -> None:
+        self.calls.append(("lower", level))
+
+    def restore(self) -> None:
+        self.calls.append("restore")
+
+
 def test_sounds_play_in_the_chosen_style_and_turn_off(monkeypatch):
     played = []
     monkeypatch.setattr(sounds, "play_start", lambda style: played.append(("start", style)))
     monkeypatch.setattr(sounds, "play_stop", lambda style: played.append(("stop", style)))
     settings = Settings(sound="wood")
-    display = StatusDisplay(_Quiet(), _Quiet(), settings)
+    display = StatusDisplay(_Quiet(), _Quiet(), settings, _FakeOtherSounds())
     display(State.LISTENING)
     display(State.READY)
     settings.sounds = False
@@ -108,12 +121,38 @@ def test_turning_the_pill_off_keeps_it_hidden(monkeypatch):
     monkeypatch.setattr(sounds, "play_stop", lambda style: None)
     pill = _Quiet()
     settings = Settings(sounds=False)
-    display = StatusDisplay(_Quiet(), pill, settings)
+    display = StatusDisplay(_Quiet(), pill, settings, _FakeOtherSounds())
     display(State.LISTENING)
     settings.pill = False
     display(State.WORKING)
     display(State.READY)
     assert pill.shown == [State.LISTENING, None, None]
+
+
+def test_other_sounds_go_down_to_the_chosen_level_while_listening(monkeypatch):
+    monkeypatch.setattr(sounds, "play_start", lambda style: None)
+    monkeypatch.setattr(sounds, "play_stop", lambda style: None)
+    other_sounds = _FakeOtherSounds()
+    settings = Settings()
+    display = StatusDisplay(_Quiet(), _Quiet(), settings, other_sounds)
+    for state in (State.LISTENING, State.LOCKED, State.WORKING, State.READY):
+        display(state)
+    assert other_sounds.calls == [("lower", 0.1), ("lower", 0.1), "restore"]
+    for percent, expected in ((0, [("lower", 0.0), "restore"]), (100, ["restore"])):
+        settings.other_sounds = percent
+        other_sounds.calls.clear()
+        display(State.LISTENING)
+        display(State.READY)
+        assert other_sounds.calls == expected  # muted, then left playing (the restore is harmless)
+
+
+def test_other_sounds_only_takes_the_listed_levels(tmp_path):
+    settings = Settings.load(tmp_path / "settings.json")
+    settings.change("other_sounds", 0)
+    assert Settings.load(settings.path).other_sounds == 0
+    for wrong in (15, True, "10"):
+        with pytest.raises(ValueError):
+            settings.change("other_sounds", wrong)
 
 
 def test_a_chosen_mic_records_and_an_unplugged_one_falls_back_to_default():

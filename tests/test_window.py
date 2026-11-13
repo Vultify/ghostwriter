@@ -11,6 +11,7 @@ from ghostwriter.windows import app_window
 from ghostwriter.history import History
 from ghostwriter.paths import ICON_PATH, UI_DIR
 from ghostwriter.settings import HOTKEYS
+from ghostwriter.whisper_cpp import PROCESSOR
 from ghostwriter.window import Api
 
 STARTER = "# notes stay put\nGhostwriter\n\n# a section\nsea whiz -> CIWS\n"
@@ -30,6 +31,7 @@ def test_state_has_everything_the_page_shows(api):
     assert state["settings"]["hands_free"] is True
     assert state["settings"]["history"] is True
     assert (state["settings"]["sound"], state["settings"]["pill"]) == ("soft", True)
+    assert (state["settings"]["other_sounds"], state["otherSounds"]) == (10, [100, 50, 30, 10, 0])
     assert state["soundStyles"] == ["soft", "glass", "bubble", "wood", "tap", "chime"]
     assert state["startWithWindows"] is False
     assert state["firstRun"] is False
@@ -43,6 +45,14 @@ def test_an_engine_switch_in_progress_isnt_mistaken_for_a_new_install(tmp_path):
     startup.write(tmp_path / "startup.json", model="downloading", done=1, total=10, engine="whisper.cpp")
     assert Api(settings_path=tmp_path / "settings.json", startup_path=tmp_path / "startup.json",
                history_path=tmp_path / "history.db", dictionary_path=tmp_path / "dictionary.txt").state()["firstRun"] is False
+
+
+def test_settings_shows_the_graphics_whisper_cpp_picked_or_that_its_on_the_processor(api, tmp_path):
+    assert api._runs_on("whisper.cpp", None) == "Your graphics card"  # still loading
+    startup.write(tmp_path / "startup.json", model="ready", engine="whisper.cpp", device="Intel(R) UHD Graphics 770")
+    assert api._runs_on("whisper.cpp", None) == "Intel(R) UHD Graphics 770"
+    startup.write(tmp_path / "startup.json", model="ready", engine="whisper.cpp", device=PROCESSOR)
+    assert api._runs_on("whisper.cpp", None) == "Your processor (slow)"
 
 
 def test_the_mic_test_opens_the_mic_and_reports_its_level(api):
