@@ -105,19 +105,28 @@ Phases 8 to 10: the app window, history, and the first run welcome.
 Phase 11: sound styles, pill on/off, Start with Windows, and the mic test.
 
 ## Any graphics card (whisper.cpp)
-Added 2026-10-31: AMD and Intel cards, and graphics built into the processor, run whisper.cpp through Vulkan. I chose to skip a CPU-only mode.
+Added 2026-10-31: AMD and Intel cards, and graphics built into the processor, run whisper.cpp through Vulkan. There's no separate CPU-only mode: a PC with no usable graphics falls back to the processor, which is slow.
 - [x] Build whisper.cpp with Vulkan ourselves (`scripts/build_whisper_cpp.ps1`); whisper.cpp publishes no Vulkan build for Windows
 - [x] Measure it: same words as faster-whisper on every test sentence, 0.06 to 0.24 s on the RTX 4090, about 4 s on the Intel UHD 770 built into the i9
 - [x] Compare on my own voice (`scripts/compare_engines.py`, same recordings through every engine): the full-size model differed from faster-whisper by one word in 90 seconds, so NVIDIA cards get the full-size model and other graphics the compressed one
 - [x] whisper.cpp engine in Ghostwriter, picking a real graphics card over a built-in chip
 - [x] Switch engines in Settings on NVIDIA PCs, live
 - [x] Installer: no more NVIDIA-only refusal; non-NVIDIA PCs skip the NVIDIA files and get whisper.cpp
-- [ ] I dictate with whisper.cpp on my 4090 for a few days; if it holds up, it becomes the engine for NVIDIA too and the 1.3 GB of NVIDIA files go away
+- [x] I dictate with whisper.cpp on my 4090 for a few days: it felt just like faster-whisper, so both stay, and NVIDIA PCs keep faster-whisper as the default (decided 2026-11-12)
+- [x] A one-time notice when there's no usable graphics and Ghostwriter runs on the processor, which is slow, and Settings says so too
 - [ ] A friend's AMD or Intel PC runs the one-line install
 - [ ] Build whisper.cpp for Windows the way the Linux build does it, once per processor generation, so PCs without AVX (budget Celerons and Pentiums) don't crash
 
 ## Version 1.5.0 released 2026-10-31
 Any graphics card: whisper.cpp for AMD, Intel, and built-in graphics, and an engine switch on NVIDIA PCs.
+
+## Lower other sounds while dictating
+Added 2026-11-12: music and videos get in the way of talking and thinking.
+- [x] Other apps fade to 10% of their own volume while Ghostwriter listens, and back after (Windows volume mixer, every speaker and headset)
+- [x] A choice in Settings: keep playing, 50%, 30%, 10% (the default), or mute
+- [x] Hands off an app whose volume I change mid dictation; volumes left down by a crash go back on the next start
+- [ ] Linux version (PipeWire)
+- **Checkpoint:** I dictate over music and videos for a day
 
 ## Phase 12: local AI cleanup (on/off switch, its own page in the app)
 - [ ] Small local model on the GPU removes filler words, formats lists, and fixes punctuation

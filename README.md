@@ -43,13 +43,14 @@ For longer stretches, **double tap the hotkey** to lock recording on and talk ha
 - A ghost icon in the system tray shows Ghostwriter is running, and turns red while it listens.
 - A small pill at the bottom of the screen shows a live mic level while you talk, then dots while it types. In hands free mode its red dot becomes a stop square.
 - A short sound plays when listening starts and stops (pick Soft, Glass, Bubble, Wood, Tap, or Chime in Settings). Locking on plays it twice.
+- While it listens, other apps' sound (music, videos, games, calls) drops to 10% of its volume and comes back when you stop, so nothing talks over you. In Settings you can pick 50% or 30% instead, mute it, or keep it playing.
 
 ## The window
 
 - **Home:** your hotkey, a box to try dictating in, today's word and dictation counts, your latest dictations, and quick switches for sounds, hands free, and the mic
 - **History:** everything you've dictated, grouped by day, with search, a filter for each app you use most, and a copy button on each one
 - **Dictionary:** add and remove words and fixes
-- **Settings:** hotkey, hands free and when it stops, microphone with a live test meter, speech model (and on PCs with an NVIDIA card, a choice of engine), light or dark theme (or follow Windows), six sound styles to pick from (or no sound), the listening pill on or off, start with Windows, saving history on or off, and buttons to open the log and the folder
+- **Settings:** hotkey, hands free and when it stops, microphone with a live test meter, speech model (and on PCs with an NVIDIA card, a choice of engine), light or dark theme (or follow Windows), six sound styles to pick from (or no sound), the listening pill on or off, how loud other sounds play while you talk (keep playing, 50%, 30%, 10%, or mute), start with Windows, saving history on or off, and buttons to open the log and the folder
 - **Check for updates** at the bottom of the sidebar
 
 The tray menu (right click the ghost) has the hotkey, mic, and sounds too, plus Quit. Changes apply right away and are saved to `settings.json`. The log is at `logs/ghostwriter.log`.
@@ -101,7 +102,7 @@ That puts the server in `.whisper-cpp\` and a zip in `.tools\`, which goes on th
 ## Requirements
 
 - Windows 10 or 11
-- A graphics card: NVIDIA (built and tested on an RTX 4090), or AMD or Intel with Vulkan drivers. Graphics built into the processor work too, just slower: about 4 seconds per dictation on a basic Intel UHD 770.
+- A graphics card: NVIDIA (built and tested on an RTX 4090), or AMD or Intel with Vulkan drivers. Graphics built into the processor work too, just slower: about 4 seconds per dictation on a basic Intel UHD 770. Without any usable graphics, Ghostwriter falls back to the processor and lets you know, but each dictation takes 10 seconds or more.
 - Disk: about 4 GB with an NVIDIA card (2.4 GB in the Ghostwriter folder plus the 1.6 GB speech model), about 1 GB without (0.4 GB plus the 0.6 GB model)
 
 ## License

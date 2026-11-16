@@ -17,6 +17,7 @@ recordings/
 logs/
 settings.json
 startup.json
+lowered-sounds.json
 *.wav
 !ghostwriter/assets/*.wav
 

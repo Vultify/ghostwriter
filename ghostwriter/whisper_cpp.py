@@ -27,6 +27,7 @@ from ghostwriter.system import processes
 SERVER_LOG = LOG_DIR / "whisper-cpp.log"
 START_SECONDS = 90  # loading the model onto a slow graphics chip can take a while
 REQUEST_SECONDS = 120
+PROCESSOR = "the processor"  # the device when the server finds no graphics it can use
 
 # One line per graphics device the server finds, like "ggml_vulkan: 0 = NVIDIA GeForce RTX 4090 (NVIDIA) | uma: 0 |".
 # uma 1 means the graphics share the processor's memory: a chip built into the processor, slower than a real card.
@@ -59,7 +60,7 @@ class WhisperCpp:
     def __init__(self, model: Path, vad: Path) -> None:
         self.model = model
         self.vad = vad
-        self.device = "the processor"  # until the server says which graphics it found
+        self.device = PROCESSOR  # until the server says which graphics it found
         self._device_index: int | None = None
         self._children = processes.Children()
         self._server: subprocess.Popen | None = None

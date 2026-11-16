@@ -19,6 +19,7 @@ from ghostwriter.audio import SAMPLE_RATE, wav_bytes
 from ghostwriter.dictionary import DICTIONARY_PATH, DictionaryFile
 from ghostwriter.history import History
 from ghostwriter.indicator import Indicator
+from ghostwriter.other_sounds import OtherSounds
 from ghostwriter.paths import LOG_PATH, RECORDINGS_DIR
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import Settings
@@ -29,6 +30,7 @@ from ghostwriter.system import hotkey as system_hotkey
 from ghostwriter.system import paster as system_paster
 from ghostwriter.transcriber import Transcriber, gpu_available
 from ghostwriter.tray import Tray
+from ghostwriter.whisper_cpp import PROCESSOR
 from ghostwriter.window import close_window, open_window
 
 HOTKEY = system_hotkey.HOTKEYS["Right Alt"]
@@ -43,6 +45,10 @@ NO_ENGINE_MESSAGE = (
 DOWNLOAD_MESSAGE = (
     "Downloading the speech model (about {size}). This only happens once and can take a few minutes. "
     "I'll let you know when it's ready."
+)
+SLOW_MESSAGE = (
+    "Ghostwriter couldn't find a graphics card it can use, so it's running on the processor. Each dictation can "
+    "take 10 seconds or more. Updating your graphics drivers may fix it."
 )
 # A release sooner than this is a tap, not a hold. A lone tap is thrown away as accidental.
 TAP_SECONDS = 0.3
@@ -249,12 +255,14 @@ class Dictation:
 
 
 class StatusDisplay:
-    """Shows each state change in the tray and the listening pill, with a sound when listening starts and stops."""
+    """Shows each state change in the tray and the listening pill, with a sound when listening starts and stops,
+    and turns other apps' sound down while listening."""
 
-    def __init__(self, tray: Tray, indicator: Indicator, settings: Settings) -> None:
+    def __init__(self, tray: Tray, indicator: Indicator, settings: Settings, other_sounds: OtherSounds) -> None:
         self.tray = tray
         self.indicator = indicator
         self.settings = settings
+        self.other_sounds = other_sounds
         self._state = State.READY
 
     def __call__(self, state: State) -> None:
@@ -264,6 +272,10 @@ class StatusDisplay:
                 sounds.play_start(self.settings.sound)
             elif self._state.is_recording:
                 sounds.play_stop(self.settings.sound)
+        if state.is_recording and self.settings.other_sounds < 100:
+            self.other_sounds.lower(self.settings.other_sounds / 100)
+        elif not state.is_recording and self._state.is_recording:
+            self.other_sounds.restore()  # even if they're set to keep playing now, in case that changed mid dictation
         self._state = state
         self.tray.set_state(state)
         self.indicator.show(state if state is not State.READY and self.settings.pill else None)
@@ -297,6 +309,7 @@ def _run() -> None:
     tray.start()  # the ghost shows up right away while Whisper loads
     engine = models.resolve(settings.engine, has_nvidia)
     first_run = not models.downloaded(engine, has_nvidia)
+    last_device = startup.read().get("device")  # from the last run, before this run's status replaces it
     # Written before the window opens, so on the first run it opens on the welcome and shows the download.
     startup.write(model="downloading" if first_run else "loading", engine=engine, first_run=first_run)
     show_window = TRAY_ONLY_FLAG not in sys.argv
@@ -319,9 +332,10 @@ def _run() -> None:
     dictionary.current()
     history = History()
     indicator = Indicator(level=lambda: recorder.level)
+    other_sounds = OtherSounds()
     dictation = Dictation(
         speech, recorder, system_paster.Paster(), hotkey=settings.hotkey_code,
-        on_state=StatusDisplay(tray, indicator, settings), dictionary=dictionary,
+        on_state=StatusDisplay(tray, indicator, settings, other_sounds), dictionary=dictionary,
     )
 
     def apply_settings() -> None:
@@ -332,9 +346,10 @@ def _run() -> None:
         recorder.microphone = settings.microphone
         speech.switch_to(models.resolve(settings.engine, has_nvidia))
         tray.refresh()
-        log.info("Settings: hotkey %s, mic %s, sounds %s, pill %s, hands free %s, history %s, engine %s",
-                 settings.hotkey, settings.microphone or f"{desktop.NAME} default",
+        log.info("Settings: hotkey %s, mic %s, sounds %s, pill %s, other sounds %s, hands free %s, history %s, "
+                 "engine %s", settings.hotkey, settings.microphone or f"{desktop.NAME} default",
                  settings.sound if settings.sounds else "off", "on" if settings.pill else "off",
+                 {100: "keep playing", 0: "muted"}.get(settings.other_sounds, f"at {settings.other_sounds}%"),
                  f"on, up to {settings.hands_free_minutes} min" if settings.hands_free else "off",
                  "on" if settings.history else "off", settings.engine)
 
@@ -348,8 +363,9 @@ def _run() -> None:
     tray.set_state(State.READY)
     startup.write(model="ready", engine=engine, device=speech.device)
     log.info("Ready. Hold %s to talk, or double tap it for hands free.", settings.hotkey)
-    if first_run:
-        tray.notify(f"Ready! Hold {settings.hotkey} to talk, or double tap it for hands free.")
+    notice = ready_notice(settings.hotkey, first_run, speech.device, last_device)
+    if notice:
+        tray.notify(notice)
     try:
         while not quitting.wait(0.5):
             if settings.reload_if_changed():  # saved by the app window
@@ -359,10 +375,22 @@ def _run() -> None:
     finally:
         close_window()
         dictation.stop()
+        other_sounds.close()  # after dictation stops, so nothing lowers them again
         speech.close()
         indicator.stop()
         tray.stop()
         log.info("Stopped.")
+
+
+def ready_notice(hotkey: str, first_run: bool, device: str, last_device: str | None) -> str | None:
+    """What to pop up once Whisper is ready: a welcome after the first download, and a warning the first time
+    Ghostwriter has to run on the processor. It's one notification because a second would replace the first."""
+    notices = []
+    if first_run:
+        notices.append(f"Ready! Hold {hotkey} to talk, or double tap it for hands free.")
+    if device == PROCESSOR and last_device != PROCESSOR:
+        notices.append(SLOW_MESSAGE)
+    return " ".join(notices) or None
 
 
 def check_for_updates(tray: Tray) -> None:

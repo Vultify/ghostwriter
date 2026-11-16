@@ -9,6 +9,7 @@ DICTIONARY_PATH = PROJECT / "dictionary.txt"  # personal, so it isn't in git
 STARTER_PATH = PROJECT / "dictionary.example.txt"  # copied to dictionary.txt on first run
 HISTORY_PATH = PROJECT / "history.db"  # personal, so it isn't in git
 STARTUP_PATH = PROJECT / "startup.json"  # what the tray app is doing as it starts, for the window
+LOWERED_SOUNDS_PATH = PROJECT / "lowered-sounds.json"  # other apps' volumes while turned down, to undo after a crash
 RECORDINGS_DIR = PROJECT / "recordings"  # dictations kept for comparing engines, only when asked to
 LOG_DIR = PROJECT / "logs"
 LOG_PATH = LOG_DIR / "ghostwriter.log"
