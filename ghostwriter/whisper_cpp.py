@@ -101,9 +101,13 @@ class WhisperCpp:
         """Run one throwaway pass so the first real dictation doesn't pay the graphics card's startup cost."""
         self.transcribe(np.random.default_rng(0).normal(0, 0.01, SAMPLE_RATE).astype(np.float32))
 
-    def close(self) -> None:
+    def interrupt(self) -> None:
+        """Stop the server now, ending a transcription in progress, so quitting never waits for a long one."""
         if self._server and self._server.poll() is None:
-            self._server.terminate()  # ends a request in progress, so closing never waits for a long one
+            self._server.terminate()
+
+    def close(self) -> None:
+        self.interrupt()
         with self._lock:
             self._stop()
             self._children.close()

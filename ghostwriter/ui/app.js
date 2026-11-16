@@ -151,13 +151,12 @@ function render(next) {
   document.getElementById("start-at-login").setAttribute("aria-pressed", String(state.startAtLogin));
   fillSoundStyles(settings);
   fillEngines();
-  showStatus();
+  showStatus(state.status);
   if (shown.summary) renderSummary(shown.summary);
 }
 
 // The sidebar card: whether dictation is ready, and what it runs on.
-async function showStatus() {
-  const status = await api().startup_status();
+function showStatus(status) {
   const words = { downloading: "Downloading", loading: "Starting", failed: "Couldn't start" };
   // During an engine switch the old engine keeps dictating, so only loading at startup counts here.
   document.getElementById("status-word").textContent = (!status.running && words[status.model]) || "Ready";
@@ -208,7 +207,7 @@ async function watchEngine(picked = false) {
     watchEngine.pickedAt = null;
     if (current && status.model === "ready") render(await api().state());  // picks up which graphics it runs on
   }
-  showStatus();
+  showStatus(status);
 }
 
 function applyTheme() {

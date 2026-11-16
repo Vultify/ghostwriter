@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS dictations (
 CREATE INDEX IF NOT EXISTS dictations_by_time ON dictations (at);
 """
 _COLUMNS = "id, at, text, app, seconds, words"
-# Each change to the table since it first shipped, in order, like "ALTER TABLE dictations ADD COLUMN ...". The
-# file's user_version counts the ones it already has.
+# Each change to the table since it first shipped, in order, one SQL statement each, like "ALTER TABLE
+# dictations ADD COLUMN ...". The file's user_version counts the ones it already has.
 _UPGRADES: tuple[str, ...] = ()
 
 
@@ -107,14 +107,22 @@ class History:
 
 
 def _upgrade(db: sqlite3.Connection) -> None:
-    """Run the upgrades this file doesn't have yet. A new or never upgraded file is version 1, the first table."""
-    stored, latest = db.execute("PRAGMA user_version").fetchone()[0], len(_UPGRADES) + 1
-    for version in range(max(stored, 1), latest):  # a newer file opened by an older Ghostwriter is left as it is
-        db.executescript(_UPGRADES[version - 1])
-        db.execute(f"PRAGMA user_version = {version + 1}")
-    if stored < 1:
-        db.execute(f"PRAGMA user_version = {latest}")
-
+    """Run the upgrades this file doesn't have yet. A new or never upgraded file is version 1, the first table. A
+    newer file opened by an older Ghostwriter is left as it is."""
+    latest = len(_UPGRADES) + 1
+    if db.execute("PRAGMA user_version").fetchone()[0] >= latest:
+        return
+    db.execute("BEGIN IMMEDIATE")  # one program upgrades at a time; another waits, then finds it done
+    try:
+        stored = db.execute("PRAGMA user_version").fetchone()[0]
+        for step in _UPGRADES[max(stored, 1) - 1:]:
+            db.execute(step)
+        if stored < latest:
+            db.execute(f"PRAGMA user_version = {latest}")
+        db.commit()
+    except BaseException:
+        db.rollback()
+        raise
 
 def _escape_like(text: str) -> str:
     """Make % and _ in a search match themselves instead of acting as wildcards."""

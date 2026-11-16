@@ -51,6 +51,7 @@ class Api:
         self._maximized = False
         self._nvidia: str | None = None
         self._nvidia_checked = False
+        self._tray_has_nvidia: bool | None = None  # the tray app's last answer, kept through torn reads
 
     def attach(self, window) -> None:
         self._window = window
@@ -81,6 +82,7 @@ class Api:
             "modelSize": models.size(engine, has_nvidia),
             "modelDownloaded": models.downloaded(engine, has_nvidia),
             "gpu": self._runs_on(engine),
+            "status": startup.read(self._startup_path),
         }
 
     def set_setting(self, name: str, value) -> dict:
@@ -173,10 +175,12 @@ class Api:
         self._window.minimize()
 
     def toggle_maximize(self) -> None:
-        if self._maximized:  # kept up to date by the window's maximized and restored events
+        if self._maximized:  # also kept up to date by the window's maximized and restored events
             self._window.restore()
+            self._maximized = False
         else:
             self._window.maximize()
+            self._maximized = True
 
     def close(self) -> None:
         self.stop_mic_test()
@@ -193,7 +197,11 @@ class Api:
         """Whether the tray app runs faster-whisper on an NVIDIA card. Its own answer is in startup.json; before
         it has written one, a card nvidia-smi can see is the best guess."""
         has_nvidia = startup.read(self._startup_path).get("has_nvidia")
-        return has_nvidia if isinstance(has_nvidia, bool) else self._nvidia_name() is not None
+        if isinstance(has_nvidia, bool):
+            self._tray_has_nvidia = has_nvidia
+        if self._tray_has_nvidia is not None:
+            return self._tray_has_nvidia
+        return self._nvidia_name() is not None
 
     def _nvidia_name(self) -> str | None:
         """The NVIDIA card's name, or None on a PC without one."""

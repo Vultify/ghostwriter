@@ -2,7 +2,8 @@
 rem Sets up Ghostwriter inside this folder: its own Python, its packages, the whisper.cpp speech engine, and a Start
 rem menu shortcut. Safe to run again; it skips what's already done and picks up where it left off.
 rem "install.bat /quiet" skips the questions at the end (get.ps1 uses this).
-rem For testing: GHOSTWRITER_WHISPER_CPP_ZIP installs whisper.cpp from a local zip instead of downloading it, and
+rem For testing: GHOSTWRITER_WHISPER_CPP_ZIP installs whisper.cpp from a local zip (unchecked, so a new build can
+rem be tried before it's published) instead of downloading it, and
 rem GHOSTWRITER_NO_NVIDIA sets up as if this PC had no NVIDIA card.
 setlocal
 title Ghostwriter setup
@@ -61,7 +62,7 @@ if errorlevel 1 goto failed
 findstr /x /c:"%WHISPER_CPP_VERSION%" ".whisper-cpp\VERSION.txt" >nul 2>&1
 if not errorlevel 1 goto have_whisper_cpp
 echo   [4/5] Downloading whisper.cpp, the speech engine that runs on any graphics card...
-powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $zip = Join-Path $env:TEMP 'ghostwriter-whisper-cpp.zip'; if ($env:GHOSTWRITER_WHISPER_CPP_ZIP) { Copy-Item -LiteralPath $env:GHOSTWRITER_WHISPER_CPP_ZIP -Destination $zip } else { Invoke-WebRequest '%WHISPER_CPP_URL%' -OutFile $zip }; if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne '%WHISPER_CPP_SHA256%') { Remove-Item $zip; throw 'The whisper.cpp download does not match its checksum, so it was not used.' }; if (Test-Path '.whisper-cpp') { Remove-Item '.whisper-cpp' -Recurse -Force }; Expand-Archive $zip -DestinationPath '.whisper-cpp' -Force; Remove-Item $zip"
+powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $zip = Join-Path $env:TEMP 'ghostwriter-whisper-cpp.zip'; if ($env:GHOSTWRITER_WHISPER_CPP_ZIP) { Copy-Item -LiteralPath $env:GHOSTWRITER_WHISPER_CPP_ZIP -Destination $zip } else { Invoke-WebRequest '%WHISPER_CPP_URL%' -OutFile $zip }; if (-not $env:GHOSTWRITER_WHISPER_CPP_ZIP -and (Get-FileHash $zip -Algorithm SHA256).Hash -ne '%WHISPER_CPP_SHA256%') { Remove-Item $zip; throw 'The whisper.cpp download does not match its checksum, so it was not used.' }; if (Test-Path '.whisper-cpp') { Remove-Item '.whisper-cpp' -Recurse -Force }; Expand-Archive $zip -DestinationPath '.whisper-cpp' -Force; Remove-Item $zip"
 if errorlevel 1 goto failed
 :have_whisper_cpp
 

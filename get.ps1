@@ -56,7 +56,11 @@
         $latest = Read-Version $source
         $installed = Read-Version $installDir
 
-        if ($installed -eq $latest -and (Read-Finished $installDir) -eq $latest) {
+        # Releases before the marker existed count as finished once their Python is in place.
+        $writesMarker = Select-String -LiteralPath (Join-Path $source 'install.bat') -Pattern '\.installed' -Quiet
+        $finished = if ($writesMarker) { (Read-Finished $installDir) -eq $latest }
+                    else { Test-Path -LiteralPath (Join-Path $installDir '.venv\Scripts\pythonw.exe') }
+        if ($installed -eq $latest -and $finished) {
             Say "Ghostwriter $latest is already installed and up to date."
             return
         }

@@ -53,7 +53,7 @@ def test_the_first_run_downloads_and_reports_the_bytes_received(monkeypatch):
     calls = _fake_hub(monkeypatch, downloaded=False)
     progress = []
     assert model_path(on_progress=lambda done, total: progress.append((done, total))) == "models/turbo"
-    assert calls == [True, False]  # looked on disk first
+    assert calls == [True, True, False]  # looked on disk first, at the tested version and then any version
     assert progress == [(100, 300), (200, 300), (300, 300)]
 
 
@@ -105,3 +105,20 @@ def test_huggingface_hub_still_names_the_bar_that_counts_downloaded_bytes():
     from huggingface_hub import _snapshot_download
 
     assert '"huggingface_hub.snapshot_download.transfer"' in inspect.getsource(_snapshot_download)
+
+
+def test_a_model_already_on_disk_at_another_version_isnt_downloaded_again(monkeypatch):
+    calls = []
+
+    def snapshot_download(repo, allow_patterns, local_files_only=False, tqdm_class=None, revision=None):
+        calls.append((revision, local_files_only))
+        if revision is not None and local_files_only:
+            raise FileNotFoundError("not on disk at the tested version")
+        return "models/older"
+
+    monkeypatch.setattr(models, "snapshot_download", snapshot_download)
+    monkeypatch.setattr(models, "try_to_load_from_cache",
+                        lambda repo, name, revision=None: None if revision else "models/older/model.bin")
+    assert models.fetch(models.VAD_REPO, [models.VAD_MODEL]) == "models/older"
+    assert calls == [(models.REVISIONS[models.VAD_REPO], True), (None, True)]  # never went online
+    assert models.downloaded(models.WHISPER_CPP, has_nvidia=False)

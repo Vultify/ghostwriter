@@ -25,6 +25,7 @@ FADE_UP_SECONDS = 0.4
 STEP_SECONDS = 0.02
 CHANGED = 0.02  # a volume further than this from where Ghostwriter left it was changed by hand, so it stays
 PENDING_DAYS = 30  # a volume left down by a stop is given up on if its app hasn't shown up in this long
+READ_ATTEMPTS, READ_RETRY_SECONDS = 5, 0.2  # for a saved file another program briefly holds open
 
 log = logging.getLogger("ghostwriter")
 
@@ -66,8 +67,10 @@ class OtherSounds:
         except Exception:
             log.exception("Can't change other apps' volume on this PC, so they'll stay as they are")
             self._apps = lambda playing_only=True: []  # finds no apps, so every request does nothing
-        self._pending = self._read_saved()
-        self._handle(self._save)  # drops what's too old to wait for
+        saved = self._read_saved()
+        self._pending = saved or {}
+        if saved is not None:  # couldn't read the file at all: leave it rather than lose what's in it
+            self._handle(self._save)  # drops what's too old to wait for
         self._handle(self._put_back_pending)
         while True:
             command = self._commands.get()
@@ -119,7 +122,9 @@ class OtherSounds:
         open yet are tried again after later dictations."""
         if not self._pending:
             return
-        found, put_back = set(), 0
+        oldest = (date.today() - timedelta(days=PENDING_DAYS)).isoformat()
+        found = {key for key, entry in self._pending.items() if entry[2] < oldest}  # given up on
+        put_back = 0
         for app in self._apps(playing_only=False):
             if app.key not in self._pending:
                 continue
@@ -133,19 +138,28 @@ class OtherSounds:
             found.add(app.key)
         for key in found:
             del self._pending[key]
-        self._save()
+        if found:
+            self._save()
         if put_back:
             log.info("Put back the volume of %d app(s) that Ghostwriter had lowered when it stopped", put_back)
 
-    def _read_saved(self) -> dict[str, list]:
-        """Volumes a stop left down, minus ones too old to still be waiting for."""
-        try:
-            saved = json.loads(self.path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
-            return {}
-        except (OSError, ValueError):
+    def _read_saved(self) -> dict[str, list] | None:
+        """Volumes a stop left down, minus ones too old to still be waiting for. None if the file is there but
+        can't be read, like while an antivirus scan holds it."""
+        for attempt in range(READ_ATTEMPTS):
+            try:
+                saved = json.loads(self.path.read_text(encoding="utf-8"))
+                break
+            except FileNotFoundError:
+                return {}
+            except ValueError:
+                log.warning("%s is damaged, so any volumes still lowered stay as they are", self.path.name)
+                return {}
+            except OSError:
+                time.sleep(READ_RETRY_SECONDS)
+        else:
             log.warning("Couldn't read %s, so any volumes still lowered stay as they are", self.path.name)
-            return {}
+            return None
         if not isinstance(saved, dict):
             return {}
         oldest, today = date.today() - timedelta(days=PENDING_DAYS), date.today().isoformat()

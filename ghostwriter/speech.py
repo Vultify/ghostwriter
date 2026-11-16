@@ -77,7 +77,10 @@ class SpeechEngine:
         threading.Thread(target=self._switch, name="Engine switch", daemon=True).start()
 
     def close(self) -> None:
-        """Close the engine for quitting. A dictation still being transcribed gets a few seconds, not forever."""
+        """Close the engine for quitting. whisper.cpp stops at once; faster-whisper gets a few seconds to finish."""
+        interrupt = getattr(self._engine, "interrupt", None)
+        if interrupt:
+            interrupt()
         waited = self._in_use.acquire(timeout=5)
         try:
             if self._engine:
