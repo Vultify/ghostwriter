@@ -14,6 +14,7 @@ HOTKEYS = system_hotkey.HOTKEYS  # the keys to pick from, by name; the names are
 HANDS_FREE_MINUTES = (5, 15, 30)  # how long hands free can run before it stops by itself
 # How loud other apps play while Ghostwriter listens, in percent of their own volume: 100 leaves them be, 0 mutes.
 OTHER_SOUNDS = (100, 50, 30, 10, 0)
+LOWERED_SOUNDS = 10  # the default, and what the tray's on/off switch turns them down to
 THEMES = ("system", "light", "dark")  # for the app window; "system" follows the system's own setting
 
 log = logging.getLogger("ghostwriter")
@@ -26,7 +27,7 @@ class Settings:
     sounds: bool = True
     sound: str = "soft"  # which start and stop sounds, from sounds.STYLES
     pill: bool = True  # the listening pill at the bottom of the screen
-    other_sounds: int = 10  # percent of their own volume other apps play at while listening, from OTHER_SOUNDS
+    other_sounds: int = LOWERED_SOUNDS  # how loud other apps play while listening, from OTHER_SOUNDS
     hands_free: bool = True  # double tap locks recording on
     hands_free_minutes: int = 15
     theme: str = "system"

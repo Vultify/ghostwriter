@@ -302,8 +302,10 @@ def _run() -> None:
         return
     settings = Settings.load()
     quitting = threading.Event()
-    tray = Tray(settings, list_microphones(), on_quit=quitting.set,
-                files={"Edit dictionary": DICTIONARY_PATH, "Open log": LOG_PATH},
+    files = {"Edit dictionary": DICTIONARY_PATH}
+    if sys.platform == "win32":  # on Linux the log is only in the app window
+        files["Open log"] = LOG_PATH
+    tray = Tray(settings, list_microphones(), on_quit=quitting.set, files=files,
                 on_check_updates=lambda: threading.Thread(target=check_for_updates, args=(tray,), daemon=True).start(),
                 on_open=open_window)
     tray.start()  # the ghost shows up right away while Whisper loads

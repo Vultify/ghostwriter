@@ -1,5 +1,6 @@
 """The tray ghost on Linux: it shows up in the desktop's tray with its menu, opens the menu on a left click, follows
-changed settings, turns red while listening, and leaves when Ghostwriter stops. It needs a desktop with a tray, like Omarchy's bar."""
+changed settings, turns red while listening, and leaves when Ghostwriter stops. It needs a desktop with a tray, like
+Omarchy's bar."""
 
 import subprocess
 import sys
@@ -66,8 +67,8 @@ def _click(path: str, label: str) -> None:
     """Click a menu row the way the bar does."""
     menu = _property(bus.get_unique_name(), "/" + path, ITEM, "Menu")
     row = next(row for text, _, row in _menu(path) if text == label)
-    _call(bus.get_unique_name(), menu, MENU, "Event", GLib.Variant("(isvu)", (row, "clicked", GLib.Variant("s", ""), 0)),
-          "()")
+    click = GLib.Variant("(isvu)", (row, "clicked", GLib.Variant("s", ""), 0))
+    _call(bus.get_unique_name(), menu, MENU, "Event", click, "()")
 
 
 def _wait_for(check, seconds: float = 5):
@@ -81,6 +82,9 @@ def _wait_for(check, seconds: float = 5):
 
 
 needs_a_tray = pytest.mark.skipif(not _has_tray(), reason="this desktop has no tray")
+# The on/off rows in the menu, all on by default.
+SWITCHES = {"Sounds": "sounds", "Listening pill": "pill", "Lower other sounds while listening": "other_sounds",
+            "Save history": "history"}
 
 
 @needs_a_tray
@@ -99,18 +103,21 @@ def test_the_ghost_sits_in_the_tray_with_its_menu(tmp_path):
         menu = _menu(path)
         labels = [label for label, *_ in menu]
         assert labels[0] == "Open Ghostwriter" and labels[-1] == "Quit Ghostwriter"
-        assert {"Hotkey", "Microphone", "Sounds", "Open log", "Check for updates"} <= set(labels)
+        assert {"Hotkey", "Microphone", "Open log", "Check for updates"} <= set(labels)
         checked = {label for label, on, _ in menu if on}
-        assert checked == {"Right Alt", "System default", "Sounds"}
+        assert checked == {"Right Alt", "System default", *SWITCHES}
 
         settings.hotkey = "Right Ctrl"  # as if the app window changed it
         tray.refresh()
         assert _wait_for(lambda: ("Right Ctrl", True) in [(label, on) for label, on, _ in _menu(path)])
         assert "hold Right Ctrl to talk" in _property(bus.get_unique_name(), "/" + path, ITEM, "Title")
 
-        _click(path, "Sounds")  # a click in the menu changes the setting and its checkmark
-        assert not settings.sounds
-        assert _wait_for(lambda: ("Sounds", False) in [(label, on) for label, on, _ in _menu(path)])
+        for label, setting in SWITCHES.items():  # a click in the menu turns each one off, checkmark and all
+            _click(path, label)
+            assert _wait_for(lambda: (label, False) in [(text, on) for text, on, _ in _menu(path)])
+        assert (settings.sounds, settings.pill, settings.other_sounds, settings.history) == (False, False, 100, False)
+        _click(path, "Lower other sounds while listening")
+        assert settings.other_sounds == 10  # back on, at the default level
 
         assert _property(bus.get_unique_name(), "/" + path, ITEM, "ItemIsMenu")  # a left click opens the menu
         _call(bus.get_unique_name(), "/" + path, ITEM, "SecondaryActivate", GLib.Variant("(ii)", (0, 0)), "()")

@@ -7,7 +7,7 @@ from pathlib import Path
 import pystray
 from PIL import Image, ImageDraw
 
-from ghostwriter.settings import HOTKEYS, Settings
+from ghostwriter.settings import HOTKEYS, LOWERED_SOUNDS, Settings
 from ghostwriter.state import State
 from ghostwriter.system import desktop, tray_icon
 
@@ -48,8 +48,13 @@ class Tray:
                     *(self._choice("microphone", name) for name in microphones),
                 ),
             ),
-            pystray.MenuItem("Sounds", lambda: self._change(sounds=not settings.sounds),
-                             checked=lambda item: settings.sounds),
+            self._switch("Sounds", "sounds"),
+            self._switch("Listening pill", "pill"),
+            # On lowers them to the default; the app window has the other levels.
+            pystray.MenuItem("Lower other sounds while listening",
+                             lambda: self._change(other_sounds=100 if settings.other_sounds < 100 else LOWERED_SOUNDS),
+                             checked=lambda item: settings.other_sounds < 100),
+            self._switch("Save history", "history"),
             pystray.Menu.SEPARATOR,
             *(pystray.MenuItem(label, _opener(path)) for label, path in files.items()),
             pystray.MenuItem("Check for updates", lambda: on_check_updates()),
@@ -94,6 +99,11 @@ class Tray:
             State.LOCKED: f"Ghostwriter: listening hands free (tap {hotkey} to stop)",
             State.WORKING: "Ghostwriter: typing",
         }[self._state]
+
+    def _switch(self, label: str, setting: str) -> pystray.MenuItem:
+        """A row that turns a setting on and off, with a checkmark while it's on."""
+        return pystray.MenuItem(label, lambda: self._change(**{setting: not getattr(self.settings, setting)}),
+                                checked=lambda item: getattr(self.settings, setting))
 
     def _choice(self, setting: str, value: str | None, label: str | None = None) -> pystray.MenuItem:
         return pystray.MenuItem(
