@@ -128,6 +128,9 @@ Added 2026-11-12: music and videos get in the way of talking and thinking.
 - [ ] Linux version (PipeWire)
 - **Checkpoint:** I dictate over music and videos for a day
 
+## Version 1.6.0 released 2026-11-16
+Lower other sounds while dictating, safer installs and updates (exact tested packages, checked downloads, a setup that finishes if it stopped partway), no dictated text in the log, and the groundwork for Linux.
+
 ## Phase 12: local AI cleanup (on/off switch, its own page in the app)
 - [ ] Small local model on the GPU removes filler words, formats lists, and fixes punctuation
 - [ ] Voice commands ("new line", "scratch that")

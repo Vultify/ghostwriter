@@ -12,12 +12,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Pasting works on Linux with Hyprland. Hyprland presses Ctrl+V, or Ctrl+Shift+V in terminals, so it works in every app, older X11 ones like games included. The dictated text stays out of clipboard history, and the old clipboard comes back afterward (images included; formatted text comes back as plain text).
 - History on Linux names the app each dictation went into, from the app's launcher entry. Web apps get their own name (WhatsApp, not Chromium), and Steam games their title.
 - Ghostwriter starts on Linux, with the ghost in the desktop's tray and its full menu, opened with a left click (on Omarchy it's behind the arrow in the bar unless you pin it). Message boxes, light and dark mode, the start and stop sounds, and one copy at a time work there too. For now it records from the system's default mic; the app window, the listening pill, and start at login come next.
-- Other apps' sound (music, videos, games, calls) fades to 10% of its volume while Ghostwriter listens and back when you stop, so you can talk and think without it in the way. Settings can lower it to 50% or 30% instead, mute it, or keep it playing. An app whose volume you change in the meantime is left as you set it, and if Ghostwriter stops in the middle, the next start puts the volumes back.
-- If Ghostwriter can't find a graphics card it can use, it tells you once that it's running on the processor, which is slow, and suggests updating your graphics drivers. Settings shows "Your processor (slow)" under Runs on.
-
 - On Linux, a Dictation switch in the tray menu and on Omarchy's panel turns dictation off without quitting, so the hotkey works as a normal key (handy in games). A recording in progress still gets typed out, and the ghost fades while it's off.
 - The app window works on Linux (it needs WebKitGTK, `webkit2gtk-4.1`). The desktop draws its frame, it floats centered on Hyprland like Omarchy's own utility windows, and opening it again brings it to the front. It calls the system Omarchy on Omarchy and Linux elsewhere, as in "Omarchy default" for the mic.
 - On Omarchy, Ghostwriter has its own panel in the bar, in Omarchy's style. The ghost turns red while it listens, and a click opens the Dictation switch, switches for sounds, the listening pill, lowering other sounds, and history, and the hotkey. Right click opens the app. `scripts/install_omarchy_panel.sh` puts it in the bar in place of the tray icon.
+
+## [1.6.0] - 2026-11-16
+
+Other apps' sound fades while you dictate, safer installs and updates, and a few fixes.
+
+### Added
+- Other apps' sound (music, videos, games, calls) fades to 10% of its volume while Ghostwriter listens and back when you stop, so you can talk and think without it in the way. Settings can lower it to 50% or 30% instead, mute it, or keep it playing. An app whose volume you change in the meantime is left as you set it, and if Ghostwriter stops in the middle, the next start puts the volumes back.
+- If Ghostwriter can't find a graphics card it can use, it tells you once that it's running on the processor, which is slow, and suggests updating your graphics drivers. Settings shows "Your processor (slow)" under Runs on.
+- The tray menu has switches for the listening pill, lowering other sounds, and saving history.
 
 ### Changed
 - The Windows-only code now lives in its own folder (`ghostwriter/windows`), and `ghostwriter/system.py` picks the right code for the system Ghostwriter runs on. This gets Ghostwriter ready for Linux; nothing works differently on Windows.
@@ -135,7 +141,8 @@ The first release: local, unlimited dictation that replaces Wispr Flow for my da
 - A log at `logs/ghostwriter.log`, one copy running at a time, and an error message if it can't start.
 - Tests for the clipboard, hotkey, mic, dictionary, lock mode, settings, and the full dictation loop.
 
-[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/Vultify/ghostwriter/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/Vultify/ghostwriter/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Vultify/ghostwriter/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Vultify/ghostwriter/compare/v1.2.1...v1.3.0
