@@ -2,7 +2,9 @@
 
 from pystray import Icon
 
-__all__ = ["Icon", "publish"]
+__all__ = ["DICTATION_SWITCH", "Icon", "publish"]
+
+DICTATION_SWITCH = False  # dictation is always on with Windows, so its menu has no Dictation switch
 
 
 def publish(status: dict) -> None:

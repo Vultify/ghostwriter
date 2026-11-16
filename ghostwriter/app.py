@@ -355,7 +355,7 @@ def _run() -> None:
     )
 
     def apply_settings() -> None:
-        dictation.set_hotkey(settings.hotkey_code if settings.dictation else None)
+        dictation.set_hotkey(settings.hotkey_code if tray.dictation_on else None)
         dictation.hands_free = settings.hands_free
         dictation.max_recording_seconds = settings.hands_free_minutes * 60
         dictation.history = history if settings.history else None
@@ -363,7 +363,7 @@ def _run() -> None:
         speech.switch_to(models.resolve(settings.engine, has_nvidia))
         tray.refresh()
         log.info("Settings: dictation %s, hotkey %s, mic %s, sounds %s, pill %s, other sounds %s, hands free %s, "
-                 "history %s, engine %s", "on" if settings.dictation else "off", settings.hotkey,
+                 "history %s, engine %s", "on" if tray.dictation_on else "off", settings.hotkey,
                  settings.microphone or f"{desktop.NAME} default",
                  settings.sound if settings.sounds else "off", "on" if settings.pill else "off",
                  {100: "keep playing", 0: "muted"}.get(settings.other_sounds, f"at {settings.other_sounds}%"),

@@ -190,3 +190,11 @@ def test_the_running_app_picks_up_what_the_window_saves(tmp_path):
     assert running.reload_if_changed()
     assert running.hands_free is False
     assert not running.reload_if_changed()
+
+
+def test_windows_has_no_dictation_switch_and_always_dictates(tmp_path):
+    settings = Settings.load(tmp_path / "settings.json")
+    settings.change("dictation", False)  # as if the file came from a Linux install
+    tray = Tray(settings, ["Mic A"], on_quit=lambda: None, files={})
+    assert "Dictation" not in [item.text for item in tray._tray.menu.items]
+    assert tray.dictation_on

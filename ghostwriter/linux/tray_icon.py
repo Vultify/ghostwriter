@@ -24,6 +24,7 @@ ICON_SIZES = (16, 22, 24, 32, 48, 64)
 # Kept after Ghostwriter stops, so the panel can still find it to start it again.
 STATUS_PATH = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "ghostwriter" / "status.json"
 ROOT = 0
+DICTATION_SWITCH = True  # the tray menu and Omarchy's panel can turn dictation off, freeing the hotkey
 
 _INTERFACES = Gio.DBusNodeInfo.new_for_xml("""
 <node>

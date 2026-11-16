@@ -46,7 +46,7 @@ class Tray:
         menu = pystray.Menu(
             # The default item also runs on a left click of the ghost.
             pystray.MenuItem("Open Ghostwriter", lambda: on_open(), default=True),
-            self._switch("Dictation", "dictation"),
+            *([self._switch("Dictation", "dictation")] if tray_icon.DICTATION_SWITCH else []),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Hotkey", pystray.Menu(*(self._choice("hotkey", name) for name in HOTKEYS))),
             pystray.MenuItem(
@@ -95,13 +95,18 @@ class Tray:
         self._tray.update_menu()
         self._show()
 
+    @property
+    def dictation_on(self) -> bool:
+        """Whether the hotkey dictates. Always, on a system without the Dictation switch."""
+        return self.settings.dictation or not tray_icon.DICTATION_SWITCH
+
     def stop(self) -> None:
         tray_icon.publish(self._status("stopped"))
         self._tray.stop()
 
     def _show(self) -> None:
         """Show the state and settings on the ghost and its tooltip, and in the bar's panel where there is one."""
-        if not self.settings.dictation:
+        if not self.dictation_on:
             self._tray.icon = self._off_icon
         else:
             self._tray.icon = self._icons[self._state or State.READY]
@@ -125,7 +130,7 @@ class Tray:
 
     def _tooltip(self) -> str:
         hotkey = self.settings.hotkey
-        if self._state is not None and not self.settings.dictation:
+        if self._state is not None and not self.dictation_on:
             return f"Ghostwriter: dictation is off, so {hotkey} works normally"
         return {
             None: "Ghostwriter: starting up",

@@ -11,7 +11,8 @@ Every system's package has the same modules with the same names in them:
   pill         the window the listening pill is drawn in
   processes    starting helper programs that close when Ghostwriter does
   shortcuts    the app menu entry and starting at login
-  tray_icon    the icon in the system tray, which ghostwriter.tray builds its menu on
+  tray_icon    the icon in the system tray, which ghostwriter.tray builds its menu on, and DICTATION_SWITCH:
+               whether this system can turn dictation off (Linux, for its bar panel) or not (Windows)
   volume       other apps' volumes, turned down while Ghostwriter listens
 
 Each module loads the first time it's used, so a program only loads the parts it needs.
