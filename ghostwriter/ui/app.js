@@ -585,7 +585,10 @@ async function watchDownload() {
   setup.status = status;
   renderDownload(status);
   if (setup.step === 1) document.getElementById("setup-next").disabled = status.model !== "ready";
-  if (status.model === "ready") clearInterval(setup.timer);
+  if (status.model === "ready") {
+    clearInterval(setup.timer);
+    render(await api().state());  // the sidebar and Settings show the model as ready, too
+  }
 }
 
 function renderDownload(status) {

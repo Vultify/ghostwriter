@@ -125,6 +125,7 @@ def test_an_older_history_file_is_upgraded_and_keeps_its_dictations(history, mon
     with sqlite3.connect(history.path) as db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == 1
     monkeypatch.setattr(history_module, "_UPGRADES", ("ALTER TABLE dictations ADD COLUMN style TEXT",))
+    history = History(history.path)  # the next start of Ghostwriter, with the upgrade
     assert history.search()["items"][0]["text"] == "Kept through the upgrade."
     with sqlite3.connect(history.path) as db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == 2
@@ -137,6 +138,6 @@ def test_a_newer_history_file_isnt_turned_back_by_an_older_ghostwriter(history):
     history.add("From a newer version.", "Notepad", 1.0)
     with sqlite3.connect(history.path) as db:
         db.execute("PRAGMA user_version = 5")
-    assert history.search()["total"] == 1
+    assert History(history.path).search()["total"] == 1  # opened by this, older Ghostwriter
     with sqlite3.connect(history.path) as db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == 5

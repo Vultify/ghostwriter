@@ -52,11 +52,11 @@ def test_an_engine_switch_in_progress_isnt_mistaken_for_a_new_install(tmp_path):
 
 
 def test_settings_shows_the_graphics_whisper_cpp_picked_or_that_its_on_the_processor(api, tmp_path):
-    assert api._runs_on("whisper.cpp") == "Your graphics card"  # still loading
+    assert api._runs_on("whisper.cpp", startup.read(api._startup_path)) == "Your graphics card"  # still loading
     startup.write(tmp_path / "startup.json", model="ready", engine="whisper.cpp", device="Intel(R) UHD Graphics 770")
-    assert api._runs_on("whisper.cpp") == "Intel(R) UHD Graphics 770"
+    assert api._runs_on("whisper.cpp", startup.read(api._startup_path)) == "Intel(R) UHD Graphics 770"
     startup.write(tmp_path / "startup.json", model="ready", engine="whisper.cpp", device=PROCESSOR)
-    assert api._runs_on("whisper.cpp") == "Your processor (slow)"
+    assert api._runs_on("whisper.cpp", startup.read(api._startup_path)) == "Your processor (slow)"
 
 
 def test_the_window_follows_the_tray_apps_answer_on_nvidia(api, tmp_path):

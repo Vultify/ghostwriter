@@ -73,7 +73,7 @@ A plain line is a word to spell right. A line with `->` is a fix: what Whisper h
 
 ## Tests
 
-The test tools aren't part of a normal install, so add them once:
+The test tools aren't part of a normal install, so add them once (and again after running `install.bat`, which keeps only the packages Ghostwriter itself needs):
 
 ```
 .tools\uv.exe pip install --python .venv\Scripts\python.exe -r requirements-dev.txt

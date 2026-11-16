@@ -217,3 +217,24 @@ def test_a_damaged_saved_entry_is_skipped(tmp_path):
     sounds.wait()
     assert music.level == pytest.approx(0.8)
     sounds.close()
+
+
+def test_a_saved_file_that_cant_be_read_yet_is_kept_until_it_can(tmp_path, monkeypatch):
+    path = tmp_path / "lowered-sounds.json"
+    path.write_text(json.dumps({"game": [1.0, 0.1, date.today().isoformat()]}), encoding="utf-8")
+    read = OtherSounds._read_saved
+    attempts = []
+
+    def held_at_first(self):  # an antivirus scan holds the file through the first read
+        attempts.append(1)
+        return None if len(attempts) == 1 else read(self)
+
+    monkeypatch.setattr(OtherSounds, "_read_saved", held_at_first)
+    music = FakeApp("music", 0.8)
+    sounds = _other_sounds(tmp_path, [music])
+    sounds.lower(LEVEL)
+    sounds.restore()
+    sounds.wait()
+    assert json.loads(path.read_text(encoding="utf-8")).keys() == {"game"}  # still waiting for the game
+    assert music.level == pytest.approx(0.8)
+    sounds.close()

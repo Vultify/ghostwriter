@@ -61,7 +61,8 @@ class Api:
 
     def state(self) -> dict:
         settings = Settings.load(self._settings_path)
-        has_nvidia = self._has_nvidia()
+        status = startup.read(self._startup_path)
+        has_nvidia = self._has_nvidia(status)
         engine = models.resolve(settings.engine, has_nvidia)
         return {
             "version": __version__,
@@ -81,8 +82,8 @@ class Api:
             "model": f"{MODEL_LABEL}, compressed" if models.compressed(engine, has_nvidia) else MODEL_LABEL,
             "modelSize": models.size(engine, has_nvidia),
             "modelDownloaded": models.downloaded(engine, has_nvidia),
-            "gpu": self._runs_on(engine),
-            "status": startup.read(self._startup_path),
+            "gpu": self._runs_on(engine, status),
+            "status": status,
         }
 
     def set_setting(self, name: str, value) -> dict:
@@ -193,10 +194,10 @@ class Api:
             return {**self._dictionary.entries(), "error": str(error)}
         return self._dictionary.entries()
 
-    def _has_nvidia(self) -> bool:
+    def _has_nvidia(self, status: dict) -> bool:
         """Whether the tray app runs faster-whisper on an NVIDIA card. Its own answer is in startup.json; before
         it has written one, a card nvidia-smi can see is the best guess."""
-        has_nvidia = startup.read(self._startup_path).get("has_nvidia")
+        has_nvidia = status.get("has_nvidia")
         if isinstance(has_nvidia, bool):
             self._tray_has_nvidia = has_nvidia
         if self._tray_has_nvidia is not None:
@@ -217,10 +218,10 @@ class Api:
                 pass
         return self._nvidia
 
-    def _runs_on(self, engine: str) -> str:
+    def _runs_on(self, engine: str, status: dict) -> str:
         if engine == models.FASTER_WHISPER:
             return self._nvidia_name() or "Your graphics card"
-        status = startup.read(self._startup_path)  # whisper.cpp says which graphics it picked once it's running
+        # whisper.cpp says which graphics it picked once it's running.
         device = status.get("device") if status.get("engine") == engine else None
         if device == PROCESSOR:
             return "Your processor (slow)"

@@ -2,7 +2,8 @@
 
 Every system's package has the same modules with the same names in them:
   app_window   starting, finding, and framing the app window
-  desktop      opening files, message boxes, one copy at a time, light or dark theme, sounds
+  desktop      opening files, message boxes, one copy at a time, light or dark theme, sounds, and the labels
+               NAME (like "Windows") and APP_MENU (where people find Ghostwriter to start it, like "Start menu")
   hotkey       the keys to pick from, and the hook that reports the hotkey and hides it from other apps
   install      the install command and the updater
   microphones  the mics to pick from

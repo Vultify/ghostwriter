@@ -37,6 +37,7 @@ _UPGRADES: tuple[str, ...] = ()
 class History:
     def __init__(self, path: Path = HISTORY_PATH) -> None:
         self.path = path
+        self._ready = False  # the table is made and upgraded once, on the first open
 
     def add(self, text: str, app: str, seconds: float, at: datetime | None = None) -> None:
         moment = (at or datetime.now()).isoformat(timespec="seconds")
@@ -98,8 +99,10 @@ class History:
         db = sqlite3.connect(self.path, timeout=5)
         try:
             db.row_factory = sqlite3.Row
-            db.executescript(_SCHEMA)
-            _upgrade(db)
+            if not self._ready:
+                db.executescript(_SCHEMA)
+                _upgrade(db)
+                self._ready = True
             with db:  # commits at the end, or undoes everything on an error
                 yield db
         finally:

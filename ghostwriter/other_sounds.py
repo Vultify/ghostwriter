@@ -39,6 +39,7 @@ class OtherSounds:
         self._prepare_thread = prepare_thread
         self._lowered: list[tuple[volume.AppVolume, float, float]] = []  # each app, its volume, and what it's at now
         self._pending: dict[str, list] = {}  # left down by an earlier stop: app key -> [its volume, lowered to, date]
+        self._unreadable = False  # the saved file couldn't be read, so it isn't written until it can be
         self._commands: queue.Queue[Callable[[], None] | None] = queue.Queue()  # None stops the thread
         self._thread = threading.Thread(target=self._run, name="Other sounds", daemon=True)
         self._thread.start()
@@ -68,9 +69,8 @@ class OtherSounds:
             log.exception("Can't change other apps' volume on this PC, so they'll stay as they are")
             self._apps = lambda playing_only=True: []  # finds no apps, so every request does nothing
         saved = self._read_saved()
-        self._pending = saved or {}
-        if saved is not None:  # couldn't read the file at all: leave it rather than lose what's in it
-            self._handle(self._save)  # drops what's too old to wait for
+        self._pending, self._unreadable = saved or {}, saved is None
+        self._handle(self._save)  # drops what's too old to wait for
         self._handle(self._put_back_pending)
         while True:
             command = self._commands.get()
@@ -88,12 +88,14 @@ class OtherSounds:
     def _lower(self, level: float) -> None:
         if self._lowered:
             return
-        self._put_back_pending()  # first, so an app a crash left down isn't taken as its real volume
         for app in self._apps():
             try:
                 original = app.level
             except OSError:
                 continue
+            waiting = self._pending.pop(app.key, None)
+            if waiting and abs(original - waiting[1]) <= CHANGED:
+                original = waiting[0]  # still where a stop left it, so its real volume is the saved one
             if original > 0:
                 self._lowered.append((app, original, original * level))
         if not self._lowered:
@@ -122,8 +124,7 @@ class OtherSounds:
         open yet are tried again after later dictations."""
         if not self._pending:
             return
-        oldest = (date.today() - timedelta(days=PENDING_DAYS)).isoformat()
-        found = {key for key, entry in self._pending.items() if entry[2] < oldest}  # given up on
+        found = {key for key, entry in self._pending.items() if _expired(entry[2])}  # given up on
         put_back = 0
         for app in self._apps(playing_only=False):
             if app.key not in self._pending:
@@ -146,7 +147,7 @@ class OtherSounds:
     def _read_saved(self) -> dict[str, list] | None:
         """Volumes a stop left down, minus ones too old to still be waiting for. None if the file is there but
         can't be read, like while an antivirus scan holds it."""
-        for attempt in range(READ_ATTEMPTS):
+        for _ in range(READ_ATTEMPTS):
             try:
                 saved = json.loads(self.path.read_text(encoding="utf-8"))
                 break
@@ -158,30 +159,42 @@ class OtherSounds:
             except OSError:
                 time.sleep(READ_RETRY_SECONDS)
         else:
-            log.warning("Couldn't read %s, so any volumes still lowered stay as they are", self.path.name)
+            log.warning("Couldn't read %s yet, so it's left as it is for now", self.path.name)
             return None
         if not isinstance(saved, dict):
             return {}
-        oldest, today = date.today() - timedelta(days=PENDING_DAYS), date.today().isoformat()
+        today = date.today().isoformat()
         pending = {}
         for key, entry in saved.items():
             try:
                 original, lowered = float(entry[0]), float(entry[1])
                 saved_on = entry[2] if len(entry) > 2 else today
-                if date.fromisoformat(saved_on) >= oldest:
+                if not _expired(saved_on):
                     pending[key] = [original, lowered, saved_on]
             except (TypeError, ValueError, IndexError, KeyError):
                 log.warning("Skipped a damaged entry in %s", self.path.name)
         return pending
 
     def _save(self) -> None:
-        """Keep the volumes that still need putting back, in case Ghostwriter stops before it gets to them."""
+        """Keep the volumes that still need putting back, in case Ghostwriter stops before it gets to them. A file
+        that couldn't be read is read again first, so what's in it is never lost."""
+        if self._unreadable:
+            saved = self._read_saved()
+            if saved is None:
+                return
+            self._pending, self._unreadable = {**saved, **self._pending}, False
         today = date.today().isoformat()
         saved = {**self._pending, **{app.key: [original, lowered, today] for app, original, lowered in self._lowered}}
         if saved:
             self.path.write_text(json.dumps(saved), encoding="utf-8")
         else:
             self.path.unlink(missing_ok=True)
+
+
+def _expired(saved_on: str) -> bool:
+    """Whether a volume saved on this day (YYYY-MM-DD) has waited too long for its app to come back."""
+    return date.fromisoformat(saved_on) < date.today() - timedelta(days=PENDING_DAYS)
+
 
 def _fade(apps: list[tuple[volume.AppVolume, float, float]], seconds: float) -> None:
     """Move each app's volume from its start to its end level in small steps."""

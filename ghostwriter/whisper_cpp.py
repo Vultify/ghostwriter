@@ -70,6 +70,7 @@ class WhisperCpp:
         self._server: subprocess.Popen | None = None
         self._port = 0
         self._path = ""  # a fresh secret path prefix on each start, so web pages and other programs can't use it
+        self._closing = False
         self._lock = threading.Lock()
         self._start()
         found = pick_device(SERVER_LOG.read_text(encoding="utf-8", errors="replace"))
@@ -85,6 +86,8 @@ class WhisperCpp:
     def transcribe(self, audio: np.ndarray, prompt: str | None = None) -> str:
         """Turn 16 kHz mono float32 audio into text."""
         with self._lock:
+            if self._closing:
+                raise WhisperCppError("Ghostwriter is quitting, so whisper.cpp isn't transcribing anymore")
             if self._server.poll() is not None:
                 log.warning("whisper.cpp had stopped, so it's starting again")
                 self._start()
@@ -103,6 +106,7 @@ class WhisperCpp:
 
     def interrupt(self) -> None:
         """Stop the server now, ending a transcription in progress, so quitting never waits for a long one."""
+        self._closing = True
         if self._server and self._server.poll() is None:
             self._server.terminate()
 
