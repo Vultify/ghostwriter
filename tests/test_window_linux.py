@@ -50,6 +50,28 @@ def test_on_hyprland_it_floats_centered_and_shrinks_to_fit_a_small_screen(monkey
     assert "set_enabled(false)" in rule  # replaces the last launch's rule instead of piling up
 
 
+def test_on_a_tiny_screen_it_never_goes_below_the_size_the_page_needs(monkeypatch):
+    sent = []
+    screen = {"focused": True, "width": 960, "height": 600, "scale": 1, "reserved": [0, 26, 0, 0]}
+    monkeypatch.setattr(app_window.hyprland, "request",
+                        lambda command: sent.append(command) or (json.dumps([screen]) if command == "j/monitors" else "ok"))
+    app_window._float_on_hyprland()
+    assert f"size = {{ {app_window.MIN_WIDTH}, {app_window.MIN_HEIGHT} }}" in sent[-1]
+
+
+def test_opening_again_leaves_the_open_windows_rule_alone(monkeypatch):
+    floated = []
+    monkeypatch.setattr(app_window.hyprland, "running", lambda: True)
+    monkeypatch.setattr(app_window, "_float_on_hyprland", lambda: floated.append(True))
+    monkeypatch.setattr(app_window.subprocess, "Popen", lambda args, **options: None)
+    monkeypatch.setattr(app_window, "_window_processes", lambda: [4242])
+    app_window.open_window()
+    assert not floated
+    monkeypatch.setattr(app_window, "_window_processes", lambda: [])
+    app_window.open_window()
+    assert floated
+
+
 def test_closing_finds_the_window_by_its_command_and_folder(monkeypatch, tmp_path):
     monkeypatch.setattr(app_window, "PROJECT", tmp_path)  # so a real open window is never touched
     stand_in = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)", "-m", "ghostwriter.window"],

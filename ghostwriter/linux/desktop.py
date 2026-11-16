@@ -92,14 +92,30 @@ class _Playback:
         self.samples = samples
         self.position = 0
         self.finished = threading.Event()
+        self.closed = False
         self.stream = sd.OutputStream(samplerate=rate, channels=samples.shape[1], dtype="int16",
                                       callback=self._fill, finished_callback=self.finished.set)
-        self.stream.start()
+        try:
+            self.stream.start()
+        except Exception:
+            self.stream.close()
+            raise
+        threading.Thread(target=self._close_when_done, daemon=True).start()
 
     def stop(self) -> None:
-        self.stream.abort()
-        self.stream.close()
+        """Cut the sound off and let go of the speaker. Called with the player lock held."""
+        if not self.closed:
+            self.closed = True
+            self.stream.abort()
+            self.stream.close()
         self.finished.set()
+
+    def _close_when_done(self) -> None:
+        # A sound that plays to its end still holds the speaker until it's closed, and the sound library doesn't
+        # allow closing it from its own callback.
+        self.finished.wait()
+        with _player_lock:
+            self.stop()
 
     def _fill(self, out: np.ndarray, frames: int, time, status) -> None:
         chunk = self.samples[self.position:self.position + frames]

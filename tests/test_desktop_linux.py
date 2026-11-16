@@ -4,10 +4,12 @@ import os
 import signal
 import subprocess
 import sys
+import time
 import wave
 
 import numpy as np
 import pytest
+import sounddevice as sd
 
 from ghostwriter.linux import desktop
 from ghostwriter.paths import PROJECT
@@ -93,15 +95,39 @@ def test_ghostwriter_quits_cleanly_even_when_started_with_ctrl_c_ignored(quit_si
         program.wait()
 
 
-def test_sounds_started_from_many_threads_at_once_never_crash(tmp_path):
-    """Quick clicks through the sound previews once crashed the app window: two threads stopped and started sounds
-    at the same moment. Played through the real speaker, as silence."""
-    silence = tmp_path / "silence.wav"
+def _needs_a_speaker():
+    try:
+        sd.query_devices(kind="output")
+    except (sd.PortAudioError, ValueError):
+        pytest.skip("no sound output on this machine")
+
+
+def _silent_wav(folder):
+    silence = folder / "silence.wav"
     with wave.open(str(silence), "wb") as sound:
         sound.setnchannels(1)
         sound.setsampwidth(2)
         sound.setframerate(44100)
         sound.writeframes(bytes(2 * 4410))  # a tenth of a second
+    return silence
+
+
+def test_a_sound_lets_go_of_the_speaker_when_it_ends(tmp_path):
+    _needs_a_speaker()
+    desktop.play_sound(_silent_wav(tmp_path), wait=True)
+    playback = desktop._playing
+    for _ in range(100):
+        if playback.stream.closed:
+            break
+        time.sleep(0.02)
+    assert playback.stream.closed
+
+
+def test_sounds_started_from_many_threads_at_once_never_crash(tmp_path):
+    """Quick clicks through the sound previews once crashed the app window: two threads stopped and started sounds
+    at the same moment. Played through the real speaker, as silence."""
+    _needs_a_speaker()
+    silence = _silent_wav(tmp_path)
     program = subprocess.run(
         [sys.executable, "-c",
          "import sys, threading; from pathlib import Path; from ghostwriter.linux import desktop\n"

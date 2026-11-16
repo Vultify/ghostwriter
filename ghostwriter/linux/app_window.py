@@ -25,6 +25,7 @@ MISSING_ENGINE_MESSAGE = (
 )
 _WINDOW_MODULE = "ghostwriter.window"
 WIDTH, HEIGHT = 1120, 740  # the window's size, as on Windows
+MIN_WIDTH, MIN_HEIGHT = 940, 640  # the smallest the page fits in, as window.py tells GTK
 SCREEN_MARGIN = 40  # kept free around a floating window on a screen too small for the full size
 # Floats the window centered at its size, like Omarchy does for LocalSend. Set again before every launch, replacing
 # the last one, the way Omarchy's own About window sets its rule, so nothing is added to the Hyprland config.
@@ -43,7 +44,9 @@ GLib.set_prgname(APP_ID)
 
 def open_window() -> None:
     """Start the app window as its own program. A second start brings the open one to the front instead."""
-    if hyprland.running():
+    # With a window already open, the new start only brings it to the front, and replacing the rule could change
+    # the open window's size.
+    if hyprland.running() and not _window_processes():
         _float_on_hyprland()
     subprocess.Popen([sys.executable, "-m", _WINDOW_MODULE], cwd=PROJECT, start_new_session=True,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -78,8 +81,10 @@ def _float_on_hyprland() -> None:
         left, top, right, bottom = screen["reserved"]  # the bar's space
         free_width = screen["width"] / screen["scale"] - left - right - 2 * SCREEN_MARGIN
         free_height = screen["height"] / screen["scale"] - top - bottom - 2 * SCREEN_MARGIN
-        rule = _FLOAT_RULE.format(app_id=json.dumps(f"^{re.escape(APP_ID)}$"), width=round(min(WIDTH, free_width)),
-                                  height=round(min(HEIGHT, free_height)))
+        width = max(MIN_WIDTH, min(WIDTH, free_width))
+        height = max(MIN_HEIGHT, min(HEIGHT, free_height))
+        rule = _FLOAT_RULE.format(app_id=json.dumps(f"^{re.escape(APP_ID)}$"), width=round(width),
+                                  height=round(height))
         reply = hyprland.request("eval " + rule).strip()
         if reply != "ok":
             raise hyprland.HyprlandError(reply)
@@ -98,11 +103,12 @@ def _window_processes() -> list[int]:
         if not entry.name.isdigit() or int(entry.name) == os.getpid():
             continue
         try:
-            command = (entry / "cmdline").read_bytes().split(b"\0")
+            if not _runs_module((entry / "cmdline").read_bytes().split(b"\0"), _WINDOW_MODULE):
+                continue
             folder = Path(os.readlink(entry / "cwd"))
         except OSError:  # gone already, or someone else's
             continue
-        if _runs_module(command, _WINDOW_MODULE) and folder == PROJECT:
+        if folder == PROJECT:
             found.append(int(entry.name))
     return found
 
