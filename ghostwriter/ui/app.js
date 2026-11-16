@@ -23,8 +23,19 @@ window.addEventListener("pywebviewready", async () => {
   app.classList.add("loaded");
   renderDictionary(await api().dictionary());
   await watchHistory();
+  watchSettings.stamp = await api().settings_stamp();
   setInterval(watchHistory, 1000);
+  setInterval(watchSettings, 1000);
 });
+
+// The tray menu can change settings while the window is open; this keeps the page in step with it.
+async function watchSettings() {
+  if (document.hidden) return;
+  const stamp = await api().settings_stamp();
+  if (stamp === watchSettings.stamp) return;
+  watchSettings.stamp = stamp;
+  render(await api().state());
+}
 
 darkQuery.addEventListener("change", () => state && applyTheme());
 

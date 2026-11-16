@@ -146,6 +146,13 @@ class Api:
     def history_stamp(self) -> str:
         return self._history.stamp()
 
+    def settings_stamp(self) -> int:
+        """Changes whenever settings.json is saved, by the window or the tray menu."""
+        try:
+            return self._settings_path.stat().st_mtime_ns
+        except FileNotFoundError:
+            return 0
+
     def clear_history(self) -> None:
         self._history.clear()
 
