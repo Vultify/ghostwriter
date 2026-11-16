@@ -159,7 +159,8 @@ function render(next) {
 async function showStatus() {
   const status = await api().startup_status();
   const words = { downloading: "Downloading", loading: "Starting", failed: "Couldn't start" };
-  document.getElementById("status-word").textContent = words[status.model] || "Ready";
+  // During an engine switch the old engine keeps dictating, so only loading at startup counts here.
+  document.getElementById("status-word").textContent = (!status.running && words[status.model]) || "Ready";
   const where = state.gpu.startsWith("Your ") ? state.gpu[0].toLowerCase() + state.gpu.slice(1) : state.gpu;
   document.getElementById("status-text").textContent = `Runs offline on ${where}. Nothing leaves this PC.`;
 }

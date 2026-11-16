@@ -131,3 +131,12 @@ def test_an_older_history_file_is_upgraded_and_keeps_its_dictations(history, mon
         assert "style" in [column[1] for column in db.execute("PRAGMA table_info(dictations)")]
     history.add("After it.", "Notepad", 1.0)  # opening again doesn't rerun the upgrade
     assert history.search()["total"] == 2
+
+
+def test_a_newer_history_file_isnt_turned_back_by_an_older_ghostwriter(history):
+    history.add("From a newer version.", "Notepad", 1.0)
+    with sqlite3.connect(history.path) as db:
+        db.execute("PRAGMA user_version = 5")
+    assert history.search()["total"] == 1
+    with sqlite3.connect(history.path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 5

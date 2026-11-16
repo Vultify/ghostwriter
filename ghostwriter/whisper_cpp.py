@@ -102,6 +102,8 @@ class WhisperCpp:
         self.transcribe(np.random.default_rng(0).normal(0, 0.01, SAMPLE_RATE).astype(np.float32))
 
     def close(self) -> None:
+        if self._server and self._server.poll() is None:
+            self._server.terminate()  # ends a request in progress, so closing never waits for a long one
         with self._lock:
             self._stop()
             self._children.close()

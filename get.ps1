@@ -30,7 +30,9 @@
     function Read-Finished($folder) {
         $marker = Join-Path $folder '.installed'
         if (-not (Test-Path -LiteralPath $marker)) { return $null }
-        return (Get-Content -LiteralPath $marker -Raw).Trim()
+        $text = Get-Content -LiteralPath $marker -Raw
+        if ($null -eq $text) { return $null }  # empty: the last step started but didn't finish
+        return $text.Trim()
     }
 
     Write-Host ''

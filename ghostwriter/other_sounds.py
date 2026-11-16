@@ -85,6 +85,7 @@ class OtherSounds:
     def _lower(self, level: float) -> None:
         if self._lowered:
             return
+        self._put_back_pending()  # first, so an app a crash left down isn't taken as its real volume
         for app in self._apps():
             try:
                 original = app.level
@@ -103,7 +104,8 @@ class OtherSounds:
             for app, original, lowered in self._lowered:
                 try:
                     now = app.level
-                except OSError:  # the app closed
+                except OSError:  # the app closed, and Windows will open it at the lowered volume, so put it back then
+                    self._pending[app.key] = [original, lowered, date.today().isoformat()]
                     continue
                 if abs(now - lowered) <= CHANGED:
                     fades.append((app, now, original))
@@ -121,14 +123,14 @@ class OtherSounds:
         for app in self._apps(playing_only=False):
             if app.key not in self._pending:
                 continue
-            found.add(app.key)
             original, lowered = self._pending[app.key][:2]
             try:
                 if abs(app.level - lowered) <= CHANGED:
                     app.level = original
                     put_back += 1
-            except OSError:
+            except OSError:  # listed but already closing; try again next time
                 continue
+            found.add(app.key)
         for key in found:
             del self._pending[key]
         self._save()
@@ -149,10 +151,13 @@ class OtherSounds:
         oldest, today = date.today() - timedelta(days=PENDING_DAYS), date.today().isoformat()
         pending = {}
         for key, entry in saved.items():
-            if isinstance(entry, list) and len(entry) >= 2:
+            try:
+                original, lowered = float(entry[0]), float(entry[1])
                 saved_on = entry[2] if len(entry) > 2 else today
                 if date.fromisoformat(saved_on) >= oldest:
-                    pending[key] = [entry[0], entry[1], saved_on]
+                    pending[key] = [original, lowered, saved_on]
+            except (TypeError, ValueError, IndexError, KeyError):
+                log.warning("Skipped a damaged entry in %s", self.path.name)
         return pending
 
     def _save(self) -> None:

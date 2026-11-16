@@ -77,9 +77,14 @@ class SpeechEngine:
         threading.Thread(target=self._switch, name="Engine switch", daemon=True).start()
 
     def close(self) -> None:
-        with self._in_use:
+        """Close the engine for quitting. A dictation still being transcribed gets a few seconds, not forever."""
+        waited = self._in_use.acquire(timeout=5)
+        try:
             if self._engine:
                 self._engine.close()
+        finally:
+            if waited:
+                self._in_use.release()
 
     def _switch(self) -> None:
         while True:
@@ -90,10 +95,11 @@ class SpeechEngine:
                     return
             log.info("Switching to %s", engine)
             try:
-                new = load_engine(engine, self.has_nvidia, path=self.status_path)
+                new = load_engine(engine, self.has_nvidia, path=self.status_path, running=self.name)
             except Exception:
                 log.exception("Couldn't switch to %s", engine)
-                startup.write(self.status_path, model="failed", engine=engine, has_nvidia=self.has_nvidia)
+                startup.write(self.status_path, model="failed", engine=engine, running=self.name,
+                              has_nvidia=self.has_nvidia)
                 with self._lock:
                     self._failed = engine
                     self._switching = False
@@ -106,10 +112,13 @@ class SpeechEngine:
             log.info("Now dictating with %s", engine)
 
 
-def load_engine(engine: str, has_nvidia: bool, first_run: bool = False,
-                path: Path = STARTUP_PATH) -> "Transcriber | WhisperCpp":
-    """Download the engine's model if needed, load it onto the graphics card, and warm it up."""
+def load_engine(engine: str, has_nvidia: bool, first_run: bool = False, path: Path = STARTUP_PATH,
+                running: str = "") -> "Transcriber | WhisperCpp":
+    """Download the engine's model if needed, load it onto the graphics card, and warm it up. While switching,
+    running names the engine that keeps dictating meanwhile, so the window doesn't say Ghostwriter isn't ready."""
     status = {"engine": engine, "first_run": first_run, "has_nvidia": has_nvidia}
+    if running:
+        status["running"] = running
     startup.write(path, model="loading" if models.downloaded(engine, has_nvidia) else "downloading", **status)
     report = _download_reporter(status, path)
     if engine == models.FASTER_WHISPER:

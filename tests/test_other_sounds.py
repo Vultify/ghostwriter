@@ -173,3 +173,47 @@ def _levels(volume, process: int, wait: float = 0.0) -> list[float]:
     thread.start()
     thread.join()
     return found
+
+
+def test_an_app_closed_while_lowered_is_put_back_when_it_opens_again(tmp_path):
+    music = FakeApp("music", 0.8)
+    apps = [music]
+    sounds = _other_sounds(tmp_path, apps)
+    sounds.lower(LEVEL)
+    sounds.wait()
+    music.closed = True  # quit mid dictation; Windows remembers it at the lowered volume
+    sounds.restore()
+    sounds.wait()
+    apps[0] = FakeApp("music", 0.8 * LEVEL, playing=False)  # opened again later
+    sounds.lower(LEVEL)
+    sounds.restore()
+    sounds.wait()
+    assert apps[0].level == pytest.approx(0.8)
+    assert not sounds.path.exists()
+    sounds.close()
+
+
+def test_an_app_a_crash_left_down_keeps_its_real_volume_when_lowered_again(tmp_path):
+    (tmp_path / "lowered-sounds.json").write_text(json.dumps({"music": [1.0, 0.1, date.today().isoformat()]}),
+                                                  encoding="utf-8")
+    apps = []
+    sounds = _other_sounds(tmp_path, apps)
+    sounds.wait()
+    apps.append(FakeApp("music", 0.1))  # opened later, still at the volume the crash left it at
+    sounds.lower(LEVEL)
+    sounds.wait()
+    assert json.loads(sounds.path.read_text(encoding="utf-8"))["music"][0] == pytest.approx(1.0)
+    sounds.close()
+    assert apps[0].level == pytest.approx(1.0)
+
+
+def test_a_damaged_saved_entry_is_skipped(tmp_path):
+    (tmp_path / "lowered-sounds.json").write_text(json.dumps({"bad": [1.0, 0.1, 5], "worse": "x", "music": [0.8, 0.08]}),
+                                                  encoding="utf-8")
+    music = FakeApp("music", 0.08)
+    sounds = _other_sounds(tmp_path, [music])
+    sounds.lower(LEVEL)  # still answers after the damaged entries
+    sounds.restore()
+    sounds.wait()
+    assert music.level == pytest.approx(0.8)
+    sounds.close()

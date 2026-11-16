@@ -30,6 +30,9 @@ lowered-sounds.json
 .tools/
 .whisper-cpp/
 
+# Local notes, never published
+docs/
+
 # Local backups of the git history
 backups/
 

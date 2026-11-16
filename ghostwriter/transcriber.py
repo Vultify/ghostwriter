@@ -63,9 +63,12 @@ class Transcriber:
         return " ".join(segment.text.strip() for segment in segments).strip()
 
     def warm_up(self) -> None:
-        """Run one throwaway pass, silence filter included, so the first real dictation doesn't pay the GPU and
-        filter startup cost."""
-        self.transcribe(np.random.default_rng(0).normal(0, 0.01, SAMPLE_RATE).astype(np.float32))
+        """Run throwaway passes so the first real dictation doesn't pay the GPU's or the silence filter's startup
+        cost. The filter drops this noise as silence, so the GPU gets its own pass without it."""
+        noise = np.random.default_rng(0).normal(0, 0.01, SAMPLE_RATE).astype(np.float32)
+        segments, _ = self.model.transcribe(noise, language="en", beam_size=BEAM_SIZE)
+        list(segments)  # segments are generated lazily; this forces the pass to run
+        self.transcribe(noise)  # loads the silence filter
 
     def close(self) -> None:
         """Free the GPU memory, when switching to the other engine."""

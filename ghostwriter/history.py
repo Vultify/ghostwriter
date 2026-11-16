@@ -108,11 +108,12 @@ class History:
 
 def _upgrade(db: sqlite3.Connection) -> None:
     """Run the upgrades this file doesn't have yet. A new or never upgraded file is version 1, the first table."""
-    stored = db.execute("PRAGMA user_version").fetchone()[0]
-    for step in _UPGRADES[max(stored, 1) - 1:]:
-        db.executescript(step)
-    if stored != len(_UPGRADES) + 1:
-        db.execute(f"PRAGMA user_version = {len(_UPGRADES) + 1}")
+    stored, latest = db.execute("PRAGMA user_version").fetchone()[0], len(_UPGRADES) + 1
+    for version in range(max(stored, 1), latest):  # a newer file opened by an older Ghostwriter is left as it is
+        db.executescript(_UPGRADES[version - 1])
+        db.execute(f"PRAGMA user_version = {version + 1}")
+    if stored < 1:
+        db.execute(f"PRAGMA user_version = {latest}")
 
 
 def _escape_like(text: str) -> str:

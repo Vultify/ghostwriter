@@ -173,11 +173,10 @@ class Api:
         self._window.minimize()
 
     def toggle_maximize(self) -> None:
-        if self._maximized:
+        if self._maximized:  # kept up to date by the window's maximized and restored events
             self._window.restore()
         else:
             self._window.maximize()
-        self._maximized = not self._maximized
 
     def close(self) -> None:
         self.stop_mic_test()

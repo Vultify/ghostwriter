@@ -128,7 +128,7 @@ def test_switching_engines_keeps_dictating_and_closes_the_old_one(monkeypatch, t
     monkeypatch.setattr(speech.startup, "write", lambda *args, **status: None)
     loading = threading.Event()
 
-    def load_engine(name, has_nvidia, first_run=False, path=None):
+    def load_engine(name, has_nvidia, first_run=False, path=None, running=""):
         if name == models.WHISPER_CPP:
             loading.wait(5)  # a slow download
         return FakeEngine(name)
@@ -149,7 +149,7 @@ def test_an_engine_that_fails_to_load_leaves_the_old_one_running(monkeypatch):
     monkeypatch.setattr(speech.startup, "write", lambda *args, **status: None)
     attempts = []
 
-    def load_engine(name, has_nvidia, first_run=False, path=None):
+    def load_engine(name, has_nvidia, first_run=False, path=None, running=""):
         attempts.append(name)
         if name == models.WHISPER_CPP:
             raise OSError("no internet")
