@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Other apps' sound (music, videos, games, calls) fades to 10% of its volume while Ghostwriter listens and back when you stop, so you can talk and think without it in the way. Settings can lower it to 50% or 30% instead, mute it, or keep it playing. An app whose volume you change in the meantime is left as you set it, and if Ghostwriter stops in the middle, the next start puts the volumes back.
 - If Ghostwriter can't find a graphics card it can use, it tells you once that it's running on the processor, which is slow, and suggests updating your graphics drivers. Settings shows "Your processor (slow)" under Runs on.
 
+- A Dictation switch, in the tray menu and on Omarchy's panel, turns dictation off without quitting, so the hotkey works as a normal key (handy in games). A recording in progress still gets typed out, and the ghost fades while it's off.
+- On Omarchy, Ghostwriter has its own panel in the bar, in Omarchy's style. The ghost turns red while it listens, and a click opens the Dictation switch, switches for sounds, the listening pill, lowering other sounds, and history, and the hotkey. Right click opens the app. `scripts/install_omarchy_panel.sh` puts it in the bar in place of the tray icon.
+
 ### Changed
 - The Windows-only code now lives in its own folder (`ghostwriter/windows`), and `ghostwriter/system.py` picks the right code for the system Ghostwriter runs on. This gets Ghostwriter ready for Linux; nothing works differently on Windows.
 

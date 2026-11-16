@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "vultify.ghostwriter",
+  "name": "Ghostwriter",
+  "version": "1.0.0",
+  "author": "Vultify",
+  "license": "MIT",
+  "description": "Ghostwriter in the bar: the ghost shows when it's listening, and a click opens its settings.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Ghostwriter",
+    "description": "Turn dictation on and off and change Ghostwriter's settings from the bar. Right-click opens the app.",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

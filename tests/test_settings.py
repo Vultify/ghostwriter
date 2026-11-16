@@ -53,7 +53,7 @@ def test_tray_menu_changes_are_saved_and_reported(tmp_path):
     tray._change(hotkey="Right Ctrl")
     tray._change(sounds=False)
     saved = json.loads(settings.path.read_text(encoding="utf-8"))
-    assert saved == {"hotkey": "Right Ctrl", "microphone": None, "sounds": False, "sound": "soft", "pill": True,
+    assert saved == {"dictation": True, "hotkey": "Right Ctrl", "microphone": None, "sounds": False, "sound": "soft", "pill": True,
                      "other_sounds": 10, "hands_free": True, "hands_free_minutes": 15, "theme": "system",
                      "history": True, "engine": "auto"}
     assert changes == ["Right Ctrl", "Right Ctrl"]

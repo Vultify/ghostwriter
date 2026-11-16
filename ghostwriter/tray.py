@@ -1,5 +1,6 @@
 """The system tray icon: a little ghost by the clock that turns red while listening, with Ghostwriter's settings menu."""
 
+import os
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -7,6 +8,7 @@ from pathlib import Path
 import pystray
 from PIL import Image, ImageDraw
 
+from ghostwriter.paths import PROJECT
 from ghostwriter.settings import HOTKEYS, LOWERED_SOUNDS, Settings
 from ghostwriter.state import State
 from ghostwriter.system import desktop, tray_icon
@@ -16,6 +18,8 @@ SUPERSAMPLE = 4
 RED = (255, 69, 58, 255)
 LIGHT_TASKBAR_COLOR = (32, 32, 32, 255)
 DARK_TASKBAR_COLOR = (255, 255, 255, 255)
+OFF_OPACITY = 110  # out of 255: a faded ghost while dictation is off
+PANEL_SETTINGS = ("dictation", "hotkey", "microphone", "sounds", "pill", "other_sounds", "history")
 
 
 class Tray:
@@ -33,12 +37,16 @@ class Tray:
         self.settings = settings
         self.on_change: Callable[[], None] = lambda: None
         self._state: State | None = None  # None until startup finishes
-        normal = draw_ghost(LIGHT_TASKBAR_COLOR if desktop.taskbar_is_light() else DARK_TASKBAR_COLOR)
+        self._microphones = microphones
+        color = LIGHT_TASKBAR_COLOR if desktop.taskbar_is_light() else DARK_TASKBAR_COLOR
+        normal = draw_ghost(color)
+        self._off_icon = draw_ghost(color[:3] + (OFF_OPACITY,))
         listening = draw_ghost(RED)
         self._icons = {State.READY: normal, State.LISTENING: listening, State.LOCKED: listening, State.WORKING: normal}
         menu = pystray.Menu(
             # The default item also runs on a left click of the ghost.
             pystray.MenuItem("Open Ghostwriter", lambda: on_open(), default=True),
+            self._switch("Dictation", "dictation"),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Hotkey", pystray.Menu(*(self._choice("hotkey", name) for name in HOTKEYS))),
             pystray.MenuItem(
@@ -72,6 +80,7 @@ class Tray:
 
         threading.Thread(target=self._tray.run, args=(show,), name="Tray", daemon=True).start()
         shown.wait(5)
+        self._show()
 
     def notify(self, message: str) -> None:
         """Pop up a notification from the tray icon."""
@@ -79,19 +88,45 @@ class Tray:
 
     def set_state(self, state: State) -> None:
         self._state = state
-        self._tray.icon = self._icons[state]
-        self._tray.title = self._tooltip()
+        self._show()
 
     def refresh(self) -> None:
         """Show settings changed elsewhere, like in the app window, in the menu's checkmarks and the tooltip."""
         self._tray.update_menu()
-        self._tray.title = self._tooltip()
+        self._show()
 
     def stop(self) -> None:
+        tray_icon.publish(self._status("stopped"))
         self._tray.stop()
+
+    def _show(self) -> None:
+        """Show the state and settings on the ghost and its tooltip, and in the bar's panel where there is one."""
+        if not self.settings.dictation:
+            self._tray.icon = self._off_icon
+        else:
+            self._tray.icon = self._icons[self._state or State.READY]
+        self._tray.title = self._tooltip()
+        tray_icon.publish(self._status(self._state.value if self._state else "starting"))
+
+    def _status(self, state: str) -> dict:
+        """What a bar panel needs to show Ghostwriter and change its settings."""
+        return {
+            "pid": os.getpid(),
+            "state": state,
+            "project": str(PROJECT),
+            "settings": str(self.settings.path),
+            "hotkeys": list(HOTKEYS),
+            "microphones": list(self._microphones),
+            "defaultMicrophone": f"{desktop.NAME} default",
+            "loweredSounds": LOWERED_SOUNDS,
+            # The values in use, so the panel shows the right ones before settings.json exists.
+            "values": {name: getattr(self.settings, name) for name in PANEL_SETTINGS},
+        }
 
     def _tooltip(self) -> str:
         hotkey = self.settings.hotkey
+        if self._state is not None and not self.settings.dictation:
+            return f"Ghostwriter: dictation is off, so {hotkey} works normally"
         return {
             None: "Ghostwriter: starting up",
             State.READY: f"Ghostwriter: hold {hotkey} to talk, double tap for hands free",
@@ -118,7 +153,7 @@ class Tray:
             setattr(self.settings, name, value)
         self.settings.save()
         self._tray.update_menu()
-        self._tray.title = self._tooltip()
+        self._show()
         self.on_change()
 
 
@@ -143,6 +178,6 @@ def draw_ghost(color: tuple[int, int, int, int], final_size: int = ICON_SIZE) ->
     for x in (0.40 * size, 0.60 * size):
         draw.ellipse((x - eye_width / 2, eye_y - eye_height / 2, x + eye_width / 2, eye_y + eye_height / 2), fill=0)
     icon = Image.new("RGBA", (size, size), color)
-    icon.putalpha(shape)
+    icon.putalpha(shape.point(lambda level: level * color[3] // 255))  # a see-through color fades the whole ghost
     return icon.resize((final_size, final_size), Image.LANCZOS)
 

@@ -22,6 +22,7 @@ log = logging.getLogger("ghostwriter")
 
 @dataclass
 class Settings:
+    dictation: bool = True  # off pauses the hotkey, so the key works normally until it's turned back on
     hotkey: str = field(default_factory=system_hotkey.default_hotkey)
     microphone: str | None = None  # None follows the system's default mic
     sounds: bool = True
@@ -88,6 +89,7 @@ class Settings:
 
 # What each saved setting may hold; anything else in the file is ignored.
 _CHECKS = {
+    "dictation": lambda value: isinstance(value, bool),
     "hotkey": lambda value: isinstance(value, str) and value in HOTKEYS,
     "microphone": lambda value: value is None or isinstance(value, str),
     "sounds": lambda value: isinstance(value, bool),

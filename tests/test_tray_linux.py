@@ -2,6 +2,7 @@
 changed settings, turns red while listening, and leaves when Ghostwriter stops. It needs a desktop with a tray, like
 Omarchy's bar."""
 
+import json
 import subprocess
 import sys
 import time
@@ -11,6 +12,7 @@ from gi.repository import Gio, GLib
 
 from ghostwriter.paths import PROJECT
 from ghostwriter.settings import Settings
+from ghostwriter.linux import tray_icon
 from ghostwriter.state import State
 from ghostwriter.tray import Tray
 
@@ -83,12 +85,13 @@ def _wait_for(check, seconds: float = 5):
 
 needs_a_tray = pytest.mark.skipif(not _has_tray(), reason="this desktop has no tray")
 # The on/off rows in the menu, all on by default.
-SWITCHES = {"Sounds": "sounds", "Listening pill": "pill", "Lower other sounds while listening": "other_sounds",
-            "Save history": "history"}
+SWITCHES = {"Dictation": "dictation", "Sounds": "sounds", "Listening pill": "pill",
+            "Lower other sounds while listening": "other_sounds", "Save history": "history"}
 
 
 @needs_a_tray
-def test_the_ghost_sits_in_the_tray_with_its_menu(tmp_path):
+def test_the_ghost_sits_in_the_tray_with_its_menu(tmp_path, monkeypatch):
+    monkeypatch.setattr(tray_icon, "STATUS_PATH", tmp_path / "status.json")  # not the real panel's
     settings = Settings(path=tmp_path / "settings.json")
     opened = []
     tray = Tray(settings, ["Studio mic"], on_quit=lambda: None, files={"Open log": tmp_path},
@@ -115,9 +118,18 @@ def test_the_ghost_sits_in_the_tray_with_its_menu(tmp_path):
         for label, setting in SWITCHES.items():  # a click in the menu turns each one off, checkmark and all
             _click(path, label)
             assert _wait_for(lambda: (label, False) in [(text, on) for text, on, _ in _menu(path)])
-        assert (settings.sounds, settings.pill, settings.other_sounds, settings.history) == (False, False, 100, False)
+        assert (settings.dictation, settings.sounds, settings.pill, settings.other_sounds, settings.history) == (
+            False, False, False, 100, False)
         _click(path, "Lower other sounds while listening")
         assert settings.other_sounds == 10  # back on, at the default level
+
+        status = json.loads((tmp_path / "status.json").read_text())  # what the Omarchy panel reads
+        assert status["state"] == "ready" and status["values"]["dictation"] is False
+        assert status["settings"] == str(settings.path) and status["hotkeys"][0] == "Right Alt"
+        assert status["microphones"] == ["Studio mic"] and status["defaultMicrophone"] == "System default"
+        faded = _property(bus.get_unique_name(), "/" + path, ITEM, "IconPixmap")
+        _click(path, "Dictation")  # back on, and the ghost is no longer faded
+        assert _wait_for(lambda: _property(bus.get_unique_name(), "/" + path, ITEM, "IconPixmap") != faded)
 
         assert _property(bus.get_unique_name(), "/" + path, ITEM, "ItemIsMenu")  # a left click opens the menu
         _call(bus.get_unique_name(), "/" + path, ITEM, "SecondaryActivate", GLib.Variant("(ii)", (0, 0)), "()")
@@ -129,6 +141,7 @@ def test_the_ghost_sits_in_the_tray_with_its_menu(tmp_path):
         assert _wait_for(lambda: _property(bus.get_unique_name(), "/" + path, ITEM, "IconPixmap") != ready_icon)
     finally:
         tray.stop()
+    assert json.loads((tmp_path / "status.json").read_text())["state"] == "stopped"
 
 
 @needs_a_tray
@@ -138,6 +151,8 @@ def test_the_ghost_leaves_the_tray_even_after_a_crash(tmp_path):
          "from pathlib import Path; import sys, time; from gi.repository import Gio; "
          "from ghostwriter.settings import Settings; from ghostwriter.state import State; "
          "from ghostwriter.tray import Tray; "
+         "from ghostwriter.linux import tray_icon; "
+         "tray_icon.STATUS_PATH = Path(sys.argv[1]).with_name('status.json'); "
          "tray = Tray(Settings(path=Path(sys.argv[1])), [], on_quit=lambda: None, files={}); "
          "tray.start(); tray.set_state(State.READY); "
          "print(Gio.bus_get_sync(Gio.BusType.SESSION, None).get_unique_name(), flush=True); time.sleep(30)",

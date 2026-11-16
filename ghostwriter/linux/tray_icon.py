@@ -1,8 +1,14 @@
 """The tray ghost on Linux. It talks to the bar directly over D-Bus with the two protocols Linux bars read
 (StatusNotifierItem for the icon, dbusmenu for its menu), so a left click opens the menu and the ghost is sent as
-pixels, with no GTK window and no temporary files. ghostwriter.tray builds the menu the same way on every system."""
+pixels, with no GTK window and no temporary files. ghostwriter.tray builds the menu the same way on every system.
 
+It also keeps a small status file for Omarchy's Ghostwriter panel (ghostwriter/linux/omarchy), which shows the same
+state and settings in Omarchy's own style."""
+
+import json
 import logging
+import os
+from pathlib import Path
 
 import numpy as np
 from gi.repository import Gio, GLib
@@ -15,6 +21,8 @@ MENU_PATH = "/MenuBar"
 WATCHER = "org.kde.StatusNotifierWatcher"
 NOTIFICATIONS = "org.freedesktop.Notifications"
 ICON_SIZES = (16, 22, 24, 32, 48, 64)
+# Kept after Ghostwriter stops, so the panel can still find it to start it again.
+STATUS_PATH = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "ghostwriter" / "status.json"
 ROOT = 0
 
 _INTERFACES = Gio.DBusNodeInfo.new_for_xml("""
@@ -72,6 +80,13 @@ _INTERFACES = Gio.DBusNodeInfo.new_for_xml("""
 _ITEM, _MENU = _INTERFACES.interfaces
 
 log = logging.getLogger("ghostwriter")
+
+
+def publish(status: dict) -> None:
+    """Save Ghostwriter's state and settings for the Omarchy panel. It's rewritten in place, since the panel watches
+    this file and a swapped-in copy would end the watch; the panel skips a read that catches it half written."""
+    STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    STATUS_PATH.write_text(json.dumps(status) + "\n", encoding="utf-8")
 
 
 class _Entry:

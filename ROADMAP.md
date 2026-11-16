@@ -144,11 +144,12 @@ Added 2026-11-03. Built and tested on my Omarchy laptop (Intel UHD 600, so slow 
 - [ ] Paste on desktops other than Hyprland (GNOME, KDE), which need another way to press keys
 - [x] Knowing which app is in front for History (Hyprland's active window). The name comes from the app's launcher entry, web apps are matched by their address (WhatsApp, YouTube), and Steam games by their window title
 - [x] Tray ghost in the desktop's tray, talking to the bar directly over D-Bus, so a left click opens the menu (Omarchy's bar folds tray icons behind its arrow unless they're pinned). Message boxes, light and dark mode, the sounds, and one copy at a time work too, so Ghostwriter starts on Linux. The app window, pill, start at login, and updates are stand-ins until their own steps
+- [x] Ghostwriter panel for Omarchy's bar, built from Omarchy's own parts: the ghost turns red while listening, and a click opens a Dictation switch, switches for sounds, the pill, lowering other sounds, and history, and the hotkey. Right click opens the app. It replaces the tray icon on Omarchy (`scripts/install_omarchy_panel.sh`)
 - [ ] Pick a mic on Linux (for now it records from the system's default mic, set in the desktop's sound settings)
 - [ ] App window through GTK WebKit
 - [ ] Listening pill as a Wayland overlay (`gtk-layer-shell`)
 - [ ] Start at login (Hyprland autostart) and an app launcher entry (`.desktop` file)
-- [ ] One-line install script for Linux (`get.sh`)
+- [ ] One-line install script for Linux (`get.sh`). On Omarchy it copies the panel into `~/.config/omarchy/plugins` on every install and update (a copy, not a link, so Omarchy loads it without warnings) and runs the bar setup
 - [ ] Check the Windows build still works on my PC before release
 - **Checkpoint 13:** I dictate into apps for a day on a Linux laptop strong enough for Whisper
 

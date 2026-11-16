@@ -50,6 +50,8 @@ SLOW_MESSAGE = (
     "Ghostwriter couldn't find a graphics card it can use, so it's running on the processor. Each dictation can "
     "take 10 seconds or more. Updating your graphics drivers may fix it."
 )
+# No keyboard ever sends this key, so with it as the hotkey the real key works normally again.
+NO_HOTKEY = 0
 # A release sooner than this is a tap, not a hold. A lone tap is thrown away as accidental.
 TAP_SECONDS = 0.3
 # A second press this soon after a tap locks recording on, hands free.
@@ -64,6 +66,7 @@ class _Key(Enum):
     PRESS = "press"
     RELEASE = "release"
     TIMEOUT = "timeout"
+    OFF = "off"  # dictation was turned off
 
 
 class _Mode(Enum):
@@ -127,8 +130,11 @@ class Dictation:
         self._key_events.put(None)
         self._clips.put(None)
 
-    def set_hotkey(self, key_code: int) -> None:
-        self._hook.set_key(key_code)
+    def set_hotkey(self, key_code: int | None) -> None:
+        """Listen for this key, or for none while dictation is off. A recording in progress gets typed out."""
+        self._hook.set_key(NO_HOTKEY if key_code is None else key_code)
+        if key_code is None:
+            self._key_events.put(_Key.OFF)
 
     def _update_state(self, unfinished_change: int = 0) -> None:
         with self._state_lock:
@@ -185,6 +191,13 @@ class Dictation:
                 else:
                     self._tapped_at = time.perf_counter()
                     self._set_mode(_Mode.TAPPED)
+            elif mode is _Mode.RELEASING:
+                self._set_mode(_Mode.IDLE)
+        elif key is _Key.OFF:
+            if mode in (_Mode.HOLDING, _Mode.LOCKED):
+                self._finish_recording(then=_Mode.IDLE)
+            elif mode is _Mode.TAPPED:
+                self._discard_recording()
             elif mode is _Mode.RELEASING:
                 self._set_mode(_Mode.IDLE)
         elif mode is _Mode.TAPPED:
@@ -341,15 +354,16 @@ def _run() -> None:
     )
 
     def apply_settings() -> None:
-        dictation.set_hotkey(settings.hotkey_code)
+        dictation.set_hotkey(settings.hotkey_code if settings.dictation else None)
         dictation.hands_free = settings.hands_free
         dictation.max_recording_seconds = settings.hands_free_minutes * 60
         dictation.history = history if settings.history else None
         recorder.microphone = settings.microphone
         speech.switch_to(models.resolve(settings.engine, has_nvidia))
         tray.refresh()
-        log.info("Settings: hotkey %s, mic %s, sounds %s, pill %s, other sounds %s, hands free %s, history %s, "
-                 "engine %s", settings.hotkey, settings.microphone or f"{desktop.NAME} default",
+        log.info("Settings: dictation %s, hotkey %s, mic %s, sounds %s, pill %s, other sounds %s, hands free %s, "
+                 "history %s, engine %s", "on" if settings.dictation else "off", settings.hotkey,
+                 settings.microphone or f"{desktop.NAME} default",
                  settings.sound if settings.sounds else "off", "on" if settings.pill else "off",
                  {100: "keep playing", 0: "muted"}.get(settings.other_sounds, f"at {settings.other_sounds}%"),
                  f"on, up to {settings.hands_free_minutes} min" if settings.hands_free else "off",
