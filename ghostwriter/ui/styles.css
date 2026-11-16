@@ -79,6 +79,8 @@ button { cursor: pointer; }
   border-bottom: 1px solid var(--chrome-line);
 }
 
+.app.system-frame .titlebar { display: none; }
+
 .titlebar-drag {
   flex-grow: 1;
   display: flex;

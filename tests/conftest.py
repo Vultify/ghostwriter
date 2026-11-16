@@ -29,7 +29,7 @@ if WINDOWS:
     user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
 
     collect_ignore = ["test_apps_linux.py", "test_desktop_linux.py", "test_hotkey_linux.py", "test_paste_linux.py",
-                      "test_tray_linux.py"]
+                      "test_tray_linux.py", "test_window_linux.py"]
 else:
     from ghostwriter.linux import hyprland
     from ghostwriter.linux.clipboard import Clipboard

@@ -69,6 +69,7 @@ class Api:
             "firstRun": self._first_run,
             "settings": settings.saved(),
             "system": desktop.NAME,
+            "ownFrame": app_window.OWN_FRAME,
             "appMenu": desktop.APP_MENU,
             "startAtLogin": shortcuts.starts_at_login(self._login_folder),
             "soundStyles": list(sounds.STYLES),
@@ -264,7 +265,7 @@ def main() -> None:
         width=WIDTH,
         height=HEIGHT,
         min_size=(MIN_WIDTH, MIN_HEIGHT),
-        frameless=True,
+        frameless=app_window.OWN_FRAME,
         easy_drag=False,
         background_color=BACKGROUNDS[desktop.apps_theme() if theme == "system" else theme],
     )

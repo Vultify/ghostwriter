@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - If Ghostwriter can't find a graphics card it can use, it tells you once that it's running on the processor, which is slow, and suggests updating your graphics drivers. Settings shows "Your processor (slow)" under Runs on.
 
 - On Linux, a Dictation switch in the tray menu and on Omarchy's panel turns dictation off without quitting, so the hotkey works as a normal key (handy in games). A recording in progress still gets typed out, and the ghost fades while it's off.
+- The app window works on Linux (it needs WebKitGTK, `webkit2gtk-4.1`). The desktop draws its frame, it floats centered on Hyprland like Omarchy's own utility windows, and opening it again brings it to the front. It calls the system Omarchy on Omarchy and Linux elsewhere, as in "Omarchy default" for the mic.
 - On Omarchy, Ghostwriter has its own panel in the bar, in Omarchy's style. The ghost turns red while it listens, and a click opens the Dictation switch, switches for sounds, the listening pill, lowering other sounds, and history, and the hotkey. Right click opens the app. `scripts/install_omarchy_panel.sh` puts it in the bar in place of the tray icon.
 
 ### Changed

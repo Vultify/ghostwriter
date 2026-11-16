@@ -135,6 +135,7 @@ function showView(name) {
 function render(next) {
   state = next;
   const settings = state.settings;
+  app.classList.toggle("system-frame", !state.ownFrame);  // the desktop draws the frame
   applyTheme();
 
   const text = { hotkey: settings.hotkey, version: `v${state.version}`, model: state.model, gpu: state.gpu,

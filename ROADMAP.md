@@ -146,7 +146,7 @@ Added 2026-11-03. Built and tested on my Omarchy laptop (Intel UHD 600, so slow 
 - [x] Tray ghost in the desktop's tray, talking to the bar directly over D-Bus, so a left click opens the menu (Omarchy's bar folds tray icons behind its arrow unless they're pinned). Message boxes, light and dark mode, the sounds, and one copy at a time work too, so Ghostwriter starts on Linux. The app window, pill, start at login, and updates are stand-ins until their own steps
 - [x] Ghostwriter panel for Omarchy's bar, built from Omarchy's own parts: the ghost turns red while listening, and a click opens a Dictation switch, switches for sounds, the pill, lowering other sounds, and history, and the hotkey. Right click opens the app. It replaces the tray icon on Omarchy (`scripts/install_omarchy_panel.sh`)
 - [ ] Pick a mic on Linux (for now it records from the system's default mic, set in the desktop's sound settings)
-- [ ] App window through GTK WebKit
+- [x] App window through WebKitGTK (`webkit2gtk-4.1`). The desktop draws the frame, so the page's Windows-style title bar is hidden; on Hyprland it floats centered at its full size (fitted to small screens), the way Omarchy floats LocalSend, and opening it again brings it to the front
 - [ ] Listening pill as a Wayland overlay (`gtk-layer-shell`)
 - [ ] Start at login (Hyprland autostart) and an app launcher entry (`.desktop` file)
 - [ ] One-line install script for Linux (`get.sh`). On Omarchy it copies the panel into `~/.config/omarchy/plugins` on every install and update (a copy, not a link, so Omarchy loads it without warnings) and runs the bar setup

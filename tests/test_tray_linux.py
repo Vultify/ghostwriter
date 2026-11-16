@@ -12,7 +12,7 @@ from gi.repository import Gio, GLib
 
 from ghostwriter.paths import PROJECT
 from ghostwriter.settings import Settings
-from ghostwriter.linux import tray_icon
+from ghostwriter.linux import desktop, tray_icon
 from ghostwriter.state import State
 from ghostwriter.tray import Tray
 
@@ -108,7 +108,7 @@ def test_the_ghost_sits_in_the_tray_with_its_menu(tmp_path, monkeypatch):
         assert labels[0] == "Open Ghostwriter" and labels[-1] == "Quit Ghostwriter"
         assert {"Hotkey", "Microphone", "Open log", "Check for updates"} <= set(labels)
         checked = {label for label, on, _ in menu if on}
-        assert checked == {"Right Alt", "System default", *SWITCHES}
+        assert checked == {"Right Alt", f"{desktop.NAME} default", *SWITCHES}
 
         settings.hotkey = "Right Ctrl"  # as if the app window changed it
         tray.refresh()
@@ -126,7 +126,7 @@ def test_the_ghost_sits_in_the_tray_with_its_menu(tmp_path, monkeypatch):
         status = json.loads((tmp_path / "status.json").read_text())  # what the Omarchy panel reads
         assert status["state"] == "ready" and status["values"]["dictation"] is False
         assert status["settings"] == str(settings.path) and status["hotkeys"][0] == "Right Alt"
-        assert status["microphones"] == ["Studio mic"] and status["defaultMicrophone"] == "System default"
+        assert status["microphones"] == ["Studio mic"] and status["defaultMicrophone"] == f"{desktop.NAME} default"
         faded = _property(bus.get_unique_name(), "/" + path, ITEM, "IconPixmap")
         _click(path, "Dictation")  # back on, and the ghost is no longer faded
         assert _wait_for(lambda: _property(bus.get_unique_name(), "/" + path, ITEM, "IconPixmap") != faded)

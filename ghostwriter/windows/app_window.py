@@ -14,6 +14,7 @@ from ghostwriter.windows.processes import program_path
 from ghostwriter.windows.win32 import dwmapi, user32
 
 WEB_ENGINE = "edgechromium"  # pywebview's name for WebView2
+OWN_FRAME = True  # the page draws its own title bar, with Windows 11 style buttons
 MISSING_ENGINE_MESSAGE = (
     "Ghostwriter's window needs Microsoft WebView2, which comes with Windows 11 and Microsoft Edge, and it isn't "
     "on this PC.\n\nGet it from https://go.microsoft.com/fwlink/p/?LinkId=2124703\n\n"

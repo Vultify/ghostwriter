@@ -1,8 +1,10 @@
 """Linux's small services: one copy at a time, opening files, message boxes, the light or dark theme, and sounds."""
 
 import os
+import signal
 import subprocess
 import sys
+import wave
 
 import numpy as np
 import pytest
@@ -69,3 +71,46 @@ def test_every_sound_is_ready_to_play(style):
         samples, rate = desktop._read_wav(sound_path(style, part))
         assert samples.dtype == np.int16 and samples.ndim == 2 and len(samples) > 0
         assert rate > 0
+
+
+@pytest.mark.parametrize("quit_signal", [signal.SIGINT, signal.SIGTERM])
+def test_ghostwriter_quits_cleanly_even_when_started_with_ctrl_c_ignored(quit_signal):
+    """Like a copy started from Omarchy's panel, whose launcher ignores Ctrl+C."""
+    program = subprocess.Popen(
+        [sys.executable, "-c", "import time; from ghostwriter.linux import desktop; desktop.prepare()\n"
+         "try:\n    print('ready', flush=True)\n    time.sleep(30)\n"
+         "except KeyboardInterrupt:\n    print('stopped cleanly', flush=True)"],
+        cwd=PROJECT, stdout=subprocess.PIPE, text=True,
+        preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN),
+    )
+    try:
+        assert program.stdout.readline().strip() == "ready"
+        program.send_signal(quit_signal)
+        assert program.stdout.readline().strip() == "stopped cleanly"
+        assert program.wait(timeout=5) == 0
+    finally:
+        program.kill()
+        program.wait()
+
+
+def test_sounds_started_from_many_threads_at_once_never_crash(tmp_path):
+    """Quick clicks through the sound previews once crashed the app window: two threads stopped and started sounds
+    at the same moment. Played through the real speaker, as silence."""
+    silence = tmp_path / "silence.wav"
+    with wave.open(str(silence), "wb") as sound:
+        sound.setnchannels(1)
+        sound.setsampwidth(2)
+        sound.setframerate(44100)
+        sound.writeframes(bytes(2 * 4410))  # a tenth of a second
+    program = subprocess.run(
+        [sys.executable, "-c",
+         "import sys, threading; from pathlib import Path; from ghostwriter.linux import desktop\n"
+         "def clicks(wait):\n"
+         "    for _ in range(15):\n"
+         "        desktop.play_sound(Path(sys.argv[1]), wait=wait)\n"
+         "threads = [threading.Thread(target=clicks, args=(n % 2 == 0,)) for n in range(8)]\n"
+         "[thread.start() for thread in threads]\n[thread.join() for thread in threads]\nprint('done')",
+         str(silence)],
+        cwd=PROJECT, capture_output=True, text=True, timeout=60,
+    )
+    assert program.returncode == 0 and program.stdout.strip() == "done", program.stderr[-2000:]

@@ -3,9 +3,11 @@ or dark theme, and playing sounds."""
 
 import functools
 import os
+import signal
 import socket
 import subprocess
 import sys
+import threading
 import wave
 from pathlib import Path
 
@@ -14,13 +16,21 @@ import sounddevice as sd
 
 from ghostwriter.paths import PROJECT
 
-NAME = "System"  # for labels like "System default"
+# For labels like "Omarchy default" and "Start with Omarchy": the desktop's name where it has its own, else Linux.
+NAME = "Omarchy" if Path("/usr/share/omarchy").is_dir() else "Linux"
+APP_MENU = "app launcher"  # where people find Ghostwriter to start it again
 _PREFER_LIGHT = 2  # the desktop portal's color-scheme: 0 is no preference, 1 prefers dark, 2 prefers light
 _held_names: list[socket.socket] = []  # instance locks, held until the process exits
+_player_lock = threading.Lock()
+_playing: "_Playback | None" = None  # the last sound started
 
 
 def prepare() -> None:
-    """Nothing to set up on Linux."""
+    """Quit cleanly on Ctrl+C and on a plain terminate (logging out, or Quit in Omarchy's panel), however Ghostwriter
+    was started: launchers often start programs with Ctrl+C ignored, and Python keeps it ignored. Called once, from
+    the main thread, when the tray app starts."""
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+    signal.signal(signal.SIGTERM, signal.default_int_handler)
 
 
 def claim_single_instance(name: str) -> bool:
@@ -63,8 +73,41 @@ def taskbar_is_light() -> bool:
 def play_sound(path: Path, wait: bool = False) -> None:
     """Play a WAV file. Returns right away unless wait is set, and a new sound cuts off one still playing. It plays
     from Ghostwriter itself, so turning other apps down while listening never turns down its own sounds."""
+    global _playing
     samples, rate = _read_wav(path)
-    sd.play(samples, rate, blocking=wait)
+    # One sound at a time, started and stopped by one thread at a time: the sound library crashes the whole program
+    # when two threads stop and start sounds together, like quick clicks through the sound previews.
+    with _player_lock:
+        if _playing is not None:
+            _playing.stop()
+        _playing = playback = _Playback(samples, rate)
+    if wait:
+        playback.finished.wait()
+
+
+class _Playback:
+    """One sound playing on the default speaker."""
+
+    def __init__(self, samples: np.ndarray, rate: int) -> None:
+        self.samples = samples
+        self.position = 0
+        self.finished = threading.Event()
+        self.stream = sd.OutputStream(samplerate=rate, channels=samples.shape[1], dtype="int16",
+                                      callback=self._fill, finished_callback=self.finished.set)
+        self.stream.start()
+
+    def stop(self) -> None:
+        self.stream.abort()
+        self.stream.close()
+        self.finished.set()
+
+    def _fill(self, out: np.ndarray, frames: int, time, status) -> None:
+        chunk = self.samples[self.position:self.position + frames]
+        out[:len(chunk)] = chunk
+        out[len(chunk):] = 0
+        self.position += frames
+        if len(chunk) < frames:
+            raise sd.CallbackStop
 
 
 @functools.cache
