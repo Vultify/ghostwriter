@@ -1,5 +1,6 @@
 """Whisper speech to text with faster-whisper on an NVIDIA GPU, kept loaded so each dictation starts instantly."""
 
+import logging
 import os
 import site
 import sys
@@ -12,6 +13,8 @@ from ghostwriter.models import FASTER_WHISPER_FILES, FASTER_WHISPER_REPO, Downlo
 
 # Whisper follows only its single best guess; weighing 5 was 20% slower and gave the same text in testing.
 BEAM_SIZE = 1
+
+log = logging.getLogger("ghostwriter")
 
 
 def _add_cuda_dll_dirs() -> None:
@@ -36,6 +39,7 @@ def gpu_available() -> bool:
     try:
         return ctranslate2.get_cuda_device_count() > 0
     except Exception:
+        log.warning("faster-whisper couldn't reach the NVIDIA card, so Ghostwriter uses whisper.cpp", exc_info=True)
         return False
 
 
@@ -59,10 +63,12 @@ class Transcriber:
         return " ".join(segment.text.strip() for segment in segments).strip()
 
     def warm_up(self) -> None:
-        """Run one throwaway pass so the first real dictation doesn't pay the GPU startup cost."""
+        """Run throwaway passes so the first real dictation doesn't pay the GPU's or the silence filter's startup
+        cost. The filter drops this noise as silence, so the GPU gets its own pass without it."""
         noise = np.random.default_rng(0).normal(0, 0.01, SAMPLE_RATE).astype(np.float32)
         segments, _ = self.model.transcribe(noise, language="en", beam_size=BEAM_SIZE)
         list(segments)  # segments are generated lazily; this forces the pass to run
+        self.transcribe(noise)  # loads the silence filter
 
     def close(self) -> None:
         """Free the GPU memory, when switching to the other engine."""

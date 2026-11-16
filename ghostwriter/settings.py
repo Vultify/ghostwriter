@@ -66,9 +66,12 @@ class Settings:
         setattr(self, name, value)
         self.save()
 
+    def saved(self) -> dict:
+        """Every saved setting by name, as settings.json holds them."""
+        return {name: getattr(self, name) for name in _CHECKS}
+
     def save(self) -> None:
-        values = {name: getattr(self, name) for name in _CHECKS}
-        self.path.write_text(json.dumps(values, indent=2) + "\n", encoding="utf-8")
+        self.path.write_text(json.dumps(self.saved(), indent=2) + "\n", encoding="utf-8")
         self._modified = _modified_time(self.path)
 
     def reload_if_changed(self) -> bool:

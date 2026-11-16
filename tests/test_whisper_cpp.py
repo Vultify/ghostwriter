@@ -6,6 +6,8 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -68,6 +70,8 @@ def test_whisper_cpp_transcribes_with_the_word_list_and_closes(spoken):
         engine.warm_up()
         text = dictionary.apply(engine.transcribe(spoken, prompt=dictionary.prompt))
         server = engine._server
+        with pytest.raises(urllib.error.HTTPError):  # anything not using the secret path gets nothing
+            urllib.request.urlopen(f"http://127.0.0.1:{engine._port}/load", data=b"", timeout=5)
     finally:
         engine.close()
     assert text == "Deploy the MySQL backup tonight and send the link to Brightwater Detailing."
@@ -124,7 +128,7 @@ def test_switching_engines_keeps_dictating_and_closes_the_old_one(monkeypatch, t
     monkeypatch.setattr(speech.startup, "write", lambda *args, **status: None)
     loading = threading.Event()
 
-    def load_engine(name, has_nvidia, first_run=False, path=None):
+    def load_engine(name, has_nvidia, first_run=False, path=None, running=""):
         if name == models.WHISPER_CPP:
             loading.wait(5)  # a slow download
         return FakeEngine(name)
@@ -145,7 +149,7 @@ def test_an_engine_that_fails_to_load_leaves_the_old_one_running(monkeypatch):
     monkeypatch.setattr(speech.startup, "write", lambda *args, **status: None)
     attempts = []
 
-    def load_engine(name, has_nvidia, first_run=False, path=None):
+    def load_engine(name, has_nvidia, first_run=False, path=None, running=""):
         attempts.append(name)
         if name == models.WHISPER_CPP:
             raise OSError("no internet")

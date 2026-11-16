@@ -9,6 +9,7 @@ Ghostwriter does, even after a crash.
 import json
 import logging
 import re
+import secrets
 import socket
 import subprocess
 import threading
@@ -26,7 +27,10 @@ from ghostwriter.system import processes
 
 SERVER_LOG = LOG_DIR / "whisper-cpp.log"
 START_SECONDS = 90  # loading the model onto a slow graphics chip can take a while
+# A dictation gets this long to come back, plus this many seconds per second of audio, so a long hands free
+# ramble on a slow chip isn't cut off. The processor fallback can take a few seconds per second of speech.
 REQUEST_SECONDS = 120
+REQUEST_SECONDS_PER_AUDIO_SECOND = 4
 PROCESSOR = "the processor"  # the device when the server finds no graphics it can use
 
 # One line per graphics device the server finds, like "ggml_vulkan: 0 = NVIDIA GeForce RTX 4090 (NVIDIA) | uma: 0 |".
@@ -65,6 +69,8 @@ class WhisperCpp:
         self._children = processes.Children()
         self._server: subprocess.Popen | None = None
         self._port = 0
+        self._path = ""  # a fresh secret path prefix on each start, so web pages and other programs can't use it
+        self._closing = False
         self._lock = threading.Lock()
         self._start()
         found = pick_device(SERVER_LOG.read_text(encoding="utf-8", errors="replace"))
@@ -80,13 +86,16 @@ class WhisperCpp:
     def transcribe(self, audio: np.ndarray, prompt: str | None = None) -> str:
         """Turn 16 kHz mono float32 audio into text."""
         with self._lock:
+            if self._closing:
+                raise WhisperCppError("Ghostwriter is quitting, so whisper.cpp isn't transcribing anymore")
             if self._server.poll() is not None:
                 log.warning("whisper.cpp had stopped, so it's starting again")
                 self._start()
             fields = {"language": "en", "temperature": "0", "response_format": "json", "vad": "true"}
             if prompt:
                 fields["prompt"] = prompt
-            reply = self._post(fields, wav_bytes(audio))
+            timeout = REQUEST_SECONDS + REQUEST_SECONDS_PER_AUDIO_SECOND * len(audio) / SAMPLE_RATE
+            reply = self._post(fields, wav_bytes(audio), timeout)
         if "error" in reply:
             raise WhisperCppError(f"whisper.cpp couldn't transcribe: {reply['error']}")
         return " ".join(reply.get("text", "").split())
@@ -95,15 +104,23 @@ class WhisperCpp:
         """Run one throwaway pass so the first real dictation doesn't pay the graphics card's startup cost."""
         self.transcribe(np.random.default_rng(0).normal(0, 0.01, SAMPLE_RATE).astype(np.float32))
 
+    def interrupt(self) -> None:
+        """Stop the server now, ending a transcription in progress, so quitting never waits for a long one."""
+        self._closing = True
+        if self._server and self._server.poll() is None:
+            self._server.terminate()
+
     def close(self) -> None:
+        self.interrupt()
         with self._lock:
             self._stop()
             self._children.close()
 
     def _start(self) -> None:
         self._port = _free_port()
+        self._path = "/" + secrets.token_urlsafe(16)
         args = [str(SERVER), "-m", str(self.model), "-vm", str(self.vad), "--host", "127.0.0.1",
-                "--port", str(self._port), "-l", "en", "-fa"]
+                "--port", str(self._port), "--request-path", self._path, "-l", "en", "-fa"]
         if self._device_index is not None:
             args += ["-dev", str(self._device_index)]
         SERVER_LOG.parent.mkdir(exist_ok=True)
@@ -126,21 +143,22 @@ class WhisperCpp:
 
     def _answers(self) -> bool:
         try:
-            with urllib.request.urlopen(f"http://127.0.0.1:{self._port}/", timeout=1):
+            with urllib.request.urlopen(f"http://127.0.0.1:{self._port}{self._path}/", timeout=1):
                 return True
         except OSError:
             return False
 
-    def _post(self, fields: dict[str, str], audio: bytes) -> dict:
+    def _post(self, fields: dict[str, str], audio: bytes, timeout: float) -> dict:
         boundary = uuid.uuid4().hex
         parts = [f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode()
                  for name, value in fields.items()]
         parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="dictation.wav"\r\n'
                      "Content-Type: audio/wav\r\n\r\n".encode() + audio + b"\r\n")
         request = urllib.request.Request(
-            f"http://127.0.0.1:{self._port}/inference", data=b"".join(parts) + f"--{boundary}--\r\n".encode(),
+            f"http://127.0.0.1:{self._port}{self._path}/inference",
+            data=b"".join(parts) + f"--{boundary}--\r\n".encode(),
             headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
-        with urllib.request.urlopen(request, timeout=REQUEST_SECONDS) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.loads(response.read())
 
 

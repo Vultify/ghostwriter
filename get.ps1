@@ -26,6 +26,15 @@
         return $null
     }
 
+    # install.bat writes the version into .installed as its last step, so a setup that stopped partway is redone.
+    function Read-Finished($folder) {
+        $marker = Join-Path $folder '.installed'
+        if (-not (Test-Path -LiteralPath $marker)) { return $null }
+        $text = Get-Content -LiteralPath $marker -Raw
+        if ($null -eq $text) { return $null }  # empty: the last step started but didn't finish
+        return $text.Trim()
+    }
+
     Write-Host ''
     Say 'Ghostwriter installer'
     Say '====================='
@@ -47,11 +56,17 @@
         $latest = Read-Version $source
         $installed = Read-Version $installDir
 
-        if ($installed -eq $latest -and (Test-Path -LiteralPath (Join-Path $installDir '.venv\Scripts\pythonw.exe'))) {
+        # Releases before the marker existed count as finished once their Python is in place.
+        $writesMarker = Select-String -LiteralPath (Join-Path $source 'install.bat') -Pattern '\.installed' -Quiet
+        $finished = if ($writesMarker) { (Read-Finished $installDir) -eq $latest }
+                    else { Test-Path -LiteralPath (Join-Path $installDir '.venv\Scripts\pythonw.exe') }
+        if ($installed -eq $latest -and $finished) {
             Say "Ghostwriter $latest is already installed and up to date."
             return
         }
-        if ($installed) { Say "Updating Ghostwriter $installed to $latest..." } else { Say "Installing Ghostwriter $latest into $installDir..." }
+        if ($installed -eq $latest) { Say "Finishing the setup of Ghostwriter $latest..." }
+        elseif ($installed) { Say "Updating Ghostwriter $installed to $latest..." }
+        else { Say "Installing Ghostwriter $latest into $installDir..." }
 
         # Close Ghostwriter if it's running from this folder, so its files can be replaced.
         $running = Get-Process pythonw -ErrorAction SilentlyContinue |

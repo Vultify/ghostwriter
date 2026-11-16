@@ -43,8 +43,9 @@ def prepare_thread() -> None:
     comtypes.CoInitialize()
 
 
-def other_apps() -> list[AppVolume]:
-    """Every app playing sound right now on any speaker or headset, except Ghostwriter and Windows' system sounds."""
+def other_apps(playing_only: bool = True) -> list[AppVolume]:
+    """Every app with sound on any speaker or headset, except Ghostwriter and Windows' system sounds. By default
+    only the ones playing right now; the rest are paused or quiet but still in the volume mixer."""
     import comtypes
     from pycaw.pycaw import (DEVICE_STATE, AudioUtilities, EDataFlow, IAudioSessionControl2, IAudioSessionManager2,
                              ISimpleAudioVolume)
@@ -59,7 +60,7 @@ def other_apps() -> list[AppVolume]:
             for session_index in range(sessions.GetCount()):
                 session = sessions.GetSession(session_index).QueryInterface(IAudioSessionControl2)
                 process = session.GetProcessId()
-                if session.GetState() != _ACTIVE or process in (0, os.getpid()):  # 0 is the system sounds
+                if (playing_only and session.GetState() != _ACTIVE) or process in (0, os.getpid()):  # 0: system
                     continue
                 apps.append(AppVolume(session.QueryInterface(ISimpleAudioVolume), session.GetSessionIdentifier(),
                                       process))

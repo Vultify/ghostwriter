@@ -251,6 +251,7 @@ for _func, _argtypes, _restype in (
     (user32.GetClassNameW, [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int], ctypes.c_int),
     (user32.PostMessageW, [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM], wintypes.BOOL),
     (user32.SetForegroundWindow, [wintypes.HWND], wintypes.BOOL),
+    (user32.IsIconic, [wintypes.HWND], wintypes.BOOL),
     (user32.AllowSetForegroundWindow, [wintypes.DWORD], wintypes.BOOL),
     (dwmapi.DwmSetWindowAttribute, [wintypes.HWND, wintypes.DWORD, wintypes.LPCVOID, wintypes.DWORD], ctypes.c_long),
     (user32.VkKeyScanExW, [wintypes.WCHAR, wintypes.HKL], ctypes.c_short),

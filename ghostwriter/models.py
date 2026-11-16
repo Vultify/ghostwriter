@@ -27,6 +27,13 @@ WHISPER_CPP_FULL = "ggml-large-v3-turbo.bin"
 WHISPER_CPP_COMPRESSED = "ggml-large-v3-turbo-q5_0.bin"
 VAD_REPO = "ggml-org/whisper-vad"
 VAD_MODEL = "ggml-silero-v5.1.2.bin"  # skips silence, like faster-whisper's built in filter
+# The exact version of each model repo Ghostwriter was tested with, so a change upstream never reaches an install
+# untested. Bump one on purpose, after testing it.
+REVISIONS = {
+    FASTER_WHISPER_REPO: "0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf",
+    WHISPER_CPP_REPO: "5359861c739e955e79d9a303bcbc70fb988958b1",
+    VAD_REPO: "9ffd54a1e1ee413ddf265af9913beaf518d1639b",
+}
 
 
 def whisper_cpp_model(has_nvidia: bool) -> str:
@@ -35,8 +42,13 @@ def whisper_cpp_model(has_nvidia: bool) -> str:
     return WHISPER_CPP_FULL if has_nvidia else WHISPER_CPP_COMPRESSED
 
 
+def compressed(engine: str, has_nvidia: bool) -> bool:
+    """Whether this PC runs the compressed model."""
+    return engine == WHISPER_CPP and whisper_cpp_model(has_nvidia) == WHISPER_CPP_COMPRESSED
+
+
 def size(engine: str, has_nvidia: bool) -> str:
-    return "0.6 GB" if engine == WHISPER_CPP and not has_nvidia else "1.6 GB"
+    return "0.6 GB" if compressed(engine, has_nvidia) else "1.6 GB"
 
 
 def whisper_cpp_installed() -> bool:
@@ -58,18 +70,23 @@ def resolve(setting: str, has_nvidia: bool) -> str:
 
 
 def downloaded(engine: str, has_nvidia: bool) -> bool:
-    if engine == FASTER_WHISPER:
-        return isinstance(try_to_load_from_cache(FASTER_WHISPER_REPO, "model.bin"), str)
-    return all(isinstance(try_to_load_from_cache(repo, name), str)
-               for repo, name in ((WHISPER_CPP_REPO, whisper_cpp_model(has_nvidia)), (VAD_REPO, VAD_MODEL)))
+    files = [(FASTER_WHISPER_REPO, "model.bin")] if engine == FASTER_WHISPER else [
+        (WHISPER_CPP_REPO, whisper_cpp_model(has_nvidia)), (VAD_REPO, VAD_MODEL)]
+    return all(any(isinstance(try_to_load_from_cache(repo, name, revision=revision), str)
+                   for revision in (REVISIONS[repo], None))  # None: whatever version is already on disk
+               for repo, name in files)
 
 
 def fetch(repo: str, patterns: list[str], on_progress: DownloadProgress = lambda done, total: None) -> str:
-    """A model's folder on disk, found offline so startup never goes online. Only its first use downloads it."""
-    try:
-        return snapshot_download(repo, allow_patterns=patterns, local_files_only=True)
-    except Exception:  # not downloaded yet
-        return snapshot_download(repo, allow_patterns=patterns, tqdm_class=_progress_bars(on_progress))
+    """A model's folder on disk, found offline so startup never goes online. Only its first use downloads it,
+    at the tested version; a copy downloaded earlier at another version keeps working."""
+    for revision in (REVISIONS[repo], None):
+        try:
+            return snapshot_download(repo, revision=revision, allow_patterns=patterns, local_files_only=True)
+        except Exception:  # not on disk at this version
+            continue
+    return snapshot_download(repo, revision=REVISIONS[repo], allow_patterns=patterns,
+                             tqdm_class=_progress_bars(on_progress))
 
 
 def _progress_bars(on_progress: DownloadProgress) -> type[hf_tqdm]:

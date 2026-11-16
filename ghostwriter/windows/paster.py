@@ -10,7 +10,8 @@ from pathlib import Path
 from ghostwriter.paths import PROJECT
 from ghostwriter.windows import win32
 from ghostwriter.windows.clipboard import Clipboard
-from ghostwriter.windows.win32 import kernel32, user32, version
+from ghostwriter.windows.processes import program_path
+from ghostwriter.windows.win32 import user32, version
 
 # Long enough for slow apps (browsers, terminals) to read the clipboard before we restore it.
 RESTORE_DELAY_SECONDS = 0.5
@@ -34,27 +35,20 @@ class Paster:
         """Paste text with Ctrl+V and return whether the old clipboard was put back."""
         previous = self.clipboard.snapshot()
         sequence = self.clipboard.write_text(text)
-        _wait_for_modifiers_released()
-        _send_ctrl_v()
-        time.sleep(self.restore_delay)
-        return self.clipboard.restore(previous, sequence)
+        try:
+            _wait_for_modifiers_released()
+            _send_ctrl_v()
+            time.sleep(self.restore_delay)
+        finally:
+            restored = self.clipboard.restore(previous, sequence)  # even if Windows blocked the paste
+        return restored
 
 
 def foreground_app() -> App | None:
     """The program file of the window in front, or None if Windows won't say."""
     process_id = wintypes.DWORD()
     user32.GetWindowThreadProcessId(user32.GetForegroundWindow(), ctypes.byref(process_id))
-    process = kernel32.OpenProcess(win32.PROCESS_QUERY_LIMITED_INFORMATION, False, process_id.value)
-    if not process:
-        return None
-    try:
-        name = ctypes.create_unicode_buffer(1024)
-        size = wintypes.DWORD(len(name))
-        if kernel32.QueryFullProcessImageNameW(process, 0, name, ctypes.byref(size)):
-            return Path(name.value)
-        return None
-    finally:
-        kernel32.CloseHandle(process)
+    return program_path(process_id.value)
 
 
 @functools.lru_cache(maxsize=64)

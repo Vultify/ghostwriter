@@ -5,10 +5,10 @@
 
 const app = document.getElementById("app");
 const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
-const PAGE_SIZE = 200;
 let state = null;
-// What the History page is showing, and the last stamp seen, so new dictations show up while the window is open.
-const shown = { query: "", app: "", limit: PAGE_SIZE, apps: "", stamp: null, summary: null, request: 0 };
+// What the History page is showing, and the last stamp and day seen, so new dictations and a new day show up while
+// the window is open. The limit is set from state.pageSize once the first state arrives.
+const shown = { query: "", app: "", limit: 0, apps: "", stamp: null, day: null, summary: null, request: 0 };
 // The welcome on a new install: which step it's on, and the download's progress over time for the time left.
 const setup = { step: 1, status: {}, timer: null, samples: [] };
 
@@ -17,6 +17,7 @@ const api = () => window.pywebview.api;
 window.addEventListener("pywebviewready", async () => {
   bindPage();
   render(await api().state());
+  shown.limit = state.pageSize;
   if (state.firstRun) startSetup();
   else watchEngine();  // in case an engine switch is still going
   app.classList.add("loaded");
@@ -49,8 +50,8 @@ function bindPage() {
     });
   });
 
-  document.getElementById("start-with-windows").addEventListener("click", async () => {
-    render(await api().set_start_with_windows(!state.startWithWindows));
+  document.getElementById("start-at-login").addEventListener("click", async () => {
+    render(await api().set_start_at_login(!state.startAtLogin));
   });
   document.getElementById("engines").addEventListener("change", async (event) => {
     await change("engine", event.target.value);
@@ -93,7 +94,7 @@ function bindPage() {
     typing = setTimeout(() => showHistory({ query: event.target.value.trim() }), 150);
   });
   document.getElementById("history-filters").addEventListener("change", (event) => showHistory({ app: event.target.value }));
-  document.getElementById("history-more").addEventListener("click", () => showHistory({ limit: shown.limit + PAGE_SIZE }));
+  document.getElementById("history-more").addEventListener("click", () => showHistory({ limit: shown.limit + state.pageSize }));
   document.getElementById("history-on").addEventListener("click", () => change("history", true));
   document.getElementById("clear-history").addEventListener("click", askToClear);
   document.getElementById("clear-cancel").addEventListener("click", () => showClearQuestion(false));
@@ -126,7 +127,7 @@ function render(next) {
   applyTheme();
 
   const text = { hotkey: settings.hotkey, version: `v${state.version}`, model: state.model, gpu: state.gpu,
-    modelSize: `${state.modelSize} · ${state.modelDownloaded ? "downloaded" : "downloading"}` };
+    system: state.system, modelSize: `${state.modelSize} · ${state.modelDownloaded ? "downloaded" : "downloading"}` };
   document.querySelectorAll("[data-text]").forEach((node) => { node.textContent = text[node.dataset.text]; });
 
   document.querySelectorAll(".switch[data-setting]").forEach((button) => {
@@ -146,10 +147,21 @@ function render(next) {
   document.querySelectorAll("#themes input").forEach((input) => { input.checked = input.value === settings.theme; });
   document.getElementById("history-off").hidden = settings.history;
   document.getElementById("setup-tip").hidden = !settings.hands_free;
-  document.getElementById("start-with-windows").setAttribute("aria-pressed", String(state.startWithWindows));
+  document.getElementById("start-at-login-label").textContent = `Start with ${state.system}`;
+  document.getElementById("start-at-login").setAttribute("aria-pressed", String(state.startAtLogin));
   fillSoundStyles(settings);
   fillEngines();
+  showStatus(state.status);
   if (shown.summary) renderSummary(shown.summary);
+}
+
+// The sidebar card: whether dictation is ready, and what it runs on.
+function showStatus(status) {
+  const words = { downloading: "Downloading", loading: "Starting", failed: "Couldn't start" };
+  // During an engine switch the old engine keeps dictating, so only loading at startup counts here.
+  document.getElementById("status-word").textContent = (!status.running && words[status.model]) || "Ready";
+  const where = state.gpu.startsWith("Your ") ? state.gpu[0].toLowerCase() + state.gpu.slice(1) : state.gpu;
+  document.getElementById("status-text").textContent = `Runs offline on ${where}. Nothing leaves this PC.`;
 }
 
 // Only PCs with an NVIDIA card have a choice; everywhere else whisper.cpp is the one engine that runs.
@@ -181,7 +193,7 @@ async function watchEngine(picked = false) {
   const failed = current && status.model === "failed";
   const messages = {
     downloading: status.total ? `Downloading the ${state.engine} model: ${gigabytes(status.done)} of ${gigabytes(status.total)} GB` : `Downloading the ${state.engine} model…`,
-    loading: `Loading ${state.engine} onto your graphics card…`,
+    loading: `Loading ${state.engine}…`,
     failed: `Couldn't switch to ${state.engine}. Details are in the log.`,
   };
   line.hidden = !(noticing || busy || failed);
@@ -195,6 +207,7 @@ async function watchEngine(picked = false) {
     watchEngine.pickedAt = null;
     if (current && status.model === "ready") render(await api().state());  // picks up which graphics it runs on
   }
+  showStatus(status);
 }
 
 function applyTheme() {
@@ -203,7 +216,7 @@ function applyTheme() {
 }
 
 function fillMicrophones(select, chosen) {
-  const options = [["", "Windows default"], ...state.microphones.map((name) => [name, name])];
+  const options = [["", `${state.system} default`], ...state.microphones.map((name) => [name, name])];
   if (chosen && !state.microphones.includes(chosen)) options.push([chosen, `${chosen} (not connected)`]);
   select.replaceChildren(...options.map(([value, label]) => new Option(label, value)));
   select.value = chosen || "";
@@ -224,18 +237,19 @@ function fillMinutes(settings) {
   select.disabled = !settings.hands_free;
 }
 
-// Settings and the welcome each have a set of keycaps, with their own radio group named after the fieldset.
+// Settings and the welcome each have a set of keycaps, with their own radio group named after the fieldset. Built
+// once, so arrow keys keep their place.
 function fillHotkeys(id, chosen) {
   const fieldset = document.getElementById(id);
-  const legend = fieldset.querySelector("legend");
-  const caps = state.hotkeys.map((name) => {
-    const input = Object.assign(document.createElement("input"), { type: "radio", name: id, value: name, checked: name === chosen });
-    const cap = Object.assign(document.createElement("span"), { className: "keycap", textContent: name });
-    const label = document.createElement("label");
-    label.append(input, cap);
-    return label;
-  });
-  fieldset.replaceChildren(legend, ...caps);
+  if (!fieldset.querySelector("input")) {
+    fieldset.append(...state.hotkeys.map((name) => {
+      const label = document.createElement("label");
+      label.append(Object.assign(document.createElement("input"), { type: "radio", name: id, value: name }),
+        Object.assign(document.createElement("span"), { className: "keycap", textContent: name }));
+      return label;
+    }));
+  }
+  fieldset.querySelectorAll("input").forEach((input) => { input.checked = input.value === chosen; });
 }
 
 const SOUND_NOTES = {
@@ -260,7 +274,7 @@ function fillSoundStyles(settings) {
   }
   fieldset.querySelectorAll("input").forEach((input) => { input.checked = input.value === settings.sound; });
   fieldset.disabled = !settings.sounds;
-  document.getElementById("sound-note").textContent = SOUND_NOTES[settings.sound];
+  document.getElementById("sound-note").textContent = SOUND_NOTES[settings.sound] ?? "";
 }
 
 // Mic test: opens the chosen mic and draws its level as bars that scroll left, newest on the right.
@@ -385,18 +399,20 @@ const dayAndYearFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", m
 const COPY_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>';
 const COPIED_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
 
-// Checked every second; the stamp only changes when a dictation is saved or the history is cleared.
+// Checked every second; the stamp only changes when a dictation is saved or the history is cleared, and the day is
+// checked too so "today" moves on at midnight.
 async function watchHistory() {
   if (document.hidden) return;
   const stamp = await api().history_stamp();
-  if (stamp === shown.stamp) return;
-  shown.stamp = stamp;
+  const day = new Date().toDateString();
+  if (stamp === shown.stamp && day === shown.day) return;
+  Object.assign(shown, { stamp, day });
   renderSummary(await api().history_summary());
   await showHistory();
 }
 
 async function showHistory(changes = {}) {
-  if ("query" in changes || "app" in changes) shown.limit = PAGE_SIZE;
+  if ("query" in changes || "app" in changes) shown.limit = state.pageSize;
   Object.assign(shown, changes);
   const request = ++shown.request;
   const result = await api().history(shown.query, shown.app, shown.limit);
@@ -528,9 +544,9 @@ function element(tag, className, text) {
 
 const DOWNLOAD_TEXT = {
   downloading: ["Getting the speech model", "A one-time {size} download. After this, Ghostwriter never needs the internet to hear you."],
-  loading: ["Setting it up", "Loading the speech model onto your graphics card. This takes a few seconds."],
+  loading: ["Setting it up", "Loading the speech model. This takes a few seconds."],
   ready: ["Ready to go", "The speech model is on this PC now, so nothing you say ever needs the internet."],
-  failed: ["The download stopped", "Check your internet connection, then start Ghostwriter again from the Start menu. It picks up where it left off."],
+  failed: ["The download stopped", "Check your internet connection, then start Ghostwriter again from the {appMenu}. It picks up where it left off."],
 };
 
 function startSetup() {
@@ -569,13 +585,16 @@ async function watchDownload() {
   setup.status = status;
   renderDownload(status);
   if (setup.step === 1) document.getElementById("setup-next").disabled = status.model !== "ready";
-  if (status.model === "ready") clearInterval(setup.timer);
+  if (status.model === "ready") {
+    clearInterval(setup.timer);
+    render(await api().state());  // the sidebar and Settings show the model as ready, too
+  }
 }
 
 function renderDownload(status) {
   const [title, text] = DOWNLOAD_TEXT[status.model];
   document.getElementById("download-title").textContent = title;
-  document.getElementById("download-text").textContent = text.replace("{size}", state.modelSize);
+  document.getElementById("download-text").textContent = text.replace("{size}", state.modelSize).replace("{appMenu}", state.appMenu);
   const downloading = status.model === "downloading";
   const bar = document.getElementById("download-bar");
   bar.classList.toggle("stopped", status.model === "failed");

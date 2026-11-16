@@ -4,6 +4,7 @@ import time
 import wave
 
 from conftest import press_key, pump_until
+from fakes import FakePaster, FakeRecorder, FakeTranscriber
 
 from ghostwriter import sounds
 from ghostwriter.app import Dictation
@@ -52,30 +53,6 @@ def test_every_sound_style_is_short_and_plays():
     sounds.play_start("soft")
     sounds.play_stop("soft")
     sounds.preview("tap")
-
-
-class FakeRecorder:
-    open_ms = 0.0
-
-    def start(self) -> None:
-        pass
-
-    def stop(self):
-        return [0.0]
-
-
-class FakeTranscriber:
-    def transcribe(self, audio, prompt=None) -> str:
-        return "hello"
-
-
-class FakePaster:
-    def __init__(self) -> None:
-        self.pasted: list[str] = []
-
-    def paste(self, text: str) -> bool:
-        self.pasted.append(text)
-        return True
 
 
 PRESS, RELEASE = "press", "release"

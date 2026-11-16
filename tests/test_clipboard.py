@@ -1,8 +1,9 @@
 """The clipboard round trip: save it, write our text, and put the original back."""
 
+import pytest
 from conftest import text_of
 
-from ghostwriter.windows import win32
+from ghostwriter.windows import paster, win32
 from ghostwriter.windows.clipboard import Clipboard
 from ghostwriter.windows.win32 import user32
 
@@ -60,3 +61,15 @@ def test_restore_is_skipped_when_the_user_copies_something_new():
     _put(clipboard, "something the user copied")
     assert not clipboard.restore(before, sequence)
     assert text_of(clipboard.snapshot()) == "something the user copied"
+
+
+def test_a_blocked_paste_still_puts_the_original_back(monkeypatch):
+    def blocked() -> None:
+        raise paster.PasteError("Windows blocked the Ctrl+V keystrokes")
+
+    monkeypatch.setattr(paster, "_send_ctrl_v", blocked)
+    pasting = paster.Paster(restore_delay=0)
+    _put(pasting.clipboard, "original", HTML)
+    with pytest.raises(paster.PasteError):
+        pasting.paste("dictated")
+    assert text_of(pasting.clipboard.snapshot()) == "original"

@@ -23,12 +23,11 @@ from ghostwriter.other_sounds import OtherSounds
 from ghostwriter.paths import LOG_PATH, RECORDINGS_DIR
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import Settings
-from ghostwriter.speech import SpeechEngine
+from ghostwriter.speech import SpeechEngine, nvidia_available
 from ghostwriter.state import State
 from ghostwriter.system import desktop, install
 from ghostwriter.system import hotkey as system_hotkey
 from ghostwriter.system import paster as system_paster
-from ghostwriter.transcriber import Transcriber, gpu_available
 from ghostwriter.tray import Tray
 from ghostwriter.whisper_cpp import PROCESSOR
 from ghostwriter.window import close_window, open_window
@@ -84,7 +83,7 @@ class Dictation:
 
     def __init__(
         self,
-        transcriber: SpeechEngine | Transcriber,
+        transcriber: SpeechEngine,  # or anything else with transcribe(audio, prompt=), like a test stand-in
         recorder: Recorder,
         paster: system_paster.Paster,
         hotkey: int = HOTKEY,
@@ -235,8 +234,9 @@ class Dictation:
             return
         seconds = len(audio) / SAMPLE_RATE
         program = system_paster.foreground_app()
-        log.info("%.1fs of audio, transcribed in %.2fs, pasting into %s: %s",
-                 seconds, elapsed, program.name if program else "an unknown app", text)
+        # Only the length goes in the log: the words themselves stay in History, which can be turned off or cleared.
+        log.info("%.1fs of audio, transcribed in %.2fs, pasting %d words into %s",
+                 seconds, elapsed, len(text.split()), program.name if program else "an unknown app")
         try:
             # The trailing space keeps back to back dictations from running together.
             if not self.paster.paste(text + " "):
@@ -295,7 +295,7 @@ def main() -> None:
 
 def _run() -> None:
     desktop.prepare()
-    has_nvidia = gpu_available()
+    has_nvidia = nvidia_available()
     if not models.available(has_nvidia):
         log.error("No NVIDIA GPU, and whisper.cpp isn't installed")
         desktop.show_error(NO_ENGINE_MESSAGE)
@@ -313,7 +313,8 @@ def _run() -> None:
     first_run = not models.downloaded(engine, has_nvidia)
     last_device = startup.read().get("device")  # from the last run, before this run's status replaces it
     # Written before the window opens, so on the first run it opens on the welcome and shows the download.
-    startup.write(model="downloading" if first_run else "loading", engine=engine, first_run=first_run)
+    startup.write(model="downloading" if first_run else "loading", engine=engine, first_run=first_run,
+                  has_nvidia=has_nvidia)
     show_window = TRAY_ONLY_FLAG not in sys.argv
     if show_window:
         open_window()
@@ -327,7 +328,7 @@ def _run() -> None:
     try:
         speech.load(engine, first_run)
     except Exception:
-        startup.write(model="failed", engine=engine, first_run=first_run)
+        startup.write(model="failed", engine=engine, first_run=first_run, has_nvidia=has_nvidia)
         raise
     recorder = Recorder(microphone=settings.microphone)
     dictionary = DictionaryFile()
@@ -363,7 +364,7 @@ def _run() -> None:
     indicator.start()
     dictation.start()
     tray.set_state(State.READY)
-    startup.write(model="ready", engine=engine, device=speech.device)
+    startup.write(model="ready", engine=engine, device=speech.device, has_nvidia=has_nvidia)
     log.info("Ready. Hold %s to talk, or double tap it for hands free.", settings.hotkey)
     notice = ready_notice(settings.hotkey, first_run, speech.device, last_device)
     if notice:
