@@ -15,6 +15,8 @@ PAGE_SIZE = 200  # dictations the History page shows before "Show more"
 RECENT_COUNT = 3  # dictations on Home
 FILTER_APPS = 4  # the most used apps get their own filter on the History page
 
+# The table as it first shipped. Never change it: later changes go in _UPGRADES, so an older history.db kept
+# through updates is brought up to date too.
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS dictations (
     id INTEGER PRIMARY KEY,
@@ -27,6 +29,9 @@ CREATE TABLE IF NOT EXISTS dictations (
 CREATE INDEX IF NOT EXISTS dictations_by_time ON dictations (at);
 """
 _COLUMNS = "id, at, text, app, seconds, words"
+# Each change to the table since it first shipped, in order, like "ALTER TABLE dictations ADD COLUMN ...". The
+# file's user_version counts the ones it already has.
+_UPGRADES: tuple[str, ...] = ()
 
 
 class History:
@@ -94,10 +99,20 @@ class History:
         try:
             db.row_factory = sqlite3.Row
             db.executescript(_SCHEMA)
+            _upgrade(db)
             with db:  # commits at the end, or undoes everything on an error
                 yield db
         finally:
             db.close()
+
+
+def _upgrade(db: sqlite3.Connection) -> None:
+    """Run the upgrades this file doesn't have yet. A new or never upgraded file is version 1, the first table."""
+    stored = db.execute("PRAGMA user_version").fetchone()[0]
+    for step in _UPGRADES[max(stored, 1) - 1:]:
+        db.executescript(step)
+    if stored != len(_UPGRADES) + 1:
+        db.execute(f"PRAGMA user_version = {len(_UPGRADES) + 1}")
 
 
 def _escape_like(text: str) -> str:

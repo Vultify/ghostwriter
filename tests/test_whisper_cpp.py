@@ -6,6 +6,8 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -68,6 +70,8 @@ def test_whisper_cpp_transcribes_with_the_word_list_and_closes(spoken):
         engine.warm_up()
         text = dictionary.apply(engine.transcribe(spoken, prompt=dictionary.prompt))
         server = engine._server
+        with pytest.raises(urllib.error.HTTPError):  # anything not using the secret path gets nothing
+            urllib.request.urlopen(f"http://127.0.0.1:{engine._port}/load", data=b"", timeout=5)
     finally:
         engine.close()
     assert text == "Deploy the MySQL backup tonight and send the link to Brightwater Detailing."

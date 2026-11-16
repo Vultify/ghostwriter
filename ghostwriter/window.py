@@ -54,38 +54,33 @@ class Api:
 
     def attach(self, window) -> None:
         self._window = window
+        # Follow the real window state, which also changes from the tray, Windows snapping, or a double click.
+        window.events.maximized += lambda: setattr(self, "_maximized", True)
+        window.events.restored += lambda: setattr(self, "_maximized", False)
 
     def state(self) -> dict:
         settings = Settings.load(self._settings_path)
-        nvidia = self._nvidia_name()
-        engine = models.resolve(settings.engine, nvidia is not None)
+        has_nvidia = self._has_nvidia()
+        engine = models.resolve(settings.engine, has_nvidia)
         return {
             "version": __version__,
             "firstRun": self._first_run,
-            "settings": {
-                "hotkey": settings.hotkey,
-                "microphone": settings.microphone,
-                "sounds": settings.sounds,
-                "hands_free": settings.hands_free,
-                "hands_free_minutes": settings.hands_free_minutes,
-                "theme": settings.theme,
-                "history": settings.history,
-                "sound": settings.sound,
-                "pill": settings.pill,
-                "other_sounds": settings.other_sounds,
-            },
-            "startWithWindows": shortcuts.starts_at_login(self._login_folder),
+            "settings": settings.saved(),
+            "system": desktop.NAME,
+            "appMenu": desktop.APP_MENU,
+            "startAtLogin": shortcuts.starts_at_login(self._login_folder),
             "soundStyles": list(sounds.STYLES),
             "hotkeys": list(HOTKEYS),
             "microphones": list_microphones(),
             "handsFreeMinutes": list(HANDS_FREE_MINUTES),
             "otherSounds": list(OTHER_SOUNDS),
+            "pageSize": PAGE_SIZE,
             "engine": engine,
-            "engines": models.available(nvidia is not None),
-            "model": MODEL_LABEL if models.size(engine, nvidia is not None) == "1.6 GB" else f"{MODEL_LABEL}, compressed",
-            "modelSize": models.size(engine, nvidia is not None),
-            "modelDownloaded": models.downloaded(engine, nvidia is not None),
-            "gpu": self._runs_on(engine, nvidia),
+            "engines": models.available(has_nvidia),
+            "model": f"{MODEL_LABEL}, compressed" if models.compressed(engine, has_nvidia) else MODEL_LABEL,
+            "modelSize": models.size(engine, has_nvidia),
+            "modelDownloaded": models.downloaded(engine, has_nvidia),
+            "gpu": self._runs_on(engine),
         }
 
     def set_setting(self, name: str, value) -> dict:
@@ -107,7 +102,7 @@ class Api:
     def remove_fix(self, heard: str, write: str) -> dict:
         return self._edit(self._dictionary.remove_fix, heard, write)
 
-    def set_start_with_windows(self, on: bool) -> dict:
+    def set_start_at_login(self, on: bool) -> dict:
         shortcuts.set_start_at_login(bool(on), self._login_folder)
         return self.state()
 
@@ -195,6 +190,12 @@ class Api:
             return {**self._dictionary.entries(), "error": str(error)}
         return self._dictionary.entries()
 
+    def _has_nvidia(self) -> bool:
+        """Whether the tray app runs faster-whisper on an NVIDIA card. Its own answer is in startup.json; before
+        it has written one, a card nvidia-smi can see is the best guess."""
+        has_nvidia = startup.read(self._startup_path).get("has_nvidia")
+        return has_nvidia if isinstance(has_nvidia, bool) else self._nvidia_name() is not None
+
     def _nvidia_name(self) -> str | None:
         """The NVIDIA card's name, or None on a PC without one."""
         if not self._nvidia_checked:
@@ -209,9 +210,9 @@ class Api:
                 pass
         return self._nvidia
 
-    def _runs_on(self, engine: str, nvidia: str | None) -> str:
-        if engine == models.FASTER_WHISPER and nvidia:
-            return nvidia
+    def _runs_on(self, engine: str) -> str:
+        if engine == models.FASTER_WHISPER:
+            return self._nvidia_name() or "Your graphics card"
         status = startup.read(self._startup_path)  # whisper.cpp says which graphics it picked once it's running
         device = status.get("device") if status.get("engine") == engine else None
         if device == PROCESSOR:

@@ -6,7 +6,7 @@ import time
 
 import pytest
 from conftest import press_key
-from test_status import FakePaster, FakeRecorder, FakeTranscriber
+from fakes import FakePaster, FakeRecorder, FakeTranscriber
 
 from ghostwriter import app, sounds
 from ghostwriter.app import Dictation, StatusDisplay, claim_single_instance

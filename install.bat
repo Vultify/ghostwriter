@@ -12,13 +12,15 @@ set "QUIET="
 if /i "%~1"=="/quiet" set "QUIET=1"
 set "RESULT=1"
 set "UV_VERSION=0.13.5"
+set "UV_SHA256=a38b8d1902b7cfbc76b423ba1bb456f623f42064cdc72628b6075b89afd1019a"
 set "UV=%~dp0.tools\uv.exe"
 set "UV_PYTHON_INSTALL_DIR=%~dp0.python"
 set "UV_NO_CACHE=1"
 set "WHISPER_CPP_VERSION=v1.9.5"
+set "WHISPER_CPP_SHA256=48214d4555f1400d1c1bb7ccfa861c1b835b7ea02172d72cd93fccb663b6973f"
 set "WHISPER_CPP_URL=https://github.com/Vultify/ghostwriter/releases/download/whisper-cpp-%WHISPER_CPP_VERSION%/whisper-cpp-%WHISPER_CPP_VERSION%-vulkan-x64.zip"
 
-rem NVIDIA cards also get the CUDA libraries for faster-whisper; every graphics card gets whisper.cpp.
+rem NVIDIA cards also get faster-whisper and its CUDA libraries; every graphics card gets whisper.cpp.
 set "NVIDIA="
 powershell -NoProfile -Command "if (Get-CimInstance Win32_VideoController | Where-Object Name -like '*NVIDIA*') { exit 0 } else { exit 1 }"
 if not errorlevel 1 set "NVIDIA=1"
@@ -34,7 +36,7 @@ echo.
 
 if exist "%UV%" goto have_uv
 echo   [1/5] Downloading uv, the tool that installs Python and packages...
-powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $zip = Join-Path $env:TEMP 'ghostwriter-uv.zip'; Invoke-WebRequest 'https://github.com/astral-sh/uv/releases/download/%UV_VERSION%/uv-x86_64-pc-windows-msvc.zip' -OutFile $zip; Expand-Archive $zip -DestinationPath '.tools' -Force; Remove-Item $zip"
+powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $zip = Join-Path $env:TEMP 'ghostwriter-uv.zip'; Invoke-WebRequest 'https://github.com/astral-sh/uv/releases/download/%UV_VERSION%/uv-x86_64-pc-windows-msvc.zip' -OutFile $zip; if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne '%UV_SHA256%') { Remove-Item $zip; throw 'The uv download does not match its checksum, so it was not used.' }; Expand-Archive $zip -DestinationPath '.tools' -Force; Remove-Item $zip"
 if errorlevel 1 goto failed
 :have_uv
 
@@ -44,26 +46,31 @@ echo   [2/5] Installing Python 3.11 into this folder...
 if errorlevel 1 goto failed
 :have_python
 
+rem The lock files hold the exact package versions Ghostwriter was tested with, and their checksums.
 if not defined NVIDIA goto packages_without_nvidia
 echo   [3/5] Installing Ghostwriter's packages. The first time this downloads about 2.3 GB and takes a few minutes...
-"%UV%" pip install --python .venv\Scripts\python.exe -r requirements.txt -r requirements-nvidia.txt
+"%UV%" pip sync --python .venv\Scripts\python.exe --require-hashes requirements-windows-nvidia.lock
 if errorlevel 1 goto failed
 goto have_packages
 :packages_without_nvidia
-echo   [3/5] Installing Ghostwriter's packages. The first time this downloads about 200 MB...
-"%UV%" pip install --python .venv\Scripts\python.exe -r requirements.txt
+echo   [3/5] Installing Ghostwriter's packages. The first time this downloads about 100 MB...
+"%UV%" pip sync --python .venv\Scripts\python.exe --require-hashes requirements-windows.lock
 if errorlevel 1 goto failed
 :have_packages
 
 findstr /x /c:"%WHISPER_CPP_VERSION%" ".whisper-cpp\VERSION.txt" >nul 2>&1
 if not errorlevel 1 goto have_whisper_cpp
 echo   [4/5] Downloading whisper.cpp, the speech engine that runs on any graphics card...
-powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $zip = Join-Path $env:TEMP 'ghostwriter-whisper-cpp.zip'; if ($env:GHOSTWRITER_WHISPER_CPP_ZIP) { Copy-Item -LiteralPath $env:GHOSTWRITER_WHISPER_CPP_ZIP -Destination $zip } else { Invoke-WebRequest '%WHISPER_CPP_URL%' -OutFile $zip }; if (Test-Path '.whisper-cpp') { Remove-Item '.whisper-cpp' -Recurse -Force }; Expand-Archive $zip -DestinationPath '.whisper-cpp' -Force; Remove-Item $zip"
+powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $zip = Join-Path $env:TEMP 'ghostwriter-whisper-cpp.zip'; if ($env:GHOSTWRITER_WHISPER_CPP_ZIP) { Copy-Item -LiteralPath $env:GHOSTWRITER_WHISPER_CPP_ZIP -Destination $zip } else { Invoke-WebRequest '%WHISPER_CPP_URL%' -OutFile $zip }; if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne '%WHISPER_CPP_SHA256%') { Remove-Item $zip; throw 'The whisper.cpp download does not match its checksum, so it was not used.' }; if (Test-Path '.whisper-cpp') { Remove-Item '.whisper-cpp' -Recurse -Force }; Expand-Archive $zip -DestinationPath '.whisper-cpp' -Force; Remove-Item $zip"
 if errorlevel 1 goto failed
 :have_whisper_cpp
 
 echo   [5/5] Adding Ghostwriter to the Start menu...
 .venv\Scripts\python.exe scripts\make_shortcut.py
+if errorlevel 1 goto failed
+
+rem Written last, so get.ps1 only calls this version installed once every step above has finished.
+.venv\Scripts\python.exe -c "import ghostwriter; print(ghostwriter.__version__)" > .installed
 if errorlevel 1 goto failed
 
 set "RESULT=0"

@@ -53,7 +53,7 @@ For longer stretches, **double tap the hotkey** to lock recording on and talk ha
 - **Settings:** hotkey, hands free and when it stops, microphone with a live test meter, speech model (and on PCs with an NVIDIA card, a choice of engine), light or dark theme (or follow Windows), six sound styles to pick from (or no sound), the listening pill on or off, how loud other sounds play while you talk (keep playing, 50%, 30%, 10%, or mute), start with Windows, saving history on or off, and buttons to open the log and the folder
 - **Check for updates** at the bottom of the sidebar
 
-The tray menu (right click the ghost) has the hotkey, mic, and sounds too, plus Quit. Changes apply right away and are saved to `settings.json`. The log is at `logs/ghostwriter.log`.
+The tray menu (right click the ghost) has the hotkey, mic, and sounds too, plus Quit. Changes apply right away and are saved to `settings.json`. The log is at `logs/ghostwriter.log`; it records how long each dictation took, never what you said.
 
 History is saved in `history.db` in the Ghostwriter folder and never leaves your PC. Turn it off in Settings to stop saving new dictations, and **Clear history** on the History page deletes everything saved so far.
 
@@ -73,6 +73,14 @@ A plain line is a word to spell right. A line with `->` is a fix: what Whisper h
 
 ## Tests
 
+The test tools aren't part of a normal install, so add them once:
+
+```
+.tools\uv.exe pip install --python .venv\Scripts\python.exe -r requirements-dev.txt
+```
+
+Then run the tests:
+
 ```
 .venv\Scripts\python -m pytest tests
 ```
@@ -87,7 +95,15 @@ whisper.cpp doesn't publish a Vulkan build for Windows, so I build it myself and
 powershell -ExecutionPolicy Bypass -File scripts\build_whisper_cpp.ps1
 ```
 
-That puts the server in `.whisper-cpp\` and a zip in `.tools\`, which goes on the GitHub prerelease named after the whisper.cpp version (like `whisper-cpp-v1.9.5`).
+That puts the server in `.whisper-cpp\` and a zip in `.tools\`, which goes on the GitHub prerelease named after the whisper.cpp version (like `whisper-cpp-v1.9.5`). A new build also needs its version and the zip's SHA-256 updated in `install.bat`, which checks every download against it.
+
+## Package versions
+
+Installs get the exact package versions the tests passed with, from `requirements-windows.lock` (and `requirements-windows-nvidia.lock` on NVIDIA PCs), each package checked against its checksum. To move to newer packages, update the workshop's `.venv`, run the tests, then write new lock files from it:
+
+```
+powershell -ExecutionPolicy Bypass -File scripts\lock_requirements.ps1
+```
 
 ## How it works
 
@@ -103,7 +119,8 @@ That puts the server in `.whisper-cpp\` and a zip in `.tools\`, which goes on th
 
 - Windows 10 or 11
 - A graphics card: NVIDIA (built and tested on an RTX 4090), or AMD or Intel with Vulkan drivers. Graphics built into the processor work too, just slower: about 4 seconds per dictation on a basic Intel UHD 770. Without any usable graphics, Ghostwriter falls back to the processor and lets you know, but each dictation takes 10 seconds or more.
-- Disk: about 4 GB with an NVIDIA card (2.4 GB in the Ghostwriter folder plus the 1.6 GB speech model), about 1 GB without (0.4 GB plus the 0.6 GB model)
+- Without an NVIDIA card: a processor with AVX2 (most from 2013 on), which the whisper.cpp engine needs
+- Disk: about 4 GB with an NVIDIA card (2.4 GB in the Ghostwriter folder plus the 1.6 GB speech model), about 0.8 GB without (0.2 GB plus the 0.6 GB model)
 
 ## License
 

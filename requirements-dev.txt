@@ -1,0 +1,4 @@
+# For working on Ghostwriter and running its tests; users never need these.
+-r requirements.txt
+faster-whisper          # the tests decode audio with it, and test faster-whisper itself on NVIDIA cards
+pytest

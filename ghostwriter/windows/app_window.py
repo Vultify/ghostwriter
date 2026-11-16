@@ -10,7 +10,8 @@ from pathlib import Path
 
 from ghostwriter.paths import PROJECT
 from ghostwriter.windows import win32
-from ghostwriter.windows.win32 import dwmapi, kernel32, user32
+from ghostwriter.windows.processes import program_path
+from ghostwriter.windows.win32 import dwmapi, user32
 
 WEB_ENGINE = "edgechromium"  # pywebview's name for WebView2
 MISSING_ENGINE_MESSAGE = (
@@ -35,7 +36,8 @@ def close_window(title: str) -> None:
 
 def bring_to_front(title: str) -> None:
     for window in _app_windows(title):
-        user32.ShowWindow(window, win32.SW_RESTORE)
+        if user32.IsIconic(window):  # only a minimized window needs restoring; a maximized one stays maximized
+            user32.ShowWindow(window, win32.SW_RESTORE)
         user32.SetForegroundWindow(window)
 
 
@@ -84,14 +86,5 @@ def _runs_from_here(window: int) -> bool:
     user32.GetWindowThreadProcessId(window, ctypes.byref(process_id))
     if process_id.value == os.getpid():
         return False
-    process = kernel32.OpenProcess(win32.PROCESS_QUERY_LIMITED_INFORMATION, False, process_id.value)
-    if not process:
-        return False
-    try:
-        name = ctypes.create_unicode_buffer(1024)
-        size = wintypes.DWORD(len(name))
-        if not kernel32.QueryFullProcessImageNameW(process, 0, name, ctypes.byref(size)):
-            return False
-        return name.value.lower().startswith(str(PROJECT).lower())
-    finally:
-        kernel32.CloseHandle(process)
+    program = program_path(process_id.value)
+    return program is not None and program.is_relative_to(PROJECT)

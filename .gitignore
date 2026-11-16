@@ -18,6 +18,7 @@ logs/
 settings.json
 startup.json
 lowered-sounds.json
+.installed
 *.wav
 !ghostwriter/assets/*.wav
 
@@ -28,9 +29,6 @@ lowered-sounds.json
 # Tools install.bat downloads, and the whisper.cpp speech engine for non-NVIDIA PCs
 .tools/
 .whisper-cpp/
-
-# Private notes, kept on this PC only
-docs/research.md
 
 # Local backups of the git history
 backups/

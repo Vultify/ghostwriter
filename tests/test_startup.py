@@ -1,6 +1,7 @@
 """Starting up on a new PC: the GPU check, the one time model download and its progress, and passing that progress
 to the app window."""
 
+import inspect
 import json
 import sys
 
@@ -31,7 +32,7 @@ def _fake_hub(monkeypatch, downloaded: bool) -> list[bool]:
     """Stands in for huggingface_hub, reporting progress the way it does: bytes received, plus a bar counting files."""
     calls = []
 
-    def snapshot_download(repo, allow_patterns, local_files_only=False, tqdm_class=None):
+    def snapshot_download(repo, allow_patterns, local_files_only=False, tqdm_class=None, revision=None):
         calls.append(local_files_only)
         if local_files_only and not downloaded:
             raise FileNotFoundError("not downloaded yet")
@@ -96,3 +97,11 @@ def test_download_progress_is_saved_a_few_times_a_second_and_always_at_the_end(t
     assert (saved["done"], saved["engine"], saved["first_run"]) == (1, "whisper.cpp", True)
     report(10, 10)
     assert json.loads(path.read_text(encoding="utf-8"))["done"] == 10
+
+
+def test_huggingface_hub_still_names_the_bar_that_counts_downloaded_bytes():
+    """The welcome screen's progress listens for this bar by name. The other download tests fake the bar, so this
+    checks the installed library itself, and an upgrade that renames it fails here instead of on a new install."""
+    from huggingface_hub import _snapshot_download
+
+    assert '"huggingface_hub.snapshot_download.transfer"' in inspect.getsource(_snapshot_download)

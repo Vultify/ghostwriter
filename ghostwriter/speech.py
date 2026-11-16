@@ -8,16 +8,33 @@ import logging
 import threading
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from ghostwriter import models, startup, whisper_cpp
 from ghostwriter.models import DownloadProgress
 from ghostwriter.paths import STARTUP_PATH
-from ghostwriter.transcriber import Transcriber, model_path
 from ghostwriter.whisper_cpp import WhisperCpp
 
+if TYPE_CHECKING:
+    from ghostwriter.transcriber import Transcriber  # faster-whisper, only installed on PCs with an NVIDIA card
+
 log = logging.getLogger("ghostwriter")
+
+
+def nvidia_available() -> bool:
+    """Whether faster-whisper is installed and can run on an NVIDIA card. The installer only adds it on PCs with
+    one, so everywhere else this never loads it."""
+    try:
+        from ghostwriter.transcriber import gpu_available
+    except ModuleNotFoundError:
+        log.info("faster-whisper isn't installed on this PC, so Ghostwriter uses whisper.cpp")
+        return False
+    except (ImportError, OSError):
+        log.exception("faster-whisper couldn't load, so Ghostwriter uses whisper.cpp")
+        return False
+    return gpu_available()
 
 
 class SpeechEngine:
@@ -25,7 +42,7 @@ class SpeechEngine:
         self.has_nvidia = has_nvidia  # picks which whisper.cpp model to use
         self.status_path = status_path  # startup.json, where the window follows a switch
         self.name = ""
-        self._engine: Transcriber | WhisperCpp | None = None
+        self._engine: "Transcriber | WhisperCpp | None" = None
         self._wanted = ""
         self._failed = ""  # an engine that couldn't load isn't retried until it's picked again
         self._switching = False
@@ -76,7 +93,7 @@ class SpeechEngine:
                 new = load_engine(engine, self.has_nvidia, path=self.status_path)
             except Exception:
                 log.exception("Couldn't switch to %s", engine)
-                startup.write(self.status_path, model="failed", engine=engine)
+                startup.write(self.status_path, model="failed", engine=engine, has_nvidia=self.has_nvidia)
                 with self._lock:
                     self._failed = engine
                     self._switching = False
@@ -84,17 +101,19 @@ class SpeechEngine:
             with self._in_use:
                 old, self._engine, self.name = self._engine, new, engine
             old.close()
-            startup.write(self.status_path, model="ready", engine=engine, device=self.device)
+            startup.write(self.status_path, model="ready", engine=engine, device=self.device,
+                          has_nvidia=self.has_nvidia)
             log.info("Now dictating with %s", engine)
 
 
 def load_engine(engine: str, has_nvidia: bool, first_run: bool = False,
-                path: Path = STARTUP_PATH) -> Transcriber | WhisperCpp:
+                path: Path = STARTUP_PATH) -> "Transcriber | WhisperCpp":
     """Download the engine's model if needed, load it onto the graphics card, and warm it up."""
-    status = {"engine": engine, "first_run": first_run}
+    status = {"engine": engine, "first_run": first_run, "has_nvidia": has_nvidia}
     startup.write(path, model="loading" if models.downloaded(engine, has_nvidia) else "downloading", **status)
     report = _download_reporter(status, path)
     if engine == models.FASTER_WHISPER:
+        from ghostwriter.transcriber import Transcriber, model_path
         folder = model_path(report)
         startup.write(path, model="loading", **status)
         loaded = Transcriber(folder)

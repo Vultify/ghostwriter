@@ -13,6 +13,7 @@ import queue
 import threading
 import time
 from collections.abc import Callable
+from datetime import date, timedelta
 from functools import partial
 from pathlib import Path
 
@@ -23,18 +24,20 @@ FADE_DOWN_SECONDS = 0.15
 FADE_UP_SECONDS = 0.4
 STEP_SECONDS = 0.02
 CHANGED = 0.02  # a volume further than this from where Ghostwriter left it was changed by hand, so it stays
+PENDING_DAYS = 30  # a volume left down by a stop is given up on if its app hasn't shown up in this long
 
 log = logging.getLogger("ghostwriter")
 
 
 class OtherSounds:
     def __init__(self, path: Path = LOWERED_SOUNDS_PATH,
-                 apps: Callable[[], list[volume.AppVolume]] = volume.other_apps,
+                 apps: Callable[..., list[volume.AppVolume]] = volume.other_apps,
                  prepare_thread: Callable[[], None] = volume.prepare_thread) -> None:
         self.path = path
         self._apps = apps
         self._prepare_thread = prepare_thread
         self._lowered: list[tuple[volume.AppVolume, float, float]] = []  # each app, its volume, and what it's at now
+        self._pending: dict[str, list] = {}  # left down by an earlier stop: app key -> [its volume, lowered to, date]
         self._commands: queue.Queue[Callable[[], None] | None] = queue.Queue()  # None stops the thread
         self._thread = threading.Thread(target=self._run, name="Other sounds", daemon=True)
         self._thread.start()
@@ -62,8 +65,10 @@ class OtherSounds:
             self._prepare_thread()
         except Exception:
             log.exception("Can't change other apps' volume on this PC, so they'll stay as they are")
-            self._apps = list  # finds no apps, so every request does nothing
-        self._handle(self._put_back_after_a_stop)
+            self._apps = lambda playing_only=True: []  # finds no apps, so every request does nothing
+        self._pending = self._read_saved()
+        self._handle(self._save)  # drops what's too old to wait for
+        self._handle(self._put_back_pending)
         while True:
             command = self._commands.get()
             self._handle(command or self._restore)
@@ -89,46 +94,75 @@ class OtherSounds:
                 self._lowered.append((app, original, original * level))
         if not self._lowered:
             return
-        # Saved before fading, so even a stop halfway through can be undone.
-        self.path.write_text(json.dumps({app.key: [original, lowered] for app, original, lowered in self._lowered}),
-                             encoding="utf-8")
+        self._save()  # before fading, so even a stop halfway through can be undone
         _fade([(app, original, lowered) for app, original, lowered in self._lowered], FADE_DOWN_SECONDS)
 
     def _restore(self) -> None:
-        if not self._lowered:
-            return
-        fades = []
-        for app, original, lowered in self._lowered:
-            try:
-                now = app.level
-            except OSError:  # the app closed
-                continue
-            if abs(now - lowered) <= CHANGED:
-                fades.append((app, now, original))
-        self._lowered = []
-        _fade(fades, FADE_UP_SECONDS)
-        self.path.unlink(missing_ok=True)
+        if self._lowered:
+            fades = []
+            for app, original, lowered in self._lowered:
+                try:
+                    now = app.level
+                except OSError:  # the app closed
+                    continue
+                if abs(now - lowered) <= CHANGED:
+                    fades.append((app, now, original))
+            self._lowered = []
+            _fade(fades, FADE_UP_SECONDS)
+            self._save()
+        self._put_back_pending()
 
-    def _put_back_after_a_stop(self) -> None:
-        """Ghostwriter stopped while other apps were down: put back the ones still running."""
-        try:
-            saved = json.loads(self.path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
+    def _put_back_pending(self) -> None:
+        """Put back volumes an earlier stop left down, for the apps around now, playing or not. Apps that aren't
+        open yet are tried again after later dictations."""
+        if not self._pending:
             return
-        except (OSError, ValueError):
-            saved = {}
-        put_back = 0
-        for app in self._apps():
+        found, put_back = set(), 0
+        for app in self._apps(playing_only=False):
+            if app.key not in self._pending:
+                continue
+            found.add(app.key)
+            original, lowered = self._pending[app.key][:2]
             try:
-                if app.key in saved and abs(app.level - saved[app.key][1]) <= CHANGED:
-                    app.level = saved[app.key][0]
+                if abs(app.level - lowered) <= CHANGED:
+                    app.level = original
                     put_back += 1
             except OSError:
                 continue
-        self.path.unlink(missing_ok=True)
+        for key in found:
+            del self._pending[key]
+        self._save()
         if put_back:
             log.info("Put back the volume of %d app(s) that Ghostwriter had lowered when it stopped", put_back)
 
+    def _read_saved(self) -> dict[str, list]:
+        """Volumes a stop left down, minus ones too old to still be waiting for."""
+        try:
+            saved = json.loads(self.path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return {}
+        except (OSError, ValueError):
+            log.warning("Couldn't read %s, so any volumes still lowered stay as they are", self.path.name)
+            return {}
+        if not isinstance(saved, dict):
+            return {}
+        oldest, today = date.today() - timedelta(days=PENDING_DAYS), date.today().isoformat()
+        pending = {}
+        for key, entry in saved.items():
+            if isinstance(entry, list) and len(entry) >= 2:
+                saved_on = entry[2] if len(entry) > 2 else today
+                if date.fromisoformat(saved_on) >= oldest:
+                    pending[key] = [entry[0], entry[1], saved_on]
+        return pending
+
+    def _save(self) -> None:
+        """Keep the volumes that still need putting back, in case Ghostwriter stops before it gets to them."""
+        today = date.today().isoformat()
+        saved = {**self._pending, **{app.key: [original, lowered, today] for app, original, lowered in self._lowered}}
+        if saved:
+            self.path.write_text(json.dumps(saved), encoding="utf-8")
+        else:
+            self.path.unlink(missing_ok=True)
 
 def _fade(apps: list[tuple[volume.AppVolume, float, float]], seconds: float) -> None:
     """Move each app's volume from its start to its end level in small steps."""
