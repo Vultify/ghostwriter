@@ -2,19 +2,18 @@
 to the app window."""
 
 import json
-import sys
 
 import pytest
 
 from ghostwriter import models, startup
+from ghostwriter.app import SLOW_MESSAGE, ready_notice
+from ghostwriter.settings import HOTKEYS
 from ghostwriter.speech import _download_reporter
 from ghostwriter.transcriber import gpu_available, model_path
 from ghostwriter.whisper_cpp import PROCESSOR
 
 # These two check the NVIDIA PC Ghostwriter was built on; PCs without an NVIDIA card use whisper.cpp instead.
 needs_nvidia = pytest.mark.skipif(not gpu_available(), reason="this PC has no NVIDIA card")
-# The tray app loads every system part, and Linux doesn't have them all yet.
-needs_the_tray_app = pytest.mark.skipif(sys.platform != "win32", reason="the tray app doesn't load on Linux yet")
 
 
 @needs_nvidia
@@ -73,11 +72,7 @@ def test_the_window_reads_what_the_tray_app_writes(tmp_path):
     assert startup.read(path) == {}
 
 
-@needs_the_tray_app
 def test_the_ready_notice_welcomes_new_installs_and_warns_once_about_the_processor():
-    from ghostwriter.app import SLOW_MESSAGE, ready_notice
-    from ghostwriter.settings import HOTKEYS
-
     assert ready_notice("Right Alt", first_run=False, device="NVIDIA GeForce RTX 4090", last_device=None) is None
     assert ready_notice("Right Alt", first_run=True, device="", last_device=None).startswith("Ready! Hold Right Alt")
     assert ready_notice("Right Alt", first_run=False, device=PROCESSOR, last_device="Intel(R) UHD Graphics 770") == SLOW_MESSAGE

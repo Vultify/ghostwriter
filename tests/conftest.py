@@ -28,15 +28,16 @@ if WINDOWS:
     user32.SetForegroundWindow.argtypes = [wintypes.HWND]
     user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
 
-    collect_ignore = ["test_apps_linux.py", "test_hotkey_linux.py", "test_paste_linux.py"]
+    collect_ignore = ["test_apps_linux.py", "test_desktop_linux.py", "test_hotkey_linux.py", "test_paste_linux.py",
+                      "test_tray_linux.py"]
 else:
     from ghostwriter.linux import hyprland
     from ghostwriter.linux.clipboard import Clipboard
 
     # Tests for parts that only exist on Windows so far. Each one joins in once its Linux version lands.
     collect_ignore = [
-        "test_clipboard.py", "test_history.py", "test_hotkey.py", "test_paste_and_loop.py", "test_recorder.py",
-        "test_settings.py", "test_shortcuts.py", "test_status.py", "test_updates.py", "test_window.py",
+        "test_clipboard.py", "test_history.py", "test_hotkey.py", "test_paste_and_loop.py",
+        "test_settings.py", "test_shortcuts.py", "test_status.py", "test_window.py",
     ]
 
 

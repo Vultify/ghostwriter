@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw
 
 from ghostwriter.settings import HOTKEYS, Settings
 from ghostwriter.state import State
-from ghostwriter.system import desktop
+from ghostwriter.system import desktop, tray_icon
 
 ICON_SIZE = 64
 SUPERSAMPLE = 4
@@ -56,7 +56,7 @@ class Tray:
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit Ghostwriter", lambda: on_quit()),
         )
-        self._tray = pystray.Icon("Ghostwriter", normal, "Ghostwriter: starting up", menu)
+        self._tray = tray_icon.Icon("Ghostwriter", normal, "Ghostwriter: starting up", menu)
 
     def start(self) -> None:
         shown = threading.Event()

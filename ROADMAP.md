@@ -143,7 +143,8 @@ Added 2026-11-03. Built and tested on my Omarchy laptop (Intel UHD 600, so slow 
 - [x] Paste: Hyprland presses Ctrl+V (Ctrl+Shift+V in terminals), and `wl-clipboard` saves and restores the clipboard, kept out of clipboard history. I tried `wtype` first, but its keys came out scrambled in older X11 apps like games and once left a key stuck. Only one clipboard format comes back, so formatted text returns as plain text
 - [ ] Paste on desktops other than Hyprland (GNOME, KDE), which need another way to press keys
 - [x] Knowing which app is in front for History (Hyprland's active window). The name comes from the app's launcher entry, web apps are matched by their address (WhatsApp, YouTube), and Steam games by their window title
-- [ ] Tray ghost in Waybar
+- [x] Tray ghost in the desktop's tray, talking to the bar directly over D-Bus, so a left click opens the menu (Omarchy's bar folds tray icons behind its arrow unless they're pinned). Message boxes, light and dark mode, the sounds, and one copy at a time work too, so Ghostwriter starts on Linux. The app window, pill, start at login, and updates are stand-ins until their own steps
+- [ ] Pick a mic on Linux (for now it records from the system's default mic, set in the desktop's sound settings)
 - [ ] App window through GTK WebKit
 - [ ] Listening pill as a Wayland overlay (`gtk-layer-shell`)
 - [ ] Start at login (Hyprland autostart) and an app launcher entry (`.desktop` file)

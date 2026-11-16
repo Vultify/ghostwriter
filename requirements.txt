@@ -13,4 +13,5 @@ pystray                 # system tray icon
 Pillow                  # draws the tray icon and the listening pill
 pywebview               # the app window, shown in the web engine built into Windows
 pycaw; sys_platform == "win32"  # turns other apps' sound down while you dictate
+PyGObject; sys_platform == "linux"  # D-Bus and GTK on Linux: the tray icon, message boxes, and the light or dark theme
 pytest                  # tests
