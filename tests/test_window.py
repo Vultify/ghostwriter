@@ -9,7 +9,7 @@ import pytest
 from ghostwriter import startup, updates, window
 from ghostwriter.history import PAGE_SIZE, History
 from ghostwriter.paths import ICON_PATH, UI_DIR
-from ghostwriter.settings import HOTKEYS
+from ghostwriter.settings import HOTKEYS, Settings
 from ghostwriter.whisper_cpp import PROCESSOR
 from ghostwriter.window import Api
 from ghostwriter.windows import app_window
@@ -233,6 +233,24 @@ def test_the_settings_page_sounds_pill_start_with_windows_and_mic_test(api, tmp_
     assert results["styles_off"] is True
     assert results["testing"] == ["Stop test", True]
     assert results["stopped"] == "Test mic"  # leaving Settings closes the mic
+
+
+def test_the_page_follows_settings_the_tray_menu_changes(api, tmp_path):
+    results = {}
+
+    def drive(run):
+        run("showView('settings')")
+        results["before"] = run("document.getElementById('other-sounds').value")
+        Settings.load(tmp_path / "settings.json").change("other_sounds", 100)  # the tray menu's switch
+        Settings.load(tmp_path / "settings.json").change("pill", False)
+        run("0", wait=1.5)  # the page checks once a second
+        results["after"] = run("[document.getElementById('other-sounds').value, "
+                               "document.querySelector('#settings .switch[data-setting=pill]').getAttribute('aria-pressed')]")
+
+    _open_page(api, drive, tmp_path)
+
+    assert results["before"] == "10"
+    assert results["after"] == ["100", "false"]
 
 
 def test_home_and_the_history_page_show_dictations(api, tmp_path):

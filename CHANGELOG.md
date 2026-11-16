@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Home's "today" numbers and History's Today and Yesterday move on at midnight while the window is open.
 - Bringing the window forward from the tray no longer un-maximizes it.
 - Arrow keys now move through the hotkey choices instead of losing their place.
+- The app window keeps up with changes made from the tray menu while it's open, like a new hotkey or turning sounds off.
 - Settings shows the right engine and model when an NVIDIA card is present but faster-whisper can't use it, and the log says why.
 
 ## [1.5.0] - 2026-10-31
