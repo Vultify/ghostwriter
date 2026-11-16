@@ -3,6 +3,7 @@
 import ctypes
 import logging
 import subprocess
+from ctypes import wintypes
 from pathlib import Path
 
 from ghostwriter.windows import win32
@@ -42,3 +43,18 @@ class Children:
         finally:
             if process:
                 kernel32.CloseHandle(process)
+
+
+def program_path(process_id: int) -> Path | None:
+    """The program file a running process was started from, or None if Windows won't say."""
+    process = kernel32.OpenProcess(win32.PROCESS_QUERY_LIMITED_INFORMATION, False, process_id)
+    if not process:
+        return None
+    try:
+        name = ctypes.create_unicode_buffer(1024)
+        size = wintypes.DWORD(len(name))
+        if kernel32.QueryFullProcessImageNameW(process, 0, name, ctypes.byref(size)):
+            return Path(name.value)
+        return None
+    finally:
+        kernel32.CloseHandle(process)

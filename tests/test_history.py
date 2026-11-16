@@ -1,18 +1,24 @@
 """Dictation history: saving, searching, the counts on Home, clearing, and naming the app each dictation went to."""
 
+import sqlite3
+import sys
 from datetime import date, datetime
 from pathlib import Path
 
 import numpy as np
 import pytest
 from conftest import fixed_dictionary
-from test_status import FakePaster, FakeRecorder, FakeTranscriber
+from fakes import FakePaster, FakeRecorder, FakeTranscriber
 
-from ghostwriter.app import Dictation
+from ghostwriter import history as history_module
 from ghostwriter.audio import SAMPLE_RATE
 from ghostwriter.history import FILTER_APPS, History
 from ghostwriter.paths import PROJECT
-from ghostwriter.windows.paster import PasteError, app_name
+from ghostwriter.system import paster
+
+ON_WINDOWS = pytest.mark.skipif(sys.platform != "win32", reason="checks Windows program names")
+# The tray app loads every system part, and Linux doesn't have them all yet.
+NEEDS_THE_TRAY_APP = pytest.mark.skipif(sys.platform != "win32", reason="the tray app doesn't load on Linux yet")
 
 TWO_SECONDS = np.zeros(SAMPLE_RATE * 2, dtype=np.float32)
 
@@ -83,7 +89,9 @@ def test_clearing_deletes_everything_and_changes_the_stamp(history):
     assert b"private thought" not in history.path.read_bytes()
 
 
+@ON_WINDOWS
 def test_apps_are_named_the_way_windows_shows_them(tmp_path):
+    app_name = paster.app_name
     assert app_name(Path(r"C:\Windows\System32\notepad.exe")) == "Notepad"
     assert app_name(Path(r"C:\Windows\explorer.exe")) == "Windows Explorer"
     assert app_name(PROJECT / ".python" / "pythonw.exe") == "Ghostwriter"
@@ -93,17 +101,43 @@ def test_apps_are_named_the_way_windows_shows_them(tmp_path):
     assert app_name(None) == "Unknown app"
 
 
+@NEEDS_THE_TRAY_APP
 def test_dictations_are_saved_even_when_the_paste_fails(history):
+    from ghostwriter.app import Dictation
+
     class BlockedPaster:
         def paste(self, text: str) -> bool:
-            raise PasteError("blocked")
+            raise paster.PasteError("blocked")
 
     dictation = Dictation(FakeTranscriber(), FakeRecorder(), FakePaster(), dictionary=fixed_dictionary(), history=history)
     dictation._type_out(TWO_SECONDS)
     dictation.paster = BlockedPaster()
-    with pytest.raises(PasteError):
+    with pytest.raises(paster.PasteError):
         dictation._type_out(TWO_SECONDS)
     dictation.history = None  # history turned off
     dictation.paster = FakePaster()
     dictation._type_out(TWO_SECONDS)
     assert [(item["text"], item["seconds"], item["words"]) for item in history.search()["items"]] == [("hello", 2.0, 1)] * 2
+
+
+def test_an_older_history_file_is_upgraded_and_keeps_its_dictations(history, monkeypatch):
+    history.add("Kept through the upgrade.", "Notepad", 1.0)
+    with sqlite3.connect(history.path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 1
+    monkeypatch.setattr(history_module, "_UPGRADES", ("ALTER TABLE dictations ADD COLUMN style TEXT",))
+    history = History(history.path)  # the next start of Ghostwriter, with the upgrade
+    assert history.search()["items"][0]["text"] == "Kept through the upgrade."
+    with sqlite3.connect(history.path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert "style" in [column[1] for column in db.execute("PRAGMA table_info(dictations)")]
+    history.add("After it.", "Notepad", 1.0)  # opening again doesn't rerun the upgrade
+    assert history.search()["total"] == 2
+
+
+def test_a_newer_history_file_isnt_turned_back_by_an_older_ghostwriter(history):
+    history.add("From a newer version.", "Notepad", 1.0)
+    with sqlite3.connect(history.path) as db:
+        db.execute("PRAGMA user_version = 5")
+    assert History(history.path).search()["total"] == 1  # opened by this, older Ghostwriter
+    with sqlite3.connect(history.path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 5

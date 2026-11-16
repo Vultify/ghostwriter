@@ -36,8 +36,8 @@ else:
 
     # Tests for parts that only exist on Windows so far. Each one joins in once its Linux version lands.
     collect_ignore = [
-        "test_clipboard.py", "test_history.py", "test_hotkey.py", "test_paste_and_loop.py",
-        "test_settings.py", "test_shortcuts.py", "test_status.py", "test_window.py",
+        "test_clipboard.py", "test_hotkey.py", "test_paste_and_loop.py", "test_settings.py", "test_shortcuts.py",
+        "test_status.py", "test_window.py",
     ]
 
 

@@ -7,18 +7,20 @@ import sys
 import threading
 import time
 import wave
+from datetime import date, timedelta
 
 import pytest
 
-from ghostwriter.other_sounds import OtherSounds
+from ghostwriter.other_sounds import PENDING_DAYS, OtherSounds
 
 LEVEL = 0.1  # the default, 10%
 
 
 class FakeApp:
-    def __init__(self, key: str, level: float) -> None:
+    def __init__(self, key: str, level: float, playing: bool = True) -> None:
         self.key = key
         self._level = level
+        self.playing = playing  # a paused app is still in the volume mixer, just not playing
         self.closed = False
 
     @property
@@ -35,7 +37,10 @@ class FakeApp:
 
 
 def _other_sounds(tmp_path, apps) -> OtherSounds:
-    return OtherSounds(tmp_path / "lowered-sounds.json", apps=lambda: apps, prepare_thread=lambda: None)
+    def found(playing_only: bool = True) -> list[FakeApp]:
+        return [app for app in apps if app.playing or not playing_only]
+
+    return OtherSounds(tmp_path / "lowered-sounds.json", apps=found, prepare_thread=lambda: None)
 
 
 def test_other_apps_drop_to_10_percent_of_their_own_volume_and_come_back(tmp_path):
@@ -77,13 +82,41 @@ def test_closing_puts_them_back(tmp_path):
 def test_volumes_left_down_by_a_crash_go_back_on_the_next_start(tmp_path):
     (tmp_path / "lowered-sounds.json").write_text(json.dumps({"music": [0.8, 0.24], "game": [1.0, 0.3]}),
                                                   encoding="utf-8")
-    music, game, chat = FakeApp("music", 0.24), FakeApp("game", 0.7), FakeApp("chat", 0.24)
+    music, game, chat = FakeApp("music", 0.24, playing=False), FakeApp("game", 0.7), FakeApp("chat", 0.24)
     sounds = _other_sounds(tmp_path, [music, game, chat])
     sounds.restore()  # does nothing itself, but waits behind the startup check
     sounds.wait()
-    assert music.level == 0.8
+    assert music.level == 0.8  # paused, but still put back
     assert game.level == 0.7  # changed by hand since, so it stays
     assert chat.level == 0.24  # never lowered by Ghostwriter
+    assert not sounds.path.exists()
+    sounds.close()
+
+
+def test_an_app_closed_during_a_crash_is_put_back_once_it_opens_again(tmp_path):
+    (tmp_path / "lowered-sounds.json").write_text(json.dumps({"game": [1.0, 0.1, date.today().isoformat()]}),
+                                                  encoding="utf-8")
+    apps = [FakeApp("music", 0.8)]
+    sounds = _other_sounds(tmp_path, apps)
+    sounds.lower(LEVEL)
+    sounds.restore()
+    sounds.wait()
+    assert json.loads(sounds.path.read_text(encoding="utf-8")).keys() == {"game"}  # still waiting for the game
+    apps.append(FakeApp("game", 0.1, playing=False))  # opened later, with the volume Windows remembered
+    sounds.lower(LEVEL)
+    sounds.restore()
+    sounds.wait()
+    assert [app.level for app in apps] == pytest.approx([0.8, 1.0])
+    assert not sounds.path.exists()
+    sounds.close()
+
+
+def test_a_volume_waiting_too_long_is_given_up_on(tmp_path):
+    old = (date.today() - timedelta(days=PENDING_DAYS + 1)).isoformat()
+    (tmp_path / "lowered-sounds.json").write_text(json.dumps({"game": [1.0, 0.1, old]}), encoding="utf-8")
+    sounds = _other_sounds(tmp_path, [])
+    sounds.restore()
+    sounds.wait()
     assert not sounds.path.exists()
     sounds.close()
 
@@ -109,7 +142,8 @@ def test_a_real_app_in_the_windows_volume_mixer_goes_down_and_back(tmp_path):
         before = _levels(volume, process, wait=5)
         assert before, "the silent player never showed up in the volume mixer"
         sounds = OtherSounds(tmp_path / "lowered-sounds.json",
-                             apps=lambda: [app for app in volume.other_apps() if app.process == process])
+                             apps=lambda playing_only=True: [app for app in volume.other_apps(playing_only)
+                                                             if app.process == process])
         sounds.lower(LEVEL)
         sounds.wait()
         lowered = _levels(volume, process)
@@ -139,3 +173,68 @@ def _levels(volume, process: int, wait: float = 0.0) -> list[float]:
     thread.start()
     thread.join()
     return found
+
+
+def test_an_app_closed_while_lowered_is_put_back_when_it_opens_again(tmp_path):
+    music = FakeApp("music", 0.8)
+    apps = [music]
+    sounds = _other_sounds(tmp_path, apps)
+    sounds.lower(LEVEL)
+    sounds.wait()
+    music.closed = True  # quit mid dictation; Windows remembers it at the lowered volume
+    sounds.restore()
+    sounds.wait()
+    apps[0] = FakeApp("music", 0.8 * LEVEL, playing=False)  # opened again later
+    sounds.lower(LEVEL)
+    sounds.restore()
+    sounds.wait()
+    assert apps[0].level == pytest.approx(0.8)
+    assert not sounds.path.exists()
+    sounds.close()
+
+
+def test_an_app_a_crash_left_down_keeps_its_real_volume_when_lowered_again(tmp_path):
+    (tmp_path / "lowered-sounds.json").write_text(json.dumps({"music": [1.0, 0.1, date.today().isoformat()]}),
+                                                  encoding="utf-8")
+    apps = []
+    sounds = _other_sounds(tmp_path, apps)
+    sounds.wait()
+    apps.append(FakeApp("music", 0.1))  # opened later, still at the volume the crash left it at
+    sounds.lower(LEVEL)
+    sounds.wait()
+    assert json.loads(sounds.path.read_text(encoding="utf-8"))["music"][0] == pytest.approx(1.0)
+    sounds.close()
+    assert apps[0].level == pytest.approx(1.0)
+
+
+def test_a_damaged_saved_entry_is_skipped(tmp_path):
+    (tmp_path / "lowered-sounds.json").write_text(json.dumps({"bad": [1.0, 0.1, 5], "worse": "x", "music": [0.8, 0.08]}),
+                                                  encoding="utf-8")
+    music = FakeApp("music", 0.08)
+    sounds = _other_sounds(tmp_path, [music])
+    sounds.lower(LEVEL)  # still answers after the damaged entries
+    sounds.restore()
+    sounds.wait()
+    assert music.level == pytest.approx(0.8)
+    sounds.close()
+
+
+def test_a_saved_file_that_cant_be_read_yet_is_kept_until_it_can(tmp_path, monkeypatch):
+    path = tmp_path / "lowered-sounds.json"
+    path.write_text(json.dumps({"game": [1.0, 0.1, date.today().isoformat()]}), encoding="utf-8")
+    read = OtherSounds._read_saved
+    attempts = []
+
+    def held_at_first(self):  # an antivirus scan holds the file through the first read
+        attempts.append(1)
+        return None if len(attempts) == 1 else read(self)
+
+    monkeypatch.setattr(OtherSounds, "_read_saved", held_at_first)
+    music = FakeApp("music", 0.8)
+    sounds = _other_sounds(tmp_path, [music])
+    sounds.lower(LEVEL)
+    sounds.restore()
+    sounds.wait()
+    assert json.loads(path.read_text(encoding="utf-8")).keys() == {"game"}  # still waiting for the game
+    assert music.level == pytest.approx(0.8)
+    sounds.close()

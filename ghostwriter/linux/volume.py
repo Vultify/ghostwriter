@@ -14,6 +14,6 @@ def prepare_thread() -> None:
     """Nothing to set up on Linux."""
 
 
-def other_apps() -> list[AppVolume]:
+def other_apps(playing_only: bool = True) -> list[AppVolume]:
     """No apps are found yet, so other apps keep playing at their own volume."""
     return []

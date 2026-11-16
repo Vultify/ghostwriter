@@ -44,10 +44,10 @@
     <div class="status-card">
       <div class="status-line">
         <span class="status-dot" aria-hidden="true"></span>
-        <span>Ready</span>
+        <span id="status-word">Ready</span>
         <span class="status-key mono" data-text="hotkey"></span>
       </div>
-      <p>Running offline on your GPU. Nothing leaves this PC.</p>
+      <p id="status-text">Runs offline. Nothing leaves this PC.</p>
     </div>
     <div class="sidebar-footer">
       <span class="mono" data-text="version"></span>
@@ -61,7 +61,7 @@
       <header class="view-header">
         <div>
           <h1 id="home-title">Home</h1>
-          <p>Hold your hotkey anywhere in Windows, talk, let go.</p>
+          <p>Hold your hotkey anywhere in <span data-text="system">Windows</span>, talk, let go.</p>
         </div>
       </header>
 
@@ -281,7 +281,7 @@
               <label><input type="radio" name="theme" value="light"><span class="swatch-card"><span class="swatch light" aria-hidden="true"><span></span></span>Light</span></label>
               <label><input type="radio" name="theme" value="dark"><span class="swatch-card"><span class="swatch dark" aria-hidden="true"><span></span></span>Dark</span></label>
             </fieldset>
-            <p class="hint">System follows your Windows light or dark setting.</p>
+            <p class="hint">System follows your <span data-text="system">Windows</span> light or dark setting.</p>
           </section>
 
           <section class="card" aria-labelledby="feedback-title">
@@ -319,10 +319,10 @@
             <h2 id="general-title">General</h2>
             <div class="setting-row">
               <div>
-                <div>Start with Windows</div>
+                <div id="start-at-login-label">Start with Windows</div>
                 <div class="setting-hint">Ghost is in the tray when you log in</div>
               </div>
-              <button type="button" class="switch" id="start-with-windows" aria-label="Start with Windows" aria-pressed="false"><span></span></button>
+              <button type="button" class="switch" id="start-at-login" aria-labelledby="start-at-login-label" aria-pressed="false"><span></span></button>
             </div>
             <div class="setting-row">
               <div>

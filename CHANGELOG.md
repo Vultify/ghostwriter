@@ -20,6 +20,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 - The Windows-only code now lives in its own folder (`ghostwriter/windows`), and `ghostwriter/system.py` picks the right code for the system Ghostwriter runs on. This gets Ghostwriter ready for Linux; nothing works differently on Windows.
+- Installs and updates get the exact package versions Ghostwriter was tested with, each checked against its checksum, and the speech models are pinned to tested versions too. The uv and whisper.cpp downloads are checked against their checksums as well.
+- PCs without an NVIDIA card no longer download faster-whisper, which they can't use: about 180 MB less on disk, and the tray app uses about 20 MB less memory.
+- The test tools (pytest) are no longer installed for everyone; `requirements-dev.txt` has them.
+- The sidebar shows whether Ghostwriter is ready, downloading, or starting, and what it runs on, instead of always "Ready" and "GPU". The window's wording comes from the system it runs on, ready for Linux.
+- The first dictation after starting no longer waits for faster-whisper's silence filter to load.
+
+### Fixed
+- Running the install command again now finishes a setup that stopped partway. Before, it said "already installed and up to date" and left the setup broken.
+- The log no longer records what you dictated, only how long it took. Turning History off or clearing it now covers everything.
+- If Windows blocks a paste, your clipboard is still put back.
+- Volumes Ghostwriter lowered before stopping unexpectedly are put back even for apps that were paused or closed at the time, once they show up again.
+- Long hands-free dictations on slow graphics no longer time out before they're transcribed.
+- whisper.cpp's local server only answers Ghostwriter now, through a secret address that changes on every start.
+- Home's "today" numbers and History's Today and Yesterday move on at midnight while the window is open.
+- Bringing the window forward from the tray no longer un-maximizes it.
+- Arrow keys now move through the hotkey choices instead of losing their place.
+- The app window keeps up with changes made from the tray menu while it's open, like a new hotkey or turning sounds off.
+- Settings shows the right engine and model when an NVIDIA card is present but faster-whisper can't use it, and the log says why.
 
 ## [1.5.0] - 2026-10-31
 

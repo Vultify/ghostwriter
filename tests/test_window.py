@@ -7,12 +7,15 @@ from datetime import datetime, timedelta
 import pytest
 
 from ghostwriter import startup, updates, window
-from ghostwriter.windows import app_window
-from ghostwriter.history import History
+from ghostwriter.history import PAGE_SIZE, History
 from ghostwriter.paths import ICON_PATH, UI_DIR
-from ghostwriter.settings import HOTKEYS
+from ghostwriter.settings import HOTKEYS, Settings
 from ghostwriter.whisper_cpp import PROCESSOR
 from ghostwriter.window import Api
+from ghostwriter.windows import app_window
+from ghostwriter.windows.win32 import kernel32
+
+SYNCHRONIZE = 0x00100000  # enough access to see whether a lock exists
 
 STARTER = "# notes stay put\nGhostwriter\n\n# a section\nsea whiz -> CIWS\n"
 
@@ -33,7 +36,8 @@ def test_state_has_everything_the_page_shows(api):
     assert (state["settings"]["sound"], state["settings"]["pill"]) == ("soft", True)
     assert (state["settings"]["other_sounds"], state["otherSounds"]) == (10, [100, 50, 30, 10, 0])
     assert state["soundStyles"] == ["soft", "glass", "bubble", "wood", "tap", "chime"]
-    assert state["startWithWindows"] is False
+    assert state["startAtLogin"] is False
+    assert (state["system"], state["appMenu"], state["pageSize"]) == ("Windows", "Start menu", PAGE_SIZE)
     assert state["firstRun"] is False
     assert state["hotkeys"] == list(HOTKEYS)
     assert state["handsFreeMinutes"] == [5, 15, 30]
@@ -48,11 +52,22 @@ def test_an_engine_switch_in_progress_isnt_mistaken_for_a_new_install(tmp_path):
 
 
 def test_settings_shows_the_graphics_whisper_cpp_picked_or_that_its_on_the_processor(api, tmp_path):
-    assert api._runs_on("whisper.cpp", None) == "Your graphics card"  # still loading
+    assert api._runs_on("whisper.cpp", startup.read(api._startup_path)) == "Your graphics card"  # still loading
     startup.write(tmp_path / "startup.json", model="ready", engine="whisper.cpp", device="Intel(R) UHD Graphics 770")
-    assert api._runs_on("whisper.cpp", None) == "Intel(R) UHD Graphics 770"
+    assert api._runs_on("whisper.cpp", startup.read(api._startup_path)) == "Intel(R) UHD Graphics 770"
     startup.write(tmp_path / "startup.json", model="ready", engine="whisper.cpp", device=PROCESSOR)
-    assert api._runs_on("whisper.cpp", None) == "Your processor (slow)"
+    assert api._runs_on("whisper.cpp", startup.read(api._startup_path)) == "Your processor (slow)"
+
+
+def test_the_window_follows_the_tray_apps_answer_on_nvidia(api, tmp_path):
+    """If the tray app found the NVIDIA card unusable, Settings shows whisper.cpp's compressed model, not a choice."""
+    startup.write(tmp_path / "startup.json", model="ready", engine="whisper.cpp", has_nvidia=False)
+    state = api.state()
+    assert (state["engines"], state["engine"]) == (["whisper.cpp"], "whisper.cpp")
+    assert (state["model"], state["modelSize"]) == ("Whisper large-v3-turbo, compressed", "0.6 GB")
+    startup.write(tmp_path / "startup.json", model="ready", engine="whisper.cpp", has_nvidia=True)
+    state = api.state()
+    assert (state["model"], state["modelSize"]) == ("Whisper large-v3-turbo", "1.6 GB")
 
 
 def test_the_mic_test_opens_the_mic_and_reports_its_level(api):
@@ -199,8 +214,8 @@ def test_the_settings_page_sounds_pill_start_with_windows_and_mic_test(api, tmp_
         run("document.querySelector('#sound-styles input[value=tap]').click()", wait=1.2)  # also plays a preview
         results["note"] = run("document.getElementById('sound-note').textContent")
         run("document.querySelector('#settings .switch[data-setting=pill]').click()")
-        run("document.getElementById('start-with-windows').click()", wait=2)
-        results["startup"] = run("document.getElementById('start-with-windows').getAttribute('aria-pressed')")
+        run("document.getElementById('start-at-login').click()", wait=2)
+        results["startup"] = run("document.getElementById('start-at-login').getAttribute('aria-pressed')")
         run("document.querySelector('#settings .switch[data-setting=sounds]').click()")
         results["styles_off"] = run("document.getElementById('sound-styles').disabled")
         run("document.getElementById('mic-test').click()", wait=1)
@@ -218,6 +233,24 @@ def test_the_settings_page_sounds_pill_start_with_windows_and_mic_test(api, tmp_
     assert results["styles_off"] is True
     assert results["testing"] == ["Stop test", True]
     assert results["stopped"] == "Test mic"  # leaving Settings closes the mic
+
+
+def test_the_page_follows_settings_the_tray_menu_changes(api, tmp_path):
+    results = {}
+
+    def drive(run):
+        run("showView('settings')")
+        results["before"] = run("document.getElementById('other-sounds').value")
+        Settings.load(tmp_path / "settings.json").change("other_sounds", 100)  # the tray menu's switch
+        Settings.load(tmp_path / "settings.json").change("pill", False)
+        run("0", wait=1.5)  # the page checks once a second
+        results["after"] = run("[document.getElementById('other-sounds').value, "
+                               "document.querySelector('#settings .switch[data-setting=pill]').getAttribute('aria-pressed')]")
+
+    _open_page(api, drive, tmp_path)
+
+    assert results["before"] == "10"
+    assert results["after"] == ["100", "false"]
 
 
 def test_home_and_the_history_page_show_dictations(api, tmp_path):
@@ -306,8 +339,10 @@ def _wait_for(check, timeout: float = 20.0) -> bool:
 
 
 def test_opening_twice_gives_one_window_and_quitting_closes_it():
-    if app_window._app_windows(window.TITLE):
-        pytest.skip("Ghostwriter's window is open, and this test would close it")
+    lock = kernel32.OpenMutexW(SYNCHRONIZE, False, f"Local\\{window.INSTANCE_NAME}")
+    if lock:  # any copy's window, the installed one included, holds the same lock
+        kernel32.CloseHandle(lock)
+        pytest.skip("A Ghostwriter window is open, and this test would close it or be stopped by it")
     window.open_window()
     assert _wait_for(lambda: len(app_window._app_windows(window.TITLE)) == 1), "the window never opened"
     window.open_window()

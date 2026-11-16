@@ -15,6 +15,8 @@ PAGE_SIZE = 200  # dictations the History page shows before "Show more"
 RECENT_COUNT = 3  # dictations on Home
 FILTER_APPS = 4  # the most used apps get their own filter on the History page
 
+# The table as it first shipped. Never change it: later changes go in _UPGRADES, so an older history.db kept
+# through updates is brought up to date too.
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS dictations (
     id INTEGER PRIMARY KEY,
@@ -27,11 +29,15 @@ CREATE TABLE IF NOT EXISTS dictations (
 CREATE INDEX IF NOT EXISTS dictations_by_time ON dictations (at);
 """
 _COLUMNS = "id, at, text, app, seconds, words"
+# Each change to the table since it first shipped, in order, one SQL statement each, like "ALTER TABLE
+# dictations ADD COLUMN ...". The file's user_version counts the ones it already has.
+_UPGRADES: tuple[str, ...] = ()
 
 
 class History:
     def __init__(self, path: Path = HISTORY_PATH) -> None:
         self.path = path
+        self._ready = False  # the table is made and upgraded once, on the first open
 
     def add(self, text: str, app: str, seconds: float, at: datetime | None = None) -> None:
         moment = (at or datetime.now()).isoformat(timespec="seconds")
@@ -93,12 +99,33 @@ class History:
         db = sqlite3.connect(self.path, timeout=5)
         try:
             db.row_factory = sqlite3.Row
-            db.executescript(_SCHEMA)
+            if not self._ready:
+                db.executescript(_SCHEMA)
+                _upgrade(db)
+                self._ready = True
             with db:  # commits at the end, or undoes everything on an error
                 yield db
         finally:
             db.close()
 
+
+def _upgrade(db: sqlite3.Connection) -> None:
+    """Run the upgrades this file doesn't have yet. A new or never upgraded file is version 1, the first table. A
+    newer file opened by an older Ghostwriter is left as it is."""
+    latest = len(_UPGRADES) + 1
+    if db.execute("PRAGMA user_version").fetchone()[0] >= latest:
+        return
+    db.execute("BEGIN IMMEDIATE")  # one program upgrades at a time; another waits, then finds it done
+    try:
+        stored = db.execute("PRAGMA user_version").fetchone()[0]
+        for step in _UPGRADES[max(stored, 1) - 1:]:
+            db.execute(step)
+        if stored < latest:
+            db.execute(f"PRAGMA user_version = {latest}")
+        db.commit()
+    except BaseException:
+        db.rollback()
+        raise
 
 def _escape_like(text: str) -> str:
     """Make % and _ in a search match themselves instead of acting as wildcards."""

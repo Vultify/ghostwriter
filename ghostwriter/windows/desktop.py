@@ -11,6 +11,7 @@ from ghostwriter.windows import win32
 from ghostwriter.windows.win32 import kernel32, user32
 
 NAME = "Windows"  # for labels like "Windows default" and "Start with Windows"
+APP_MENU = "Start menu"  # where people find Ghostwriter to start it again
 TITLE = "Ghostwriter"
 _PERSONALIZE_KEY = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
 _SOUND_FLAGS = winsound.SND_FILENAME | winsound.SND_NODEFAULT
