@@ -14,11 +14,11 @@ from pathlib import Path
 from gi.repository import GLib
 
 from ghostwriter.linux import hyprland
+from ghostwriter.linux.shortcuts import APP_ID
 from ghostwriter.paths import PROJECT
 
 WEB_ENGINE = "gtk"  # pywebview's name for WebKitGTK
 OWN_FRAME = False  # the desktop frames the window, not the page
-APP_ID = "io.github.vultify.Ghostwriter"
 MISSING_ENGINE_MESSAGE = (
     "Ghostwriter's window needs WebKitGTK (webkit2gtk-4.1), and it isn't installed.\n\n"
     "Dictation still works: use the ghost in the bar."

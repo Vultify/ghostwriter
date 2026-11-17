@@ -10,17 +10,25 @@ from ghostwriter.linux import app_window, desktop, shortcuts
 from ghostwriter.window import Api
 
 
+def _api(folder):
+    return Api(settings_path=folder / "settings.json", dictionary_path=folder / "dictionary.txt",
+               history_path=folder / "history.db", startup_path=folder / "startup.json",
+               login_folder=folder / "autostart")
+
+
 def test_the_page_lets_the_desktop_draw_the_frame_and_names_the_system(tmp_path):
-    state = Api(settings_path=tmp_path / "settings.json", dictionary_path=tmp_path / "dictionary.txt",
-                history_path=tmp_path / "history.db", startup_path=tmp_path / "startup.json").state()
+    state = _api(tmp_path).state()
     assert state["ownFrame"] is False
     assert state["system"] == desktop.NAME and state["appMenu"] == desktop.APP_MENU
-    assert state["startAtLogin"] is False
 
 
-def test_start_at_login_stays_off_without_an_error_until_linux_has_it():
-    shortcuts.set_start_at_login(True)
-    assert not shortcuts.starts_at_login()
+def test_the_start_at_login_switch_adds_and_removes_the_autostart_entry(tmp_path):
+    api = _api(tmp_path)
+    assert api.state()["startAtLogin"] is False
+    api.set_start_at_login(True)
+    assert api.state()["startAtLogin"] is True and (tmp_path / "autostart" / shortcuts.ENTRY_NAME).exists()
+    api.set_start_at_login(False)
+    assert api.state()["startAtLogin"] is False
 
 
 def test_the_window_starts_as_its_own_program(monkeypatch):
