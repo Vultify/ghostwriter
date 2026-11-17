@@ -1,5 +1,5 @@
-"""Picking a mic on Linux: the mics come from PipeWire under the names the desktop's sound settings show, and a
-recording opens on the picked one."""
+"""Picking a mic on Linux: the mics come from the sound server under the names the desktop's sound settings show,
+and a recording opens on the picked one."""
 
 import json
 import os
@@ -20,27 +20,25 @@ from ghostwriter.paths import PROJECT  # noqa: E402
 from ghostwriter.recorder import Recorder, list_microphones  # noqa: E402
 
 
-def _node(node_id, media_class, name, description=None):
-    properties = {"media.class": media_class, "node.name": name}
+def _source(name, description=None, device_class="sound"):
+    source = {"name": name, "properties": {"device.class": device_class}}
     if description:
-        properties["node.description"] = description
-    return {"id": node_id, "type": "PipeWire:Interface:Node", "info": {"props": properties}}
+        source["description"] = description
+    return source
 
 
 def test_mics_are_listed_by_the_names_the_sound_settings_show(monkeypatch):
-    dump = [
-        _node(40, "Audio/Sink", "alsa_output.speakers", "Speakers"),
-        _node(41, "Audio/Source", "alsa_input.usb-rode", "RODECaster Duo"),
-        _node(42, "Audio/Source", "alsa_input.usb-blue-1", "Yeti"),
-        _node(43, "Audio/Source", "alsa_input.usb-blue-2", "Yeti"),
-        _node(44, "Audio/Source/Virtual", "noise_suppressed_mic", "Noise Suppressed Mic"),
-        _node(45, "Stream/Input/Audio", "firefox-capture", "Firefox"),
-        _node(46, "Video/Source", "v4l2_input.camera", "Camera"),
-        _node(47, "Audio/Source", "alsa_input.no-description"),
-        {"id": 3, "type": "PipeWire:Interface:Link", "info": {"props": {"media.class": "Audio/Source"}}},
+    sources = [
+        _source("alsa_output.speakers.monitor", "Monitor of Speakers", "monitor"),
+        _source("alsa_input.usb-rode", "RODECaster Duo"),
+        _source("alsa_input.usb-blue-1", "Yeti"),
+        _source("alsa_input.usb-blue-2", "Yeti"),
+        _source("noise_suppressed_mic", "Noise Suppressed Mic", None),
+        _source("alsa_input.no-description"),
+        {"description": "Half made, no name yet"},
     ]
     monkeypatch.setattr(microphones.subprocess, "run",
-                        lambda *args, **options: subprocess.CompletedProcess(args, 0, json.dumps(dump)))
+                        lambda *args, **options: subprocess.CompletedProcess(args, 0, json.dumps(sources)))
     assert microphones.microphones() == {
         "RODECaster Duo": "alsa_input.usb-rode",
         "Yeti": "alsa_input.usb-blue-1",
@@ -50,29 +48,36 @@ def test_mics_are_listed_by_the_names_the_sound_settings_show(monkeypatch):
     }
 
 
-def test_without_pipewire_only_the_system_default_is_offered(monkeypatch):
+def test_without_a_sound_server_only_the_system_default_is_offered(monkeypatch):
     def missing(*args, **options):
-        raise FileNotFoundError("pw-dump")
+        raise FileNotFoundError("pactl")
 
     monkeypatch.setattr(microphones.subprocess, "run", missing)
     assert microphones.microphones() == {}
 
 
-def test_a_recording_names_its_mic_only_while_it_opens(monkeypatch, caplog):
-    monkeypatch.setattr(microphones, "_nodes", {"Yeti": "alsa_input.usb-blue"})
-    monkeypatch.setattr(microphones, "microphones", lambda: {})
-    default = os.environ["PIPEWIRE_NODE"]
-    with microphones.recording_from("Yeti") as device:
-        assert device is None and os.environ["PIPEWIRE_NODE"] == "alsa_input.usb-blue"
-    assert os.environ["PIPEWIRE_NODE"] == default  # programs Ghostwriter starts later get the default
-    with microphones.recording_from(None):
-        assert os.environ["PIPEWIRE_NODE"] == default
-    with microphones.recording_from("Unplugged mic"):
-        assert os.environ["PIPEWIRE_NODE"] == default
+def test_a_mic_thats_gone_records_from_the_default_and_says_so(monkeypatch, caplog):
+    opened = []
+    monkeypatch.setattr(microphones, "microphones", lambda: {"Yeti": "alsa_input.usb-blue"})
+    monkeypatch.setattr(microphones, "PulseStream", lambda source, rate, callback: opened.append(source))
+    microphones.open_stream("Yeti", 16000, None)
+    microphones.open_stream(None, 16000, None)
+    microphones.open_stream("Unplugged mic", 16000, None)
+    assert opened == ["alsa_input.usb-blue", None, None]
     assert "Mic 'Unplugged mic' isn't connected" in caplog.text
 
 
-PIPEWIRE_TOOLS = ("pw-loopback", "pw-dump", "pw-link")
+def test_without_pulseaudios_library_it_records_from_the_default_through_sounddevice(monkeypatch):
+    def no_library(*args):
+        raise OSError("libpulse-simple.so.0: cannot open shared object file")
+
+    monkeypatch.setattr(microphones, "PulseStream", no_library)
+    monkeypatch.setattr(microphones.sd, "InputStream", lambda **options: options)
+    options = microphones.open_stream(None, 16000, print)
+    assert options["samplerate"] == 16000 and options["channels"] == 1 and options["callback"] is print
+
+
+PIPEWIRE_TOOLS = ("pw-loopback", "pactl", "pw-link")
 
 
 @pytest.fixture
@@ -130,10 +135,11 @@ def test_a_recording_hears_the_picked_mic(virtual_mic):
         tone.wait()
     assert float(np.sqrt(np.mean(heard * heard))) > 0.1  # the tone, not a quiet room
 
+    default = subprocess.run(["pactl", "get-default-source"], capture_output=True, text=True).stdout.strip()
     recorder = Recorder(microphone=None)
     recorder.start()
     time.sleep(0.3)
     try:
-        assert not _linked_to(mic)  # back on the system default
+        assert _linked_to(default) and not _linked_to(mic)  # back on the system default
     finally:
         recorder.stop()

@@ -1,8 +1,7 @@
 """The mics Windows has turned on, found through MME, the audio system Ghostwriter records through on Windows."""
 
-import contextlib
 import logging
-from collections.abc import Iterator
+from collections.abc import Callable
 
 import sounddevice as sd
 
@@ -27,10 +26,10 @@ def microphones() -> dict[str, int]:
     return found
 
 
-@contextlib.contextmanager
-def recording_from(microphone: str | None) -> Iterator[int | None]:
-    """The device number to open for a mic, or None for the system default."""
+def open_stream(microphone: str | None, samplerate: int, callback: Callable) -> sd.InputStream:
+    """A mono float32 recording from a mic, or the system default for None. The caller starts it."""
     index = None if microphone is None else microphones().get(microphone)
     if microphone is not None and index is None:
         log.warning("Mic %r isn't connected, using the %s default", microphone, desktop.NAME)
-    yield index
+    return sd.InputStream(samplerate=samplerate, channels=1, dtype="float32", latency="low", device=index,
+                          callback=callback)

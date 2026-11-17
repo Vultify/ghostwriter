@@ -3,7 +3,6 @@
 import time
 
 import numpy as np
-import sounddevice as sd
 
 from ghostwriter.audio import SAMPLE_RATE
 from ghostwriter.system import microphones
@@ -21,21 +20,13 @@ class Recorder:
         self.microphone = microphone  # a name from list_microphones(), or None for the system's default
         self.open_ms = 0.0
         self.level = 0.0  # loudness (RMS) of the latest chunk, for the listening pill
-        self._stream: sd.InputStream | None = None
+        self._stream = None  # an open recording, from microphones.open_stream
         self._chunks: list[np.ndarray] = []
 
     def start(self) -> None:
         started = time.perf_counter()
         self._chunks = []
-        with microphones.recording_from(self.microphone) as device:
-            self._stream = sd.InputStream(
-                samplerate=SAMPLE_RATE,
-                channels=1,
-                dtype="float32",
-                latency="low",
-                device=device,
-                callback=self._on_audio,
-            )
+        self._stream = microphones.open_stream(self.microphone, SAMPLE_RATE, self._on_audio)
         self._stream.start()
         self.open_ms = (time.perf_counter() - started) * 1000
 
