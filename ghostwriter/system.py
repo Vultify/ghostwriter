@@ -6,7 +6,7 @@ Every system's package has the same modules with the same names in them:
                NAME (like "Windows") and APP_MENU (where people find Ghostwriter to start it, like "Start menu")
   hotkey       the keys to pick from, and the hook that reports the hotkey and hides it from other apps
   install      the install command and the updater
-  microphones  the mics to pick from
+  microphones  the mics to pick from, and open_stream, which opens a recording from one
   paster       pasting into the app in front, and naming that app for History
   pill         the window the listening pill is drawn in
   processes    starting helper programs that close when Ghostwriter does

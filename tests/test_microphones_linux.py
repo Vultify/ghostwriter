@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
 
 import pytest
@@ -48,6 +49,14 @@ def test_mics_are_listed_by_the_names_the_sound_settings_show(monkeypatch):
     }
 
 
+def test_two_of_the_same_mic_keep_their_numbers_when_plugged_back_in(monkeypatch):
+    first, second = _source("alsa_input.usb-blue-1", "Yeti"), _source("alsa_input.usb-blue-2", "Yeti")
+    for listed in ([first, second], [second, first]):  # the one plugged back in is listed last
+        monkeypatch.setattr(microphones.subprocess, "run",
+                            lambda *args, **options: subprocess.CompletedProcess(args, 0, json.dumps(listed)))
+        assert microphones.microphones()["Yeti"] == "alsa_input.usb-blue-1"
+
+
 def test_without_a_sound_server_only_the_system_default_is_offered(monkeypatch):
     def missing(*args, **options):
         raise FileNotFoundError("pactl")
@@ -75,6 +84,70 @@ def test_without_pulseaudios_library_it_records_from_the_default_through_soundde
     monkeypatch.setattr(microphones.sd, "InputStream", lambda **options: options)
     options = microphones.open_stream(None, 16000, print)
     assert options["samplerate"] == 16000 and options["channels"] == 1 and options["callback"] is print
+
+
+class _FakePulse:
+    """Stands in for PulseAudio's library. Each read waits until the test lets it go."""
+
+    def __init__(self):
+        self.let_go = threading.Event()
+        self.freed = []
+
+    def pa_simple_new(self, *args):
+        return 1
+
+    def pa_simple_read(self, handle, data, size, error):
+        self.let_go.wait()
+        return 0
+
+    def pa_simple_get_latency(self, handle, error):
+        return 50_000  # microseconds
+
+    def pa_simple_free(self, handle):
+        self.freed.append(handle)
+
+
+@pytest.fixture
+def pulse(monkeypatch):
+    fake = _FakePulse()
+    monkeypatch.setattr(microphones, "_library", fake)
+    yield fake
+    fake.let_go.set()
+
+
+def test_a_mic_stuck_in_a_read_is_freed_once_it_answers_and_its_audio_goes_nowhere(pulse, caplog):
+    heard = []
+    stream = microphones.PulseStream(None, 16000, lambda *args: heard.append(args))
+    stream.start()
+    started = time.perf_counter()
+    stream.close()
+    assert time.perf_counter() - started < 2 and pulse.freed == []
+    assert "didn't stop in time" in caplog.text
+    pulse.let_go.set()
+    stream._reader.join(1)
+    assert pulse.freed == [1] and heard == []
+
+
+def test_the_reader_reports_latency_and_logs_a_recording_that_cant_take_audio(pulse, caplog):
+    pulse.let_go.set()
+    calls = []
+
+    def broken(*args):
+        calls.append(args)
+        raise ValueError("no room")
+
+    stream = microphones.PulseStream(None, 16000, broken)
+    stream.start()
+    stream._reader.join(1)
+    assert len(calls) == 1 and "couldn't take the mic's audio" in caplog.text
+    stream.close()
+    assert pulse.freed == [1]
+
+    stream = microphones.PulseStream(None, 16000, lambda *args: None)
+    stream.start()
+    time.sleep(0.05)
+    stream.close()
+    assert stream.latency == pytest.approx(microphones.CHUNK_SECONDS + 0.05)
 
 
 PIPEWIRE_TOOLS = ("pw-loopback", "pactl", "pw-link")
