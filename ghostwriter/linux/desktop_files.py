@@ -39,10 +39,14 @@ def installed() -> tuple[DesktopFile, ...]:
     return tuple(entries)
 
 
+def data_home() -> Path:
+    """The user's own data folder, where their launcher entries and icons live."""
+    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
+
+
 def _application_folders() -> list[Path]:
-    home = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
     shared = os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"
-    return [Path(folder) / "applications" for folder in [home, *shared.split(":")] if folder]
+    return [Path(folder) / "applications" for folder in [str(data_home()), *shared.split(":")] if folder]
 
 
 def _read(path: Path) -> DesktopFile | None:

@@ -2,12 +2,15 @@
 autostart folder while "Start at login" is on. Both are standard XDG desktop entries: Omarchy's launcher, GNOME, and
 KDE all read the same applications folder, and they all start what's in the autostart folder at login.
 
-Run `python -m ghostwriter.linux.shortcuts` from the project folder to add the launcher entry, or to refresh both
-entries after the folder moved."""
+Run `python -m ghostwriter.linux.shortcuts` from the project folder to add the launcher entry. It also refreshes this
+copy's Start at login entry, and leaves one that starts another copy alone."""
 
 import os
 from pathlib import Path
 
+from gi.repository import GLib
+
+from ghostwriter.linux.desktop_files import data_home
 from ghostwriter.paths import ICON_PATH, PROJECT
 
 APP_ID = "io.github.vultify.Ghostwriter"  # also the window's app id, so desktops match the window to its entry
@@ -32,11 +35,11 @@ Keywords=dictation;speech;voice;talk;transcribe;whisper;
 
 
 def applications_folder() -> Path:
-    return _data_home() / "applications"
+    return data_home() / "applications"
 
 
 def icons_folder() -> Path:
-    return _data_home() / "icons" / "hicolor"
+    return data_home() / "icons" / "hicolor"
 
 
 def autostart_folder() -> Path:
@@ -51,7 +54,15 @@ def make_launcher_entry(folder: Path | None = None, icons: Path | None = None) -
 
 
 def starts_at_login(folder: Path | None = None) -> bool:
-    return ((folder or autostart_folder()) / ENTRY_NAME).exists()
+    """On when this copy's entry is in the autostart folder, and no desktop's own settings turned it off there."""
+    entry = GLib.KeyFile()
+    try:
+        entry.load_from_file(str((folder or autostart_folder()) / ENTRY_NAME), GLib.KeyFileFlags.NONE)
+    except GLib.Error:  # not there, or not readable as an entry
+        return False
+    return (_value(entry, "Path") == str(PROJECT)  # another copy's entry isn't this one's setting
+            and _value(entry, "Hidden") != "true"
+            and _value(entry, "X-GNOME-Autostart-enabled") != "false")  # GNOME's and KDE's own off switches
 
 
 def set_start_at_login(on: bool, folder: Path | None = None) -> None:
@@ -65,8 +76,11 @@ def set_start_at_login(on: bool, folder: Path | None = None) -> None:
 def _write_entry(path: Path, arguments: list[str]) -> Path:
     command = [str(PYTHON), "-m", "ghostwriter", *arguments]
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_ENTRY.format(exec=_escape(" ".join(_exec_argument(part) for part in command)),
-                                  path=_escape(str(PROJECT)), icon=APP_ID), encoding="utf-8")
+    # Written beside it and swapped in, so a crash mid-write never leaves a broken entry behind.
+    draft = path.with_name(path.name + ".new")
+    draft.write_text(_ENTRY.format(exec=_escape(" ".join(_exec_argument(part) for part in command)),
+                                   path=_escape(str(PROJECT)), icon=APP_ID), encoding="utf-8")
+    draft.replace(path)
     return path
 
 
@@ -77,7 +91,10 @@ def _save_icons(folder: Path) -> None:
         for size in ICON_SIZES:
             target = folder / f"{size}x{size}" / "apps" / f"{APP_ID}.png"
             target.parent.mkdir(parents=True, exist_ok=True)
-            icon.ico.getimage((size, size)).save(target)  # the .ico carries a drawing at each size
+            picture = icon.ico.getimage((size, size))  # the .ico's own drawing at that size, else its largest
+            if picture.size != (size, size):
+                picture = picture.resize((size, size), Image.LANCZOS)
+            picture.save(target)
 
 
 def _exec_argument(argument: str) -> str:
@@ -92,8 +109,11 @@ def _escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r")
 
 
-def _data_home() -> Path:
-    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
+def _value(entry, key: str) -> str | None:
+    try:
+        return entry.get_string("Desktop Entry", key)
+    except GLib.Error:
+        return None
 
 
 if __name__ == "__main__":
