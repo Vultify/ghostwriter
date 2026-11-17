@@ -152,7 +152,7 @@ Added 2026-11-03. Built and tested on my Omarchy laptop (Intel UHD 600, so slow 
 - [x] App window through WebKitGTK (`webkit2gtk-4.1`). The desktop draws the frame, so the page's Windows-style title bar is hidden; on Hyprland it floats centered at its full size (fitted to small screens), the way Omarchy floats LocalSend, and opening it again brings it to the front
 - [ ] Listening pill as a Wayland overlay (`gtk-layer-shell`)
 - [x] Start at login and an app launcher entry, as standard desktop entries: the launcher entry (with the ghost icon) puts Ghostwriter in Omarchy's app launcher and GNOME's and KDE's menus, and Start at login adds a copy to the autostart folder, which Omarchy, GNOME, and KDE all start when you log in. A git checkout adds its entry with `python -m ghostwriter.linux.shortcuts`
-- [ ] One-line install script for Linux (`get.sh`). On Omarchy it copies the panel into `~/.config/omarchy/plugins` on every install and update (a copy, not a link, so Omarchy loads it without warnings) and runs the bar setup
+- [ ] One-line install script for Linux (`get.sh`). On Omarchy it copies the panel into `~/.config/omarchy/plugins` on every install and update (a copy, not a link, so Omarchy loads it without warnings) and runs the bar setup. It also adds the launcher entry, and a `ghostwriter` command in `~/.local/bin` that starts it from any folder; the launcher and Start at login entries then run that command, so they no longer depend on the desktop honoring the entry's `Path=`
 - [ ] Check the Windows build still works on my PC before release
 - **Checkpoint 13:** I dictate into apps for a day on a Linux laptop strong enough for Whisper
 
