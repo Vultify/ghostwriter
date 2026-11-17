@@ -1,21 +1,18 @@
 """Microphone capture that opens on key press and closes on release, so the mic is only live while dictating."""
 
-import logging
 import time
 
 import numpy as np
 import sounddevice as sd
 
 from ghostwriter.audio import SAMPLE_RATE
-from ghostwriter.system import desktop, microphones
+from ghostwriter.system import microphones
 
 # After release, keep listening until the speaker has gone quiet, so the last word isn't clipped.
 TAIL_SECONDS = 0.3  # never longer than this
 MIN_TAIL_SECONDS = 0.06  # always at least this, so audio still on its way from the mic arrives
 QUIET_SECONDS = 0.06  # this much quiet in a row ends the tail
 QUIET_RMS = 10 ** (-50 / 20)  # -50 dB: well under speech, well over the RODECaster's -82 dB silence
-
-log = logging.getLogger("ghostwriter")
 
 
 class Recorder:
@@ -30,14 +27,15 @@ class Recorder:
     def start(self) -> None:
         started = time.perf_counter()
         self._chunks = []
-        self._stream = sd.InputStream(
-            samplerate=SAMPLE_RATE,
-            channels=1,
-            dtype="float32",
-            latency="low",
-            device=_device_index(self.microphone),
-            callback=self._on_audio,
-        )
+        with microphones.recording_from(self.microphone) as device:
+            self._stream = sd.InputStream(
+                samplerate=SAMPLE_RATE,
+                channels=1,
+                dtype="float32",
+                latency="low",
+                device=device,
+                callback=self._on_audio,
+            )
         self._stream.start()
         self.open_ms = (time.perf_counter() - started) * 1000
 
@@ -71,12 +69,3 @@ class Recorder:
 def list_microphones() -> list[str]:
     """Names of the mics the system has turned on, for the tray menu."""
     return list(microphones.microphones())
-
-
-def _device_index(microphone: str | None) -> int | None:
-    if microphone is None:
-        return None
-    index = microphones.microphones().get(microphone)
-    if index is None:
-        log.warning("Mic %r isn't connected, using the %s default", microphone, desktop.NAME)
-    return index

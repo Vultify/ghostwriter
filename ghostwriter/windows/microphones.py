@@ -1,6 +1,14 @@
 """The mics Windows has turned on, found through MME, the audio system Ghostwriter records through on Windows."""
 
+import contextlib
+import logging
+from collections.abc import Iterator
+
 import sounddevice as sd
+
+from ghostwriter.windows import desktop
+
+log = logging.getLogger("ghostwriter")
 
 
 def microphones() -> dict[str, int]:
@@ -17,3 +25,12 @@ def microphones() -> dict[str, int]:
             continue
         found[next((full for full in full_names if full.startswith(name)), name)] = index
     return found
+
+
+@contextlib.contextmanager
+def recording_from(microphone: str | None) -> Iterator[int | None]:
+    """The device number to open for a mic, or None for the system default."""
+    index = None if microphone is None else microphones().get(microphone)
+    if microphone is not None and index is None:
+        log.warning("Mic %r isn't connected, using the %s default", microphone, desktop.NAME)
+    yield index
