@@ -53,7 +53,7 @@ def test_on_hyprland_it_floats_centered_and_shrinks_to_fit_a_small_screen(monkey
     app_window._float_on_hyprland()
     rule = sent[-1]
     assert rule.startswith("eval ") and "float = true, center = true" in rule
-    assert "size = { 1120, 664 }" in rule  # full width, and the height that fits under the bar
+    assert "size = { 1286, 664 }" in rule  # the width and height that fit inside the margins and under the bar
     assert '"^io\\\\.github\\\\.vultify\\\\.Ghostwriter$"' in rule
     assert "set_enabled(false)" in rule  # replaces the last launch's rule instead of piling up
 
