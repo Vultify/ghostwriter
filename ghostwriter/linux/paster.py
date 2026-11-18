@@ -106,6 +106,11 @@ def app_name(app: App | None) -> str:
     return app.app_id or (app.program.stem if app.program else "Unknown app")
 
 
+def app_icon(app: App | None) -> bytes | None:
+    """An app's icon as a PNG, for History. Not read on Linux yet, so History shows the app's first letter."""
+    return None
+
+
 def paste_keys(window: dict) -> tuple[str, str]:
     """The modifiers and key that paste in a window: Ctrl+Shift+V in terminals, Ctrl+V everywhere else."""
     tags = {tag.rstrip("*") for tag in window.get("tags", [])}

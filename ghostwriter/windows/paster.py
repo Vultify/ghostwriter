@@ -3,6 +3,7 @@ clipboard back. Also says which app is in front, for History."""
 
 import ctypes
 import functools
+import io
 import time
 from ctypes import wintypes
 from pathlib import Path
@@ -11,7 +12,7 @@ from ghostwriter.paths import PROJECT
 from ghostwriter.windows import win32
 from ghostwriter.windows.clipboard import Clipboard
 from ghostwriter.windows.processes import program_path
-from ghostwriter.windows.win32 import user32, version
+from ghostwriter.windows.win32 import gdi32, shell32, user32, version
 
 # Long enough for slow apps (browsers, terminals) to read the clipboard before we restore it.
 RESTORE_DELAY_SECONDS = 0.5
@@ -62,6 +63,44 @@ def app_name(program: App | None) -> str:
     # Store apps keep their real name in the product name; other programs in the description.
     keys = ("ProductName", "FileDescription") if "WindowsApps" in program.parts else ("FileDescription", "ProductName")
     return next((details[key] for key in keys if details.get(key)), program.stem)
+
+
+def app_icon(program: App | None, size: int = 48) -> bytes | None:
+    """A program's own icon as a PNG, for History, or None when it has none."""
+    if program is None:
+        return None
+    icon = wintypes.HICON()
+    if shell32.SHDefExtractIconW(str(program), 0, 0, ctypes.byref(icon), None, size) != 0 or not icon:
+        return None
+    header = win32.BITMAPINFOHEADER(biSize=ctypes.sizeof(win32.BITMAPINFOHEADER), biWidth=size, biHeight=-size,
+                                    biPlanes=1, biBitCount=32)
+    bits = ctypes.c_void_p()
+    canvas = gdi32.CreateCompatibleDC(None)
+    bitmap = gdi32.CreateDIBSection(canvas, ctypes.byref(win32.BITMAPINFO(bmiHeader=header)), 0,
+                                    ctypes.byref(bits), None, 0)
+    try:
+        if not bitmap:
+            return None
+        previous = gdi32.SelectObject(canvas, bitmap)
+        drawn = user32.DrawIconEx(canvas, 0, 0, icon, size, size, 0, None, win32.DI_NORMAL)
+        pixels = bytearray(ctypes.string_at(bits, size * size * 4))
+        gdi32.SelectObject(canvas, previous)
+    finally:
+        if bitmap:
+            gdi32.DeleteObject(bitmap)
+        gdi32.DeleteDC(canvas)
+        user32.DestroyIcon(icon)
+    if not drawn:
+        return None
+    if not any(pixels[3::4]):  # an old icon without transparency: everything it drew is solid
+        pixels[3::4] = bytes(255 if any(pixels[i:i + 3]) else 0 for i in range(0, len(pixels), 4))
+
+    from PIL import Image  # only loaded when a new app needs its icon
+
+    picture = Image.frombuffer("RGBA", (size, size), bytes(pixels), "raw", "BGRA", 0, 1)
+    png = io.BytesIO()
+    picture.save(png, "PNG")
+    return png.getvalue()
 
 
 def _file_details(program: Path) -> dict[str, str]:

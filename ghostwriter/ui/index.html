@@ -10,7 +10,7 @@
 
 <header class="titlebar">
   <div class="titlebar-drag pywebview-drag-region">
-    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path class="ghost-mark" d="M4 11a8 8 0 0 1 16 0v10l-2.67-1.8L14.67 21 12 19.2 9.33 21l-2.66-1.8L4 21z"/><circle class="ghost-eye" cx="9.5" cy="10.5" r="1.4"/><circle class="ghost-eye" cx="14.5" cy="10.5" r="1.4"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path class="ghost-mark" d="M4 11a8 8 0 0 1 16 0v10l-2.67-1.8L14.67 21 12 19.2 9.33 21l-2.66-1.8L4 21z"/><circle class="ghost-eye" cx="9.5" cy="10.5" r="1.4"/><circle class="ghost-eye" cx="14.5" cy="10.5" r="1.4"/></svg>
     <span id="window-title">Ghostwriter</span>
   </div>
   <div class="window-controls">
@@ -65,67 +65,82 @@
         </div>
       </header>
 
-      <div class="home-top">
-        <div class="card hero">
-          <div class="hero-ghost" aria-hidden="true">
-            <svg width="46" height="46" viewBox="0 0 24 24"><path class="ghost-mark" d="M4 11a8 8 0 0 1 16 0v10l-2.67-1.8L14.67 21 12 19.2 9.33 21l-2.66-1.8L4 21z"/><circle class="ghost-eye" cx="9.5" cy="10.5" r="1.4"/><circle class="ghost-eye" cx="14.5" cy="10.5" r="1.4"/></svg>
-          </div>
-          <div class="hero-text">
-            <div class="eyebrow">Ready</div>
-            <div class="hero-title">Hold <kbd data-text="hotkey"></kbd> to talk</div>
-            <p class="hero-hint" id="hero-hint"></p>
-          </div>
+      <div class="card hero">
+        <div class="hero-ring" aria-hidden="true">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="12" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/></svg>
         </div>
-        <div class="card tryit">
-          <label for="tryit">Try it here</label>
-          <textarea id="tryit" spellcheck="false"></textarea>
+        <div class="hero-text">
+          <span class="badge" id="hero-status">Ready</span>
+          <div class="hero-title">Hold <kbd data-text="hotkey"></kbd> to talk</div>
+          <p class="hero-hint" id="hero-hint"></p>
+        </div>
+        <div class="hero-mic">
+          <div class="wave" id="home-meter" aria-hidden="true"></div>
+          <button type="button" class="button with-icon" id="home-mic-test">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/></svg>
+            <span>Test mic</span>
+          </button>
         </div>
       </div>
 
       <section class="stats" aria-label="Your numbers">
         <div class="card stat">
-          <div class="stat-label">Words today</div>
-          <div class="stat-value" id="words-today">0</div>
+          <span class="icon-tile" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg></span>
+          <div>
+            <div class="stat-label">Words today</div>
+            <div class="stat-value" id="words-today">0</div>
+          </div>
         </div>
         <div class="card stat">
-          <div class="stat-label">Dictations today</div>
-          <div class="stat-value" id="dictations-today">0</div>
+          <span class="icon-tile" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/></svg></span>
+          <div>
+            <div class="stat-label">Dictations today</div>
+            <div class="stat-value" id="dictations-today">0</div>
+          </div>
         </div>
         <div class="card stat">
-          <div class="stat-label">Words this month · no limit</div>
-          <div class="stat-value" id="words-month">0</div>
+          <span class="icon-tile" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 19v-4"/><path d="M10 19v-7"/><path d="M14 19V9"/><path d="M18 19V5"/></svg></span>
+          <div>
+            <div class="stat-label">Words this month</div>
+            <div class="stat-value" id="words-month">0</div>
+          </div>
         </div>
       </section>
 
       <div class="home-bottom">
         <section class="card recent" aria-labelledby="recent-title">
           <div class="card-head">
-            <h2 id="recent-title">Recent</h2>
-            <button type="button" class="text-link" data-view="history">View all</button>
+            <h2 id="recent-title" class="titled"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>Recent</h2>
+            <button type="button" class="text-link with-icon" data-view="history">View all <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button>
           </div>
           <ul class="entries" id="recent-list"></ul>
           <p class="empty" id="recent-empty" hidden></p>
         </section>
 
-        <section class="card" aria-labelledby="quick-title">
-          <h2 id="quick-title">Quick settings</h2>
-          <div class="setting-row">
-            <div>
+        <section class="card quick" aria-labelledby="quick-title">
+          <h2 id="quick-title" class="titled"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Quick settings</h2>
+          <div class="quick-row">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 10v4"/><path d="M7.5 7v10"/><path d="M12 4v16"/><path d="M16.5 7v10"/><path d="M21 10v4"/></svg>
+            <div class="quick-label">
               <div>Sounds</div>
-              <div class="setting-hint">Chime on start and stop</div>
+              <div class="setting-hint" id="quick-sound-hint">Chime on start and stop</div>
             </div>
             <button type="button" class="switch" data-setting="sounds" aria-label="Sounds" aria-pressed="false"><span></span></button>
           </div>
-          <div class="setting-row">
-            <div>
+          <div class="quick-row">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+            <div class="quick-label">
               <div>Hands free</div>
               <div class="setting-hint">Double tap to keep talking</div>
             </div>
             <button type="button" class="switch" data-setting="hands_free" aria-label="Hands free" aria-pressed="false"><span></span></button>
           </div>
-          <div class="field">
-            <label for="home-mic">Microphone</label>
-            <select id="home-mic" data-setting="microphone"></select>
+          <div class="quick-row">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/></svg>
+            <div class="quick-label">
+              <label for="home-mic">Microphone</label>
+              <select id="home-mic" data-setting="microphone"></select>
+            </div>
           </div>
         </section>
       </div>

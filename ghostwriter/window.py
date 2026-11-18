@@ -10,12 +10,12 @@ import logging
 import subprocess
 from pathlib import Path
 
-from ghostwriter import __version__, models, sounds, startup, updates
+from ghostwriter import __version__, app_icons, models, sounds, startup, updates
 from ghostwriter.audio import loudness
 from ghostwriter.dictionary import DictionaryFile
 from ghostwriter.history import PAGE_SIZE, History
-from ghostwriter.paths import (DICTIONARY_PATH, HISTORY_PATH, ICON_PATH, LOG_PATH, PROJECT, SETTINGS_PATH,
-                               STARTUP_PATH, UI_DIR, WEB_DATA_DIR, WINDOW_LOG_PATH)
+from ghostwriter.paths import (APP_ICONS_DIR, DICTIONARY_PATH, HISTORY_PATH, ICON_PATH, LOG_PATH, PROJECT,
+                               SETTINGS_PATH, STARTUP_PATH, UI_DIR, WEB_DATA_DIR, WINDOW_LOG_PATH)
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import HANDS_FREE_MINUTES, HOTKEYS, OTHER_SOUNDS, Settings
 from ghostwriter.system import app_window, desktop, processes, shortcuts
@@ -37,8 +37,9 @@ class Api:
 
     def __init__(self, settings_path: Path = SETTINGS_PATH, dictionary_path: Path = DICTIONARY_PATH,
                  history_path: Path = HISTORY_PATH, startup_path: Path = STARTUP_PATH,
-                 login_folder: Path | None = None) -> None:
+                 login_folder: Path | None = None, icons_folder: Path = APP_ICONS_DIR) -> None:
         self._settings_path = settings_path
+        self._icons_folder = icons_folder
         self._dictionary = DictionaryFile(dictionary_path)
         self._history = History(history_path)
         self._startup_path = startup_path
@@ -143,6 +144,9 @@ class Api:
 
     def history_summary(self) -> dict:
         return self._history.summary()
+
+    def app_icons(self, names: list[str]) -> dict[str, str]:
+        return app_icons.data_urls(list(names)[:100], self._icons_folder)
 
     def history_stamp(self) -> str:
         return self._history.stamp()

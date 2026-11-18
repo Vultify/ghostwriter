@@ -57,7 +57,7 @@ function bindPage() {
   document.querySelectorAll("select[data-setting='microphone']").forEach((select) => {
     select.addEventListener("change", async () => {
       await change("microphone", select.value || null);
-      if (micTest.timer) startMicTest();  // switch the test over to the new mic
+      if (micTest.where) startMicTest(micTest.where);  // switch the test over to the new mic
     });
   });
 
@@ -72,9 +72,11 @@ function bindPage() {
   styles.addEventListener("change", (event) => change("sound", event.target.value));
   styles.addEventListener("click", (event) => { if (event.target.matches("input")) api().preview_sound(event.target.value); });
 
-  const meter = document.getElementById("mic-meter");
-  meter.replaceChildren(...Array.from({ length: METER_BARS }, () => document.createElement("span")));
-  document.getElementById("mic-test").addEventListener("click", () => (micTest.timer ? stopMicTest() : startMicTest()));
+  for (const [where, test] of Object.entries(MIC_TESTS)) {
+    document.getElementById(test.meter).replaceChildren(...Array.from({ length: test.bars }, () => document.createElement("span")));
+    document.getElementById(test.button).addEventListener("click", () => (micTest.where === where ? stopMicTest() : startMicTest(where)));
+  }
+  restWave();
   document.getElementById("hands-free-minutes").addEventListener("change", (event) => {
     change("hands_free_minutes", Number(event.target.value));
   });
@@ -122,7 +124,7 @@ async function change(name, value) {
 function showView(name) {
   document.querySelectorAll(".view").forEach((view) => { view.hidden = view.id !== name; });
   showClearQuestion(false);
-  if (name !== "settings") stopMicTest();
+  stopMicTest();
   document.querySelectorAll(".nav[data-view]").forEach((button) => {
     if (button.dataset.view === name) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
@@ -149,7 +151,8 @@ function render(next) {
   document.getElementById("hero-hint").textContent = settings.hands_free
     ? "Double tap for hands free. Tap once more to stop and paste."
     : "Hands free is off, so quick taps are simply ignored.";
-  document.getElementById("tryit").placeholder = `Click in this box, hold ${settings.hotkey}, and say something…`;
+  const style = settings.sound[0].toUpperCase() + settings.sound.slice(1);
+  document.getElementById("quick-sound-hint").textContent = `${style} on start and stop`;
 
   document.querySelectorAll("select[data-setting='microphone']").forEach((select) => fillMicrophones(select, settings.microphone));
   fillMinutes(settings);
@@ -171,7 +174,11 @@ function render(next) {
 function showStatus(status) {
   const words = { downloading: "Downloading", loading: "Starting", failed: "Couldn't start" };
   // During an engine switch the old engine keeps dictating, so only loading at startup counts here.
-  document.getElementById("status-word").textContent = (!status.running && words[status.model]) || "Ready";
+  const word = (!status.running && words[status.model]) || "Ready";
+  document.getElementById("status-word").textContent = word;
+  const badge = document.getElementById("hero-status");
+  badge.textContent = word;
+  badge.className = word === "Ready" ? "badge" : status.model === "failed" ? "badge failed" : "badge busy";
   const where = state.gpu.startsWith("Your ") ? state.gpu[0].toLowerCase() + state.gpu.slice(1) : state.gpu;
   document.getElementById("status-text").textContent = `Runs offline on ${where}. Nothing leaves this PC.`;
 }
@@ -289,44 +296,63 @@ function fillSoundStyles(settings) {
   document.getElementById("sound-note").textContent = SOUND_NOTES[settings.sound] ?? "";
 }
 
-// Mic test: opens the chosen mic and draws its level as bars that scroll left, newest on the right.
+// Mic test: opens the chosen mic and draws its level, newest on the right. Home draws it as a wave that rests in
+// its usual shape; Settings as a row of bars.
 
-const METER_BARS = 24;
+const MIC_TESTS = {
+  home: { button: "home-mic-test", meter: "home-meter", bars: 27 },
+  settings: { button: "mic-test", meter: "mic-meter", bars: 24 },
+};
+const WAVE_SHAPE = [6, 9, 12, 9, 14, 11, 9, 16, 22, 30, 38, 46, 34, 54, 34, 46, 38, 30, 22, 16, 9, 11, 14, 9, 12, 9, 6];
 const MIC_TEST_SECONDS = 20;  // stops by itself, so the mic never stays open by accident
-const micTest = { timer: null, levels: [], startedAt: 0, hint: null };
+const micTest = { where: null, timer: null, levels: [], startedAt: 0, hint: null };
 
-async function startMicTest() {
+async function startMicTest(where) {
   stopMicTest();
-  const button = document.getElementById("mic-test");
   const hint = document.getElementById("mic-hint");
   micTest.hint ??= hint.textContent;
   const opened = await api().start_mic_test();
   hint.textContent = opened ? micTest.hint : "Couldn't open that mic. Check that it's plugged in, or pick another one.";
   if (!opened) return;
-  micTest.levels = [];
-  micTest.startedAt = performance.now();
-  micTest.timer = setInterval(drawMicLevel, 60);
-  button.textContent = "Stop test";
-  document.getElementById("mic-meter").classList.add("live");
+  const test = MIC_TESTS[where];
+  Object.assign(micTest, { where, levels: [], startedAt: performance.now(), timer: setInterval(drawMicLevel, 60) });
+  buttonLabel(test.button).textContent = "Stop test";
+  document.getElementById(test.meter).classList.add("live");
 }
 
 function stopMicTest() {
   if (!micTest.timer) return;
   clearInterval(micTest.timer);
-  micTest.timer = null;
+  const test = MIC_TESTS[micTest.where];
+  Object.assign(micTest, { where: null, timer: null });
   api().stop_mic_test();
-  document.getElementById("mic-test").textContent = "Test mic";
-  const meter = document.getElementById("mic-meter");
+  buttonLabel(test.button).textContent = "Test mic";
+  const meter = document.getElementById(test.meter);
   meter.classList.remove("live");
   meter.querySelectorAll("span").forEach((bar) => { bar.style.height = ""; });
+  restWave();
+}
+
+function buttonLabel(id) {
+  const button = document.getElementById(id);
+  return button.querySelector("span") ?? button;
+}
+
+function restWave() {
+  [...document.getElementById("home-meter").children].forEach((bar, index) => { bar.style.height = `${WAVE_SHAPE[index]}px`; });
 }
 
 async function drawMicLevel() {
   if (performance.now() - micTest.startedAt > MIC_TEST_SECONDS * 1000) return stopMicTest();
-  micTest.levels = [...micTest.levels, await api().mic_level()].slice(-METER_BARS);
-  const bars = document.getElementById("mic-meter").children;
-  const offset = METER_BARS - micTest.levels.length;
-  micTest.levels.forEach((level, index) => { bars[offset + index].style.height = `${4 + Math.round(level * 24)}px`; });
+  const where = micTest.where;
+  const test = MIC_TESTS[where];
+  const level = await api().mic_level();
+  if (micTest.where !== where) return;  // stopped while the level was on its way
+  micTest.levels = [...micTest.levels, level].slice(-test.bars);
+  const bars = document.getElementById(test.meter).children;
+  const offset = test.bars - micTest.levels.length;
+  const reach = where === "home" ? 56 : 24;
+  micTest.levels.forEach((value, index) => { bars[offset + index].style.height = `${4 + Math.round(value * reach)}px`; });
 }
 
 // Dictionary
@@ -411,6 +437,36 @@ const dayAndYearFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", m
 const COPY_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>';
 const COPIED_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
 
+const icons = new Map();  // app name to its icon's data URL, or null for none
+
+async function loadIcons(items) {
+  const missing = [...new Set(items.map((item) => item.app))].filter((name) => !icons.has(name));
+  if (!missing.length) return;
+  const found = await api().app_icons(missing);
+  missing.forEach((name) => icons.set(name, found[name] ?? null));
+}
+
+const GHOST_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path class="ghost-mark" d="M4 11a8 8 0 0 1 16 0v10l-2.67-1.8L14.67 21 12 19.2 9.33 21l-2.66-1.8L4 21z"/><circle class="ghost-eye" cx="9.5" cy="10.5" r="1.4"/><circle class="ghost-eye" cx="14.5" cy="10.5" r="1.4"/></svg>';
+
+function appIcon(name) {
+  if (name === "Ghostwriter") {
+    const ghost = element("span", "app-icon ghost");
+    ghost.innerHTML = GHOST_ICON;
+    return ghost;
+  }
+  const url = icons.get(name);
+  if (url) return Object.assign(document.createElement("img"), { className: "app-icon", src: url, alt: "" });
+  const letter = element("span", "app-icon letter", (name.trim()[0] ?? "?").toUpperCase());
+  letter.setAttribute("aria-hidden", "true");
+  return letter;
+}
+
+function appTag(name) {
+  const tag = element("span", "app-tag");
+  tag.append(appIcon(name), element("span", "", name));
+  return tag;
+}
+
 // Checked every second; the stamp only changes when a dictation is saved or the history is cleared, and the day is
 // checked too so "today" moves on at midnight.
 async function watchHistory() {
@@ -419,7 +475,11 @@ async function watchHistory() {
   const day = new Date().toDateString();
   if (stamp === shown.stamp && day === shown.day) return;
   Object.assign(shown, { stamp, day });
-  renderSummary(await api().history_summary());
+  // A new dictation may have brought an app's first icon, so ask again for the ones that had none.
+  icons.forEach((url, name) => { if (url === null) icons.delete(name); });
+  const summary = await api().history_summary();
+  await loadIcons(summary.recent);
+  renderSummary(summary);
   await showHistory();
 }
 
@@ -429,6 +489,7 @@ async function showHistory(changes = {}) {
   const request = ++shown.request;
   const result = await api().history(shown.query, shown.app, shown.limit);
   if (request !== shown.request) return;  // a newer search already started
+  await loadIcons(result.items);
   fillFilters(result.apps);
   renderHistory(result);
 }
@@ -480,15 +541,10 @@ function renderHistory(result) {
 function entry(item, short) {
   const row = element("li", short ? "entry short" : "entry");
   const when = element("div", "entry-when mono");
-  when.append(element("span", "", timeFormat.format(new Date(item.at))));
-  if (!short) when.append(element("span", "faint", clockLength(item.seconds)));
+  when.append(element("span", "", timeFormat.format(new Date(item.at))), element("span", "faint", clockLength(item.seconds)));
   const body = element("div", "entry-body");
   const about = element("div", "entry-about");
-  if (short) {
-    about.append(element("span", "", item.app));
-  } else {
-    about.append(element("span", "app-tag", item.app), element("span", "", `${item.words.toLocaleString()} ${item.words === 1 ? "word" : "words"}`));
-  }
+  about.append(appTag(item.app), element("span", "", wordCount(item.words)));
   body.append(element("p", "entry-text", item.text), about);
   row.append(when, body, copyButton(item.text));
   return row;
@@ -538,6 +594,10 @@ function dayLabel(date) {
   if (daysAgo === 0) return "Today";
   if (daysAgo === 1) return "Yesterday";
   return (date.getFullYear() === new Date().getFullYear() ? dayFormat : dayAndYearFormat).format(date);
+}
+
+function wordCount(words) {
+  return `${words.toLocaleString()} ${words === 1 ? "word" : "words"}`;
 }
 
 function clockLength(seconds) {

@@ -14,7 +14,7 @@ from logging.handlers import RotatingFileHandler
 
 import numpy as np
 
-from ghostwriter import __version__, models, sounds, startup, updates
+from ghostwriter import __version__, app_icons, models, sounds, startup, updates
 from ghostwriter.audio import SAMPLE_RATE, wav_bytes
 from ghostwriter.dictionary import DICTIONARY_PATH, DictionaryFile
 from ghostwriter.history import History
@@ -261,10 +261,12 @@ class Dictation:
 
     @staticmethod
     def _save(history: History, text: str, program: system_paster.App | None, seconds: float) -> None:
+        name = system_paster.app_name(program)
         try:
-            history.add(text, system_paster.app_name(program), seconds)
+            history.add(text, name, seconds)
         except sqlite3.Error:
             log.exception("Couldn't save the dictation to history")
+        app_icons.remember(name, program)
 
 
 class StatusDisplay:

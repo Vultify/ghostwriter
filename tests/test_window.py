@@ -183,7 +183,7 @@ def test_the_page_changes_settings_and_the_dictionary(api, tmp_path):
         run("const m = document.getElementById('hands-free-minutes'); m.value = '30'; m.dispatchEvent(new Event('change'))")
         run("document.querySelector('#themes input[value=light]').click()")
         results["theme"] = run("document.getElementById('app').dataset.theme")
-        results["hint"] = run("document.getElementById('tryit').placeholder")
+        results["hero_key"] = run("document.querySelector('#home .hero-title kbd').textContent")
         run("document.getElementById('new-word').value = 'Brightwater'; document.getElementById('add-word').requestSubmit()")
         run("document.getElementById('new-heard').value = 'my sequel'; document.getElementById('new-write').value = 'MySQL'; "
             "document.getElementById('add-fix').requestSubmit()")
@@ -199,7 +199,7 @@ def test_the_page_changes_settings_and_the_dictionary(api, tmp_path):
     assert saved["hands_free"] is True and results["minutes_locked"] is True
     assert saved["hands_free_minutes"] == 30
     assert saved["theme"] == "light" and results["theme"] == "light"
-    assert "hold Right Ctrl" in results["hint"]
+    assert results["hero_key"] == "Right Ctrl"
     assert "->" in results["error"]
     assert results["chips"] == "Brightwater"
     dictionary = (tmp_path / "dictionary.txt").read_text(encoding="utf-8")

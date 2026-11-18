@@ -8,6 +8,7 @@ kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
 dwmapi = ctypes.WinDLL("dwmapi", use_last_error=True)
 version = ctypes.WinDLL("version", use_last_error=True)
+shell32 = ctypes.WinDLL("shell32", use_last_error=True)
 
 LRESULT = ctypes.c_ssize_t
 ULONG_PTR = ctypes.c_size_t
@@ -36,6 +37,7 @@ MB_ICONERROR = 0x10
 MB_ICONQUESTION = 0x20
 MB_YESNO = 0x04
 IDYES = 6
+DI_NORMAL = 3
 
 WH_KEYBOARD_LL = 13
 HC_ACTION = 0
@@ -243,6 +245,11 @@ for _func, _argtypes, _restype in (
     (gdi32.SelectObject, [wintypes.HDC, wintypes.HGDIOBJ], wintypes.HGDIOBJ),
     (gdi32.DeleteObject, [wintypes.HGDIOBJ], wintypes.BOOL),
     (gdi32.DeleteDC, [wintypes.HDC], wintypes.BOOL),
+    (shell32.SHDefExtractIconW, [wintypes.LPCWSTR, ctypes.c_int, wintypes.UINT, ctypes.POINTER(wintypes.HICON),
+                                 ctypes.POINTER(wintypes.HICON), wintypes.UINT], ctypes.c_long),
+    (user32.DrawIconEx, [wintypes.HDC, ctypes.c_int, ctypes.c_int, wintypes.HICON, ctypes.c_int, ctypes.c_int,
+                         wintypes.UINT, wintypes.HBRUSH, wintypes.UINT], wintypes.BOOL),
+    (user32.DestroyIcon, [wintypes.HICON], wintypes.BOOL),
     (user32.MessageBoxW, [wintypes.HWND, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.UINT], ctypes.c_int),
     (user32.GetForegroundWindow, [], wintypes.HWND),
     (user32.GetKeyboardLayoutList, [ctypes.c_int, ctypes.POINTER(wintypes.HKL)], ctypes.c_int),

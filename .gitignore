@@ -25,6 +25,7 @@ lowered-sounds.json
 # Personal word list (made from dictionary.example.txt on first run) and dictation history
 /dictionary.txt
 /history.db
+/app-icons/
 
 # Tools install.bat downloads, and the whisper.cpp speech engine for non-NVIDIA PCs
 .tools/
