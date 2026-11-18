@@ -112,6 +112,15 @@ function bindPage() {
   document.getElementById("clear-history").addEventListener("click", askToClear);
   document.getElementById("clear-cancel").addEventListener("click", () => showClearQuestion(false));
   document.getElementById("clear-yes").addEventListener("click", clearHistory);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenu();
+    if (event.ctrlKey && event.key.toLowerCase() === "f" && !document.getElementById("history").hidden) {
+      event.preventDefault();
+      document.getElementById("history-search").focus();
+    }
+  });
+  document.addEventListener("click", (event) => { if (!event.target.closest(".menu, [data-menu]")) closeMenu(); });
+  document.querySelector("main").addEventListener("scroll", closeMenu);
 
   document.getElementById("setup-back").addEventListener("click", () => showStep(setup.step - 1));
   document.getElementById("setup-next").addEventListener("click", () => (setup.step < 3 ? showStep(setup.step + 1) : finishSetup()));
@@ -124,6 +133,7 @@ async function change(name, value) {
 function showView(name) {
   document.querySelectorAll(".view").forEach((view) => { view.hidden = view.id !== name; });
   showClearQuestion(false);
+  closeMenu();
   stopMicTest();
   document.querySelectorAll(".nav[data-view]").forEach((button) => {
     if (button.dataset.view === name) button.setAttribute("aria-current", "page");
@@ -434,6 +444,8 @@ function showError(id, message) {
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
 const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
 const dayAndYearFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+const DOTS_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+const CALENDAR_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17"/><path d="M8 3v4"/><path d="M16 3v4"/></svg>';
 const COPY_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>';
 const COPIED_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
 
@@ -456,7 +468,8 @@ function appIcon(name) {
   }
   const url = icons.get(name);
   if (url) return Object.assign(document.createElement("img"), { className: "app-icon", src: url, alt: "" });
-  const letter = element("span", "app-icon letter", (name.trim()[0] ?? "?").toUpperCase());
+  const letter = element("span", "app-icon letter");
+  letter.dataset.letter = (name.trim()[0] ?? "?").toUpperCase();  // drawn by the stylesheet, so it isn't in the text
   letter.setAttribute("aria-hidden", "true");
   return letter;
 }
@@ -489,7 +502,7 @@ async function showHistory(changes = {}) {
   const request = ++shown.request;
   const result = await api().history(shown.query, shown.app, shown.limit);
   if (request !== shown.request) return;  // a newer search already started
-  await loadIcons(result.items);
+  await loadIcons([...result.items, ...result.apps.map((app) => ({ app }))]);
   fillFilters(result.apps);
   renderHistory(result);
 }
@@ -499,6 +512,9 @@ function renderSummary(summary) {
   document.getElementById("words-today").textContent = summary.words_today.toLocaleString();
   document.getElementById("dictations-today").textContent = summary.dictations_today.toLocaleString();
   document.getElementById("words-month").textContent = summary.words_month.toLocaleString();
+  document.getElementById("total-dictations").textContent = summary.total.toLocaleString();
+  document.getElementById("total-words").textContent = summary.total_words.toLocaleString();
+  document.getElementById("history-range").textContent = historyRange(summary.first);
   document.getElementById("recent-list").replaceChildren(...summary.recent.map((item) => entry(item, true)));
   const empty = document.getElementById("recent-empty");
   empty.hidden = summary.recent.length > 0;
@@ -509,28 +525,50 @@ function renderSummary(summary) {
 }
 
 function fillFilters(apps) {
-  const choices = shown.app && !apps.includes(shown.app) ? [...apps, shown.app] : apps;
-  if (choices.join("\n") === shown.apps) return;  // rebuilding would lose keyboard focus
-  shown.apps = choices.join("\n");
+  const buttons = apps.slice(0, state.filterApps);
+  if (shown.app && !buttons.includes(shown.app)) buttons.push(shown.app);
+  const more = apps.filter((name) => !buttons.includes(name));
+  const key = [...buttons, "|", ...more].join("\n");
+  if (key === shown.apps) return;  // rebuilding would lose keyboard focus
+  shown.apps = key;
   const fieldset = document.getElementById("history-filters");
   const legend = fieldset.querySelector("legend");
-  const filters = [["", "All"], ...choices.map((name) => [name, name])].map(([value, label]) => {
+  const filters = [["", "All"], ...buttons.map((name) => [name, name])].map(([value, label]) => {
     const input = Object.assign(document.createElement("input"), { type: "radio", name: "history-app", value, checked: value === shown.app });
+    const chip = element("span", "filter");
+    if (value) chip.append(appIcon(value));
+    chip.append(label);
     const wrapper = document.createElement("label");
-    wrapper.append(input, element("span", "filter", label));
+    wrapper.append(input, chip);
     return wrapper;
   });
   fieldset.replaceChildren(legend, ...filters);
+  if (more.length) {
+    const button = iconButton("filter more", "More apps", DOTS_ICON);
+    button.dataset.menu = "";
+    button.addEventListener("click", () => openMenu(button, more.map((name) => ({
+      label: name, icon: appIcon(name), choose: () => showHistory({ app: name }),
+    }))));
+    fieldset.append(button);
+  }
 }
 
 function renderHistory(result) {
   const days = [];
   for (const item of result.items) {
     const label = dayLabel(new Date(item.at));
-    if (days.at(-1)?.label !== label) days.push({ label, list: element("ul", "entries") });
+    if (days.at(-1)?.label !== label) days.push({ label, list: element("ul", "entries"), count: 0 });
     days.at(-1).list.append(entry(item, false));
+    days.at(-1).count += 1;
   }
-  document.getElementById("history-days").replaceChildren(...days.flatMap((day) => [element("h2", "day", day.label), day.list]));
+  document.getElementById("history-days").replaceChildren(...days.map((day) => {
+    const card = element("section", "card day-card");
+    const head = element("header", "day-head");
+    head.innerHTML = CALENDAR_ICON;
+    head.append(element("h2", "day", day.label), element("span", "day-count", day.count === 1 ? "1 entry" : `${day.count} entries`));
+    card.append(head, day.list);
+    return card;
+  }));
   const empty = document.getElementById("history-empty");
   empty.hidden = result.items.length > 0;
   empty.textContent = shown.query || shown.app ? "Nothing matches." : "Nothing here yet. Your dictations show up here as you make them.";
@@ -539,23 +577,81 @@ function renderHistory(result) {
 
 // One dictation: Home's short version shows the time, the first line, and the app; History's shows it all.
 function entry(item, short) {
-  const row = element("li", short ? "entry short" : "entry");
+  const row = element("li", short ? "entry short" : "entry long");
   const when = element("div", "entry-when mono");
   when.append(element("span", "", timeFormat.format(new Date(item.at))), element("span", "faint", clockLength(item.seconds)));
-  const body = element("div", "entry-body");
-  const about = element("div", "entry-about");
-  about.append(appTag(item.app), element("span", "", wordCount(item.words)));
-  body.append(element("p", "entry-text", item.text), about);
-  row.append(when, body, copyButton(item.text));
+  if (short) {
+    const body = element("div", "entry-body");
+    const about = element("div", "entry-about");
+    about.append(appTag(item.app), element("span", "", wordCount(item.words)));
+    body.append(element("p", "entry-text", item.text), about);
+    row.append(when, body, copyButton(item.text));
+    return row;
+  }
+  const app = element("div", "entry-app");
+  app.append(appIcon(item.app), element("span", "", item.app));
+  const more = iconButton("icon-button", "More", DOTS_ICON);
+  more.dataset.menu = "";
+  more.addEventListener("click", () => openMenu(more, [{ label: "Delete", danger: true, choose: () => deleteDictation(item.id) }]));
+  row.append(when, app, element("p", "entry-text", item.text), element("span", "word-badge", wordCount(item.words)),
+    copyButton(item.text), more);
   return row;
 }
 
-function copyButton(text) {
-  const button = element("button", "icon-button");
+async function deleteDictation(id) {
+  await api().delete_dictation(id);
+  await watchHistory();
+}
+
+// A small menu under a button, for a dictation's actions and the apps without their own filter.
+function openMenu(button, items) {
+  const menu = document.getElementById("row-menu");
+  if (!menu.hidden && menu.owner === button) return closeMenu();
+  menu.replaceChildren(...items.map((item) => {
+    const choice = element("button", item.danger ? "menu-item danger" : "menu-item");
+    choice.type = "button";
+    choice.setAttribute("role", "menuitem");
+    if (item.icon) choice.append(item.icon);
+    choice.append(item.label);
+    choice.addEventListener("click", () => { closeMenu(); item.choose(); });
+    return choice;
+  }));
+  menu.owner = button;
+  menu.hidden = false;
+  const place = button.getBoundingClientRect();
+  const width = menu.offsetWidth;
+  menu.style.left = `${Math.max(8, Math.min(place.right - width, window.innerWidth - width - 8))}px`;
+  const below = place.bottom + 6;
+  menu.style.top = `${below + menu.offsetHeight > window.innerHeight ? place.top - menu.offsetHeight - 6 : below}px`;
+  menu.firstElementChild?.focus();
+}
+
+function closeMenu() {
+  const menu = document.getElementById("row-menu");
+  if (menu.hidden) return;
+  menu.hidden = true;
+  menu.owner?.focus({ preventScroll: true });
+  menu.owner = null;
+}
+
+function iconButton(className, label, icon) {
+  const button = element("button", className);
   button.type = "button";
-  button.title = "Copy";
-  button.setAttribute("aria-label", "Copy");
-  button.innerHTML = COPY_ICON;
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.innerHTML = icon;
+  return button;
+}
+
+// How far back History goes, from its oldest dictation: "Since today", "2 days", "30 days".
+function historyRange(first) {
+  if (!first) return "None yet";
+  const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(first).setHours(0, 0, 0, 0)) / 86400000) + 1;
+  return days === 1 ? "1 day" : `${days.toLocaleString()} days`;
+}
+
+function copyButton(text) {
+  const button = iconButton("icon-button", "Copy", COPY_ICON);
   button.addEventListener("click", async () => {
     await navigator.clipboard.writeText(text);
     button.innerHTML = COPIED_ICON;

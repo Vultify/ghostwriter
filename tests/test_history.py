@@ -80,6 +80,19 @@ def test_an_empty_history_counts_zero(history):
     assert (summary["words_today"], summary["dictations_today"], summary["words_month"], summary["recent"]) == (0, 0, 0, [])
 
 
+def test_deleting_one_dictation_keeps_the_rest_and_changes_the_stamp(history):
+    history.add("keep this", "Notepad", 1.0, at=datetime(2026, 11, 2, 9, 0))
+    history.add("a private thought", "Notepad", 1.0)
+    history.add("and this", "Notepad", 1.0)
+    before = history.stamp()
+    private = next(item for item in history.search()["items"] if item["text"] == "a private thought")
+    history.delete(private["id"])
+    assert [item["text"] for item in history.search()["items"]] == ["and this", "keep this"]
+    assert history.stamp() != before
+    summary = history.summary()
+    assert (summary["total"], summary["total_words"], summary["first"]) == (2, 4, "2026-11-02T09:00:00")
+
+
 def test_clearing_deletes_everything_and_changes_the_stamp(history):
     history.add("a private thought", "Notepad", 1.0)
     before = history.stamp()

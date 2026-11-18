@@ -13,7 +13,8 @@ from ghostwriter.paths import HISTORY_PATH
 
 PAGE_SIZE = 200  # dictations the History page shows before "Show more"
 RECENT_COUNT = 3  # dictations on Home
-FILTER_APPS = 4  # the most used apps get their own filter on the History page
+FILTER_APPS = 3  # the most used apps get their own filter button on the History page
+MENU_APPS = 30  # the next most used are in its menu
 
 # The table as it first shipped. Never change it: later changes go in _UPGRADES, so an older history.db kept
 # through updates is brought up to date too.
@@ -69,23 +70,31 @@ class History:
         return [row["app"] for row in rows]
 
     def summary(self, today: date | None = None) -> dict:
-        """Counts for today and this month, and the latest few dictations, for Home."""
+        """Counts for today, this month, and all time, the oldest dictation's time, and the latest few, for Home and
+        History."""
         today = today or date.today()
         with self._open() as db:
             words_today, dictations_today = db.execute(
                 "SELECT coalesce(sum(words), 0), count(*) FROM dictations WHERE at >= ?", [today.isoformat()]).fetchone()
             words_month = db.execute("SELECT coalesce(sum(words), 0) FROM dictations WHERE at >= ?",
                                      [today.replace(day=1).isoformat()]).fetchone()[0]
-            total = db.execute("SELECT count(*) FROM dictations").fetchone()[0]
+            total, total_words, first = db.execute(
+                "SELECT count(*), coalesce(sum(words), 0), min(at) FROM dictations").fetchone()
             recent = db.execute(f"SELECT {_COLUMNS} FROM dictations ORDER BY id DESC LIMIT ?", [RECENT_COUNT]).fetchall()
         return {"words_today": words_today, "dictations_today": dictations_today, "words_month": words_month,
-                "total": total, "recent": [dict(row) for row in recent]}
+                "total": total, "total_words": total_words, "first": first, "recent": [dict(row) for row in recent]}
 
     def stamp(self) -> str:
-        """Changes whenever a dictation is added or the history is cleared, so the window knows to refresh."""
+        """Changes whenever a dictation is added or deleted, so the window knows to refresh."""
         with self._open() as db:
             count, newest = db.execute("SELECT count(*), coalesce(max(id), 0) FROM dictations").fetchone()
         return f"{count}-{newest}"
+
+    def delete(self, dictation_id: int) -> None:
+        """Delete one dictation, overwriting its text in the file too."""
+        with self._open() as db:
+            db.execute("PRAGMA secure_delete = ON")
+            db.execute("DELETE FROM dictations WHERE id = ?", [int(dictation_id)])
 
     def clear(self) -> None:
         """Delete every dictation, then compact the file so the deleted text doesn't linger in it."""

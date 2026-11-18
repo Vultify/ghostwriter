@@ -13,7 +13,7 @@ from pathlib import Path
 from ghostwriter import __version__, app_icons, models, sounds, startup, updates
 from ghostwriter.audio import loudness
 from ghostwriter.dictionary import DictionaryFile
-from ghostwriter.history import PAGE_SIZE, History
+from ghostwriter.history import FILTER_APPS, MENU_APPS, PAGE_SIZE, History
 from ghostwriter.paths import (APP_ICONS_DIR, DICTIONARY_PATH, HISTORY_PATH, ICON_PATH, LOG_PATH, PROJECT,
                                SETTINGS_PATH, STARTUP_PATH, UI_DIR, WEB_DATA_DIR, WINDOW_LOG_PATH)
 from ghostwriter.recorder import Recorder, list_microphones
@@ -79,6 +79,7 @@ class Api:
             "handsFreeMinutes": list(HANDS_FREE_MINUTES),
             "otherSounds": list(OTHER_SOUNDS),
             "pageSize": PAGE_SIZE,
+            "filterApps": FILTER_APPS,
             "engine": engine,
             "engines": models.available(has_nvidia),
             "model": f"{MODEL_LABEL}, compressed" if models.compressed(engine, has_nvidia) else MODEL_LABEL,
@@ -140,7 +141,7 @@ class Api:
         return startup.read(self._startup_path)
 
     def history(self, query: str = "", app: str = "", limit: int = PAGE_SIZE) -> dict:
-        return {**self._history.search(query, app or None, limit), "apps": self._history.apps()}
+        return {**self._history.search(query, app or None, limit), "apps": self._history.apps(FILTER_APPS + MENU_APPS)}
 
     def history_summary(self) -> dict:
         return self._history.summary()
@@ -157,6 +158,9 @@ class Api:
             return self._settings_path.stat().st_mtime_ns
         except FileNotFoundError:
             return 0
+
+    def delete_dictation(self, dictation_id: int) -> None:
+        self._history.delete(dictation_id)
 
     def clear_history(self) -> None:
         self._history.clear()

@@ -276,6 +276,10 @@ def test_home_and_the_history_page_show_dictations(api, tmp_path):
         history.add("This one arrives while the window is open.", "Notepad", 2.0)
         time.sleep(1.5)
         results["live"] = run(texts.format("#history-days"))
+        run("document.querySelector('#history-days .entry [data-menu]').click()")
+        run("document.querySelector('#row-menu .menu-item').click()", wait=1.5)
+        results["after_delete"] = run(texts.format("#history-days"))
+        results["totals"] = run("[document.getElementById('total-dictations').textContent, document.getElementById('history-range').textContent]")
         run("document.getElementById('clear-history').click()")
         results["question"] = run("document.getElementById('clear-question').textContent")
         run("document.getElementById('clear-yes').click()", wait=1.5)
@@ -291,7 +295,9 @@ def test_home_and_the_history_page_show_dictations(api, tmp_path):
     assert results["search"] == ["Deploy the MySQL backup tonight"]
     assert results["filtered"] == ["gg, queue up again in five"]
     assert results["live"][0] == "This one arrives while the window is open." and len(results["live"]) == 4
-    assert results["question"] == "Delete all 4 dictations?"
+    assert results["after_delete"] == results["live"][1:]
+    assert results["totals"] == ["3", "2 days"]
+    assert results["question"] == "Delete all 3 dictations?"
     assert results["cleared"] == [False, 0]
     assert history.search()["total"] == 0
 
