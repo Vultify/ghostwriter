@@ -131,6 +131,15 @@ Added 2026-11-12: music and videos get in the way of talking and thinking.
 ## Version 1.6.0 released 2026-11-16
 Lower other sounds while dictating, safer installs and updates (exact tested packages, checked downloads, a setup that finishes if it stopped partway), no dictated text in the log, and the groundwork for Linux.
 
+## UI polish
+Added 2026-11-17: my mockups for each page, to make the window more eye catching without reinventing it.
+- [x] Home: a glowing hotkey card with a mic test, stat cards with icons, Recent with each app's icon
+- [x] History: totals, a card per day, one row per dictation, filters with app icons, deleting one dictation, Ctrl+F
+- [x] Dictionary: cards for adding words and fixes, a searchable, sortable table with dates, changing entries in place, import and export
+- [x] Settings: labeled cards with icons, larger controls, both columns ending together
+- [x] Brighter cards and a deeper green, read from the mockups; a larger window
+- [ ] Linux: check the pages there, and read app icons from launcher entries
+
 ## Phase 12: local AI cleanup (on/off switch, its own page in the app)
 - [ ] Small local model on the GPU removes filler words, formats lists, and fixes punctuation
 - [ ] Voice commands ("new line", "scratch that")

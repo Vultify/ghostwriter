@@ -291,23 +291,24 @@
       <header class="view-header">
         <div>
           <h1 id="settings-title">Settings</h1>
-          <p>Changes save right away.</p>
+          <p>Customize how Ghostwriter works, sounds, and looks.</p>
         </div>
       </header>
 
       <div class="columns">
         <div class="column">
-          <section class="card" aria-labelledby="hotkey-title">
-            <h2 id="hotkey-title">Hotkey</h2>
-            <fieldset class="picker" id="hotkeys">
+          <section class="card settings-card" aria-labelledby="hotkey-title">
+            <div class="card-title">
+              <h2 id="hotkey-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01"/><path d="M10 10h.01"/><path d="M14 10h.01"/><path d="M18 10h.01"/><path d="M8 14h8"/></svg>Hotkey</h2>
+              <p class="card-desc">Hold to talk. The key is hidden from the app in front, so it never types.</p>
+            </div>
+            <fieldset class="picker keys" id="hotkeys">
               <legend class="sr-only">Hotkey</legend>
             </fieldset>
-            <p class="hint">Hold to talk. The key is hidden from the app in front, so it never types anything itself.</p>
-            <div class="divider"></div>
             <div class="setting-row">
               <div>
                 <div>Double tap for hands free</div>
-                <div class="setting-hint">Tap once more to stop and paste</div>
+                <div class="setting-hint">Tap once more to stop and paste.</div>
               </div>
               <button type="button" class="switch" data-setting="hands_free" aria-label="Double tap for hands free" aria-pressed="false"><span></span></button>
             </div>
@@ -317,99 +318,103 @@
             </div>
           </section>
 
-          <section class="card" aria-labelledby="mic-title">
-            <h2 id="mic-title">Microphone</h2>
-            <select id="settings-mic" data-setting="microphone" aria-labelledby="mic-title"></select>
-            <div class="mic-test">
-              <div class="meter" id="mic-meter" aria-hidden="true"></div>
-              <button type="button" class="button" id="mic-test">Test mic</button>
+          <section class="card settings-card" aria-labelledby="mic-title">
+            <h2 id="mic-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/></svg>Microphone</h2>
+            <div class="mic-row">
+              <select id="settings-mic" data-setting="microphone" aria-labelledby="mic-title"></select>
+              <button type="button" class="button with-icon" id="mic-test">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>
+                <span>Test mic</span>
+              </button>
             </div>
-            <p class="hint" id="mic-hint">The mic only opens while you dictate or test it. Plugged in a new one? Restart Ghostwriter to see it.</p>
+            <div class="level" id="mic-meter" aria-hidden="true"></div>
+            <p class="hint" id="mic-hint" hidden></p>
           </section>
 
-          <section class="card" aria-labelledby="model-title">
-            <h2 id="model-title">Speech model</h2>
-            <fieldset class="choices" id="engines">
+          <section class="card settings-card" aria-labelledby="model-title">
+            <h2 id="model-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3 10v4"/><path d="M7.5 7v10"/><path d="M12 4v16"/><path d="M16.5 7v10"/><path d="M21 10v4"/></svg>Speech model</h2>
+            <fieldset class="choices engines" id="engines">
               <legend class="sr-only">Speech engine</legend>
             </fieldset>
-            <p class="hint" id="engine-hint">faster-whisper is built for NVIDIA cards. whisper.cpp runs on any graphics card.</p>
-            <dl class="model-facts">
-              <dt>Model</dt><dd data-text="model"></dd>
-              <dt>Runs on</dt><dd data-text="gpu"></dd>
-              <dt>Size</dt><dd data-text="modelSize"></dd>
-            </dl>
-            <p class="engine-status" id="engine-status" role="status" hidden></p>
-            <div class="offline">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-              <span>Fully offline</span>
+            <p class="card-desc" id="engine-hint">faster-whisper is built for NVIDIA cards, whisper.cpp runs on any graphics card.</p>
+            <div class="facts">
+              <dl class="model-facts">
+                <dt>Model</dt><dd data-text="model"></dd>
+                <dt id="runs-on-label">GPU</dt><dd data-text="gpu"></dd>
+                <dt>Size</dt><dd data-text="modelSize"></dd>
+              </dl>
+              <p class="engine-status" id="engine-status" role="status" hidden></p>
+              <div class="offline">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="var(--card)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Fully offline</span>
+              </div>
             </div>
           </section>
         </div>
 
         <div class="column">
-          <section class="card" aria-labelledby="appearance-title">
-            <h2 id="appearance-title">Appearance</h2>
+          <section class="card settings-card" aria-labelledby="appearance-title">
+            <div class="card-title">
+              <h2 id="appearance-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Appearance</h2>
+              <p class="card-desc">Choose a theme. System follows your <span data-text="system">Windows</span> light or dark setting.</p>
+            </div>
             <fieldset class="picker themes" id="themes">
               <legend class="sr-only">Theme</legend>
               <label><input type="radio" name="theme" value="system"><span class="swatch-card"><span class="swatch system" aria-hidden="true"><span></span></span>System</span></label>
               <label><input type="radio" name="theme" value="light"><span class="swatch-card"><span class="swatch light" aria-hidden="true"><span></span></span>Light</span></label>
               <label><input type="radio" name="theme" value="dark"><span class="swatch-card"><span class="swatch dark" aria-hidden="true"><span></span></span>Dark</span></label>
             </fieldset>
-            <p class="hint">System follows your <span data-text="system">Windows</span> light or dark setting.</p>
           </section>
 
-          <section class="card" aria-labelledby="feedback-title">
-            <h2 id="feedback-title">Feedback</h2>
+          <section class="card settings-card" aria-labelledby="feedback-title">
+            <h2 id="feedback-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>Feedback</h2>
             <div class="setting-row">
               <div>
                 <div>Sounds</div>
-                <div class="setting-hint">A short sound when listening starts and stops</div>
+                <div class="setting-hint">A short sound when listening starts and stops.</div>
               </div>
               <button type="button" class="switch" data-setting="sounds" aria-label="Sounds" aria-pressed="false"><span></span></button>
             </div>
             <fieldset class="choices" id="sound-styles">
               <legend class="sr-only">Sound</legend>
             </fieldset>
-            <p class="hint" id="sound-note"></p>
-            <div class="divider"></div>
             <div class="setting-row">
               <div>
                 <div>Listening pill</div>
-                <div class="setting-hint">Mic level on screen while you talk</div>
+                <div class="setting-hint">Show mic level on screen while you talk.</div>
               </div>
               <button type="button" class="switch" data-setting="pill" aria-label="Listening pill" aria-pressed="false"><span></span></button>
             </div>
-            <div class="divider"></div>
             <div class="setting-row">
               <div>
                 <label for="other-sounds">Other sounds while you talk</label>
-                <div class="setting-hint">Music, videos, and calls</div>
+                <div class="setting-hint">Music, videos, and calls.</div>
               </div>
               <select id="other-sounds" data-setting="other_sounds"></select>
             </div>
           </section>
 
-          <section class="card" aria-labelledby="general-title">
-            <h2 id="general-title">General</h2>
+          <section class="card settings-card" aria-labelledby="general-title">
+            <h2 id="general-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>General</h2>
             <div class="setting-row">
               <div>
                 <div id="start-at-login-label">Start with Windows</div>
-                <div class="setting-hint">Ghost is in the tray when you log in</div>
+                <div class="setting-hint">Launch Ghostwriter automatically when you log in.</div>
               </div>
               <button type="button" class="switch" id="start-at-login" aria-labelledby="start-at-login-label" aria-pressed="false"><span></span></button>
             </div>
             <div class="setting-row">
               <div>
                 <div>Save dictation history</div>
-                <div class="setting-hint">Stored only on this PC</div>
+                <div class="setting-hint">Keep a history of your dictations on this PC.</div>
               </div>
               <button type="button" class="switch" data-setting="history" aria-label="Save dictation history" aria-pressed="false"><span></span></button>
             </div>
             <div class="setting-row">
               <div>Files</div>
               <div class="button-row">
-                <button type="button" class="button" data-open="log">Open log</button>
-                <button type="button" class="button" data-open="folder">Open folder</button>
+                <button type="button" class="button with-icon" data-open="log"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/></svg><span>Open log</span></button>
+                <button type="button" class="button with-icon" data-open="folder"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Open folder</span></button>
               </div>
             </div>
           </section>

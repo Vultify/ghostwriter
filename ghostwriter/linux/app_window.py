@@ -24,7 +24,7 @@ MISSING_ENGINE_MESSAGE = (
     "Dictation still works: use the ghost in the bar."
 )
 _WINDOW_MODULE = "ghostwriter.window"
-WIDTH, HEIGHT = 1120, 740  # the window's size, as on Windows
+WIDTH, HEIGHT = 1360, 920  # the window's size, as on Windows
 MIN_WIDTH, MIN_HEIGHT = 940, 640  # the smallest the page fits in, as window.py tells GTK
 SCREEN_MARGIN = 40  # kept free around a floating window on a screen too small for the full size
 # Floats the window centered at its size, like Omarchy does for LocalSend. Set again before every launch, replacing

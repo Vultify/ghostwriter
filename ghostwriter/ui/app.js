@@ -164,8 +164,9 @@ function render(next) {
   applyTheme();
 
   const text = { hotkey: settings.hotkey, version: `v${state.version}`, model: state.model, gpu: state.gpu,
-    system: state.system, modelSize: `${state.modelSize} · ${state.modelDownloaded ? "downloaded" : "downloading"}` };
+    system: state.system, modelSize: `${state.modelSize}  •  ${state.modelDownloaded ? "Downloaded" : "Downloading"}` };
   document.querySelectorAll("[data-text]").forEach((node) => { node.textContent = text[node.dataset.text]; });
+  document.getElementById("runs-on-label").textContent = state.gpu.startsWith("Your processor") ? "Runs on" : "GPU";
 
   document.querySelectorAll(".switch[data-setting]").forEach((button) => {
     button.setAttribute("aria-pressed", String(settings[button.dataset.setting]));
@@ -294,15 +295,6 @@ function fillHotkeys(id, chosen) {
   fieldset.querySelectorAll("input").forEach((input) => { input.checked = input.value === chosen; });
 }
 
-const SOUND_NOTES = {
-  soft: "Soft, low bloops. Short, so they never step on your first word.",
-  glass: "A struck-glass note. Press rings high, release answers lower, and it rings out a little.",
-  bubble: "A round water-drop pop that bends up on press and down on release.",
-  wood: "A warm marimba tap that sits under game audio instead of cutting through it.",
-  tap: "A quiet keyboard-style click with a low thump. Barely there.",
-  chime: "Two quick notes, rising on press and falling on release.",
-};
-
 // Picking a sound plays it, and so does clicking the one already picked. Built once, so arrow keys keep their place.
 function fillSoundStyles(settings) {
   const fieldset = document.getElementById("sound-styles");
@@ -316,26 +308,25 @@ function fillSoundStyles(settings) {
   }
   fieldset.querySelectorAll("input").forEach((input) => { input.checked = input.value === settings.sound; });
   fieldset.disabled = !settings.sounds;
-  document.getElementById("sound-note").textContent = SOUND_NOTES[settings.sound] ?? "";
 }
 
-// Mic test: opens the chosen mic and draws its level, newest on the right. Home draws it as a wave that rests in
-// its usual shape; Settings as a row of bars.
+// Mic test: opens the chosen mic and draws its level. Home draws it as a wave that moves left, newest on the right,
+// and rests in its usual shape; Settings as a level bar that fills from the left.
 
 const MIC_TESTS = {
   home: { button: "home-mic-test", meter: "home-meter", bars: 27 },
-  settings: { button: "mic-test", meter: "mic-meter", bars: 24 },
+  settings: { button: "mic-test", meter: "mic-meter", bars: 40 },
 };
 const WAVE_SHAPE = [6, 9, 12, 9, 14, 11, 9, 16, 22, 30, 38, 46, 34, 54, 34, 46, 38, 30, 22, 16, 9, 11, 14, 9, 12, 9, 6];
 const MIC_TEST_SECONDS = 20;  // stops by itself, so the mic never stays open by accident
-const micTest = { where: null, timer: null, levels: [], startedAt: 0, hint: null };
+const micTest = { where: null, timer: null, levels: [], startedAt: 0 };
 
 async function startMicTest(where) {
   stopMicTest();
-  const hint = document.getElementById("mic-hint");
-  micTest.hint ??= hint.textContent;
   const opened = await api().start_mic_test();
-  hint.textContent = opened ? micTest.hint : "Couldn't open that mic. Check that it's plugged in, or pick another one.";
+  const hint = document.getElementById("mic-hint");
+  hint.textContent = "Couldn't open that mic. Check that it's plugged in, or pick another one.";
+  hint.hidden = opened;
   if (!opened) return;
   const test = MIC_TESTS[where];
   Object.assign(micTest, { where, levels: [], startedAt: performance.now(), timer: setInterval(drawMicLevel, 60) });
@@ -352,7 +343,7 @@ function stopMicTest() {
   buttonLabel(test.button).textContent = "Test mic";
   const meter = document.getElementById(test.meter);
   meter.classList.remove("live");
-  meter.querySelectorAll("span").forEach((bar) => { bar.style.height = ""; });
+  meter.querySelectorAll("span").forEach((bar) => { bar.style.height = ""; bar.classList.remove("on"); });
   restWave();
 }
 
@@ -371,11 +362,15 @@ async function drawMicLevel() {
   const test = MIC_TESTS[where];
   const level = await api().mic_level();
   if (micTest.where !== where) return;  // stopped while the level was on its way
-  micTest.levels = [...micTest.levels, level].slice(-test.bars);
   const bars = document.getElementById(test.meter).children;
+  if (where === "settings") {
+    const lit = Math.round(level * test.bars);
+    [...bars].forEach((bar, index) => bar.classList.toggle("on", index < lit));
+    return;
+  }
+  micTest.levels = [...micTest.levels, level].slice(-test.bars);
   const offset = test.bars - micTest.levels.length;
-  const reach = where === "home" ? 56 : 24;
-  micTest.levels.forEach((value, index) => { bars[offset + index].style.height = `${4 + Math.round(value * reach)}px`; });
+  micTest.levels.forEach((value, index) => { bars[offset + index].style.height = `${4 + Math.round(value * 56)}px`; });
 }
 
 // Dictionary

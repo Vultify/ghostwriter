@@ -248,23 +248,23 @@ def test_the_settings_page_sounds_pill_start_with_windows_and_mic_test(api, tmp_
     def drive(run):
         run("showView('settings')")
         run("document.querySelector('#sound-styles input[value=tap]').click()", wait=1.2)  # also plays a preview
-        results["note"] = run("document.getElementById('sound-note').textContent")
+        results["picked"] = run("document.querySelector('#sound-styles input:checked').value")
         run("document.querySelector('#settings .switch[data-setting=pill]').click()")
         run("document.getElementById('start-at-login').click()", wait=2)
         results["startup"] = run("document.getElementById('start-at-login').getAttribute('aria-pressed')")
         run("document.querySelector('#settings .switch[data-setting=sounds]').click()")
         results["styles_off"] = run("document.getElementById('sound-styles').disabled")
         run("document.getElementById('mic-test').click()", wait=1)
-        results["testing"] = run("[document.getElementById('mic-test').textContent, "
+        results["testing"] = run("[document.getElementById('mic-test').textContent.trim(), "
                                  "document.getElementById('mic-meter').classList.contains('live')]")
         run("showView('home')")
-        results["stopped"] = run("document.getElementById('mic-test').textContent")
+        results["stopped"] = run("document.getElementById('mic-test').textContent.trim()")
 
     _open_page(api, drive, tmp_path)
 
     saved = json.loads((tmp_path / "settings.json").read_text(encoding="utf-8"))
     assert (saved["sound"], saved["pill"], saved["sounds"]) == ("tap", False, False)
-    assert "click" in results["note"]
+    assert results["picked"] == "tap"
     assert results["startup"] == "true" and (tmp_path / "Startup" / "Ghostwriter.lnk").exists()
     assert results["styles_off"] is True
     assert results["testing"] == ["Stop test", True]

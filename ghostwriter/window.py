@@ -22,11 +22,11 @@ from ghostwriter.system import app_window, desktop, processes, shortcuts
 from ghostwriter.whisper_cpp import PROCESSOR
 
 TITLE = "Ghostwriter"
-WIDTH, HEIGHT = 1120, 740
+WIDTH, HEIGHT = 1360, 920  # roomy enough that every page fits without wrapping, on screens big enough for it
 MIN_WIDTH, MIN_HEIGHT = 940, 640
 INSTANCE_NAME = "GhostwriterWindow"
 MODEL_LABEL = "Whisper large-v3-turbo"
-BACKGROUNDS = {"dark": "#121316", "light": "#F4F5F6"}  # shown before the page paints, so it never flashes white
+BACKGROUNDS = {"dark": "#0C1014", "light": "#F4F5F6"}  # shown before the page paints, so it never flashes white
 
 log = logging.getLogger("ghostwriter.window")
 
@@ -295,6 +295,15 @@ def _count(number: int, one: str, many: str | None = None) -> str:
     return "" if not number else f"1 {one}" if number == 1 else f"{number} {many or one + 's'}"
 
 
+def _fitted_size(screens: list) -> tuple[int, int]:
+    """The window's size, shrunk to leave room around it on a small screen, but never below the page's minimum."""
+    if not screens:
+        return WIDTH, HEIGHT
+    screen = screens[0]
+    return (max(MIN_WIDTH, min(WIDTH, int(screen.width * 0.9))),
+            max(MIN_HEIGHT, min(HEIGHT, int(screen.height * 0.85))))
+
+
 def open_window() -> None:
     """Start the app window, or bring it to the front if it's already open. Called from the tray app."""
     app_window.open_window()
@@ -317,19 +326,20 @@ def main() -> None:
 
     api = Api()
     theme = Settings.load().theme
+    width, height = _fitted_size(webview.screens)
     window = webview.create_window(
         TITLE,
         url=str(UI_DIR / "index.html"),
         js_api=api,
-        width=WIDTH,
-        height=HEIGHT,
+        width=width,
+        height=height,
         min_size=(MIN_WIDTH, MIN_HEIGHT),
         frameless=app_window.OWN_FRAME,
         easy_drag=False,
         background_color=BACKGROUNDS[desktop.apps_theme() if theme == "system" else theme],
     )
     api.attach(window)
-    window.events.shown += lambda: app_window.style_frame(window, WIDTH, HEIGHT)
+    window.events.shown += lambda: app_window.style_frame(window, width, height)
     try:
         webview.start(gui=app_window.WEB_ENGINE, http_server=True, private_mode=True, storage_path=str(WEB_DATA_DIR),
                       icon=str(ICON_PATH))
