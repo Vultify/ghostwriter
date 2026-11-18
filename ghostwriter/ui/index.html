@@ -200,7 +200,6 @@
         <p class="empty" id="history-empty" hidden></p>
         <button type="button" class="button" id="history-more" hidden>Show more</button>
       </div>
-      <div class="menu" id="row-menu" role="menu" hidden></div>
     </section>
 
     <section class="view" id="dictionary" aria-labelledby="dictionary-title" hidden>
@@ -209,43 +208,83 @@
           <h1 id="dictionary-title">Dictionary</h1>
           <p>Teach it names and words it would otherwise miss. Changes apply to your next dictation.</p>
         </div>
-        <button type="button" class="button" id="open-dictionary-file">Edit as text</button>
+        <div class="header-buttons">
+          <button type="button" class="button with-icon" id="import-export" data-menu aria-haspopup="menu">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
+            <span>Import / Export</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <button type="button" class="button with-icon" id="open-dictionary-file">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5"/><path d="M16 7l5 5-5 5"/><path d="M14 4l-4 16"/></svg>
+            <span>Edit as text</span>
+          </button>
+        </div>
       </header>
+      <p class="notice" id="dictionary-note" role="status" hidden></p>
 
       <div class="tabs" role="tablist" aria-label="Dictionary">
-        <button type="button" class="tab" role="tab" id="tab-words" aria-controls="panel-words" aria-selected="true">Words <span class="count" id="word-count"></span></button>
-        <button type="button" class="tab" role="tab" id="tab-fixes" aria-controls="panel-fixes" aria-selected="false">Fixes <span class="count" id="fix-count"></span></button>
+        <button type="button" class="tab" role="tab" id="tab-words" aria-controls="word-panel" aria-selected="true">Words <span class="count" id="word-count"></span></button>
+        <button type="button" class="tab" role="tab" id="tab-fixes" aria-controls="fix-panel" aria-selected="false">Fixes <span class="count" id="fix-count"></span></button>
       </div>
 
-      <div class="card" id="panel-words" role="tabpanel" aria-labelledby="tab-words">
-        <p class="panel-intro">A word is a hint: Whisper gets your list before it listens, so it leans toward spelling these your way. Use one for names and terms that sound like they're spelled.</p>
-        <form class="add-row" id="add-word">
-          <label class="sr-only" for="new-word">New word</label>
-          <input class="text-input" id="new-word" placeholder="New word" autocomplete="off" spellcheck="false">
-          <button type="submit" class="button primary">Add</button>
+      <div class="add-cards">
+        <form class="card add-card" id="add-word">
+          <div class="add-head">
+            <span class="icon-tile" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5C5 4.5 8.5 4.5 12 6.5c3.5-2 7-2 9-1V19c-2-1-5.5-1-9 1-3.5-2-7-2-9-1z"/><path d="M12 6.5V20"/></svg></span>
+            <div>
+              <h2>Add custom word</h2>
+              <p class="setting-hint">A hint Whisper gets before it listens, so it spells names and terms your way.</p>
+            </div>
+          </div>
+          <div class="add-row">
+            <label class="sr-only" for="new-word">New word</label>
+            <input class="text-input" id="new-word" placeholder="e.g. Ghostwriter" autocomplete="off" spellcheck="false">
+            <button type="submit" class="button primary">Add word</button>
+          </div>
+          <p class="form-error" id="word-error" role="alert" hidden></p>
         </form>
-        <p class="form-error" id="word-error" role="alert" hidden></p>
-        <ul class="chips" id="word-list"></ul>
-        <p class="empty" id="no-words" hidden>No words yet. Add names or terms Whisper should spell your way.</p>
-        <p class="hint">Starter words like GitHub and VS Code are included. Updates never touch your list.</p>
+
+        <form class="card add-card" id="add-fix">
+          <div class="add-head">
+            <span class="icon-tile" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14"/><path d="M14 4l4 4-4 4"/><path d="M20 16H6"/><path d="M10 12l-4 4 4 4"/></svg></span>
+            <div>
+              <h2>Add automatic fix</h2>
+              <p class="setting-hint">Swap a phrase it keeps mishearing for the right text, every time. Separate sound-alikes with commas.</p>
+            </div>
+          </div>
+          <div class="add-row">
+            <label class="sr-only" for="new-heard">When it hears</label>
+            <input class="text-input" id="new-heard" placeholder="e.g. ghost writer" autocomplete="off" spellcheck="false">
+            <span class="arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+            <label class="sr-only" for="new-write">Write</label>
+            <input class="text-input" id="new-write" placeholder="e.g. Ghostwriter" autocomplete="off" spellcheck="false">
+            <button type="submit" class="button primary">Add fix</button>
+          </div>
+          <p class="form-error" id="fix-error" role="alert" hidden></p>
+        </form>
       </div>
 
-      <div class="card" id="panel-fixes" role="tabpanel" aria-labelledby="tab-fixes" hidden>
-        <p class="panel-intro">A fix is a guarantee: after Whisper writes, it swaps what it heard for what you want, every time. Use one when a word sounds nothing like its spelling, or keeps coming out wrong. What you want also counts as a word.</p>
-        <div class="fix-head" aria-hidden="true"><span>When it hears</span><span class="arrow"></span><span>Write</span><span></span></div>
-        <ul class="fix-list" id="fix-list"></ul>
-        <p class="empty" id="no-fixes" hidden>No fixes yet. Add one when Whisper keeps writing a word the wrong way.</p>
-        <form class="fix-row add-fix" id="add-fix">
-          <label class="sr-only" for="new-heard">When it hears</label>
-          <input class="text-input" id="new-heard" placeholder="my sequel, my SQL" autocomplete="off" spellcheck="false">
-          <span class="arrow" aria-hidden="true">&#8594;</span>
-          <label class="sr-only" for="new-write">Write</label>
-          <input class="text-input" id="new-write" placeholder="MySQL" autocomplete="off" spellcheck="false">
-          <button type="submit" class="button primary" aria-label="Add fix">+</button>
-        </form>
-        <p class="form-error" id="fix-error" role="alert" hidden></p>
-        <p class="hint">Separate sound-alikes with commas. Fixes ignore capitals, spaces and hyphens.</p>
-      </div>
+      <section class="card word-table" aria-labelledby="list-title">
+        <div class="list-head">
+          <h2 id="list-title">Your words</h2>
+          <div class="search list-search">
+            <label class="sr-only" for="dictionary-search">Search the dictionary</label>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+            <input type="search" class="text-input" id="dictionary-search" placeholder="Search words…" autocomplete="off" spellcheck="false">
+          </div>
+          <label class="sr-only" for="dictionary-sort">Sort</label>
+          <select id="dictionary-sort">
+            <option value="az">Sort: A–Z</option>
+            <option value="za">Sort: Z–A</option>
+            <option value="new">Sort: Newest</option>
+            <option value="old">Sort: Oldest</option>
+          </select>
+        </div>
+        <div class="table-head" id="table-head" aria-hidden="true"></div>
+        <ul class="dict-list" id="word-panel" role="tabpanel" aria-labelledby="tab-words"></ul>
+        <ul class="dict-list" id="fix-panel" role="tabpanel" aria-labelledby="tab-fixes" hidden></ul>
+        <p class="empty" id="no-entries" hidden></p>
+      </section>
     </section>
 
     <section class="view" id="settings" aria-labelledby="settings-title" hidden>
@@ -379,6 +418,8 @@
     </section>
   </main>
 </div>
+
+<div class="menu" id="row-menu" role="menu" hidden></div>
 
 <div class="setup" id="setup">
   <div class="setup-body">

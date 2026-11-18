@@ -7,6 +7,7 @@ PROJECT = Path(__file__).resolve().parent.parent
 SETTINGS_PATH = PROJECT / "settings.json"
 DICTIONARY_PATH = PROJECT / "dictionary.txt"  # personal, so it isn't in git
 STARTER_PATH = PROJECT / "dictionary.example.txt"  # copied to dictionary.txt on first run
+DICTIONARY_DATES_PATH = PROJECT / "dictionary-dates.json"  # when each entry was added, for the app window
 HISTORY_PATH = PROJECT / "history.db"  # personal, so it isn't in git
 APP_ICONS_DIR = PROJECT / "app-icons"  # the icons of apps dictated into, for History
 STARTUP_PATH = PROJECT / "startup.json"  # what the tray app is doing as it starts, for the window

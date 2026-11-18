@@ -24,6 +24,7 @@ lowered-sounds.json
 
 # Personal word list (made from dictionary.example.txt on first run) and dictation history
 /dictionary.txt
+/dictionary-dates.json
 /history.db
 /app-icons/
 

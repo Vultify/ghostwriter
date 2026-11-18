@@ -1,12 +1,14 @@
 """Your personal dictionary: words Whisper should know how to spell, plus fixes for things it keeps getting wrong."""
 
+import json
 import logging
 import re
 import shutil
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 
-from ghostwriter.paths import DICTIONARY_PATH, STARTER_PATH
+from ghostwriter.paths import DICTIONARY_DATES_PATH, DICTIONARY_PATH, STARTER_PATH
 
 FIX_ARROW = "->"
 
@@ -105,7 +107,45 @@ class DictionaryFile:
             self._append(line)
 
     def remove_fix(self, heard: str, write: str) -> None:
-        self._remove(f"{heard.strip()} {FIX_ARROW} {write.strip()}")
+        self._remove(fix_line(heard, write))
+
+    def change_word(self, old: str, new: str) -> str:
+        """Change a word in place, keeping its spot in the file. Returns the new line."""
+        return self._replace(old.strip(), _checked(new, "word"))
+
+    def change_fix(self, old_heard: str, old_write: str, heard: str, write: str) -> str:
+        """Change a fix in place, keeping its spot in the file. Returns the new line."""
+        versions = [part.strip() for part in _checked(heard, "what it hears").split(",") if part.strip()]
+        return self._replace(fix_line(old_heard, old_write), fix_line(", ".join(versions), _checked(write, "what to write")))
+
+    def merge(self, text: str) -> tuple[int, int]:
+        """Add the words and fixes from another dictionary file that this one doesn't have yet, skipping lines that
+        don't fit the format. Returns how many words and fixes were added."""
+        before = self.entries()
+        for line in text.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                if FIX_ARROW in line:
+                    self.add_fix(*(part.strip() for part in line.split(FIX_ARROW, 1)))
+                else:
+                    self.add_word(line)
+            except ValueError:
+                continue
+        after = self.entries()
+        return len(after["words"]) - len(before["words"]), len(after["fixes"]) - len(before["fixes"])
+
+    def _replace(self, old: str, new: str) -> str:
+        if _normal(new) != _normal(old) and _normal(new) in {_normal(entry) for entry in self._entries()}:
+            raise ValueError("That's already in your dictionary.")
+        lines = self._lines()
+        for index, line in enumerate(lines):
+            if _normal(line) == _normal(old):
+                lines[index] = new
+                self.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                return new
+        raise ValueError("That entry isn't in the file anymore. It may have been edited as text.")
 
     def _lines(self) -> list[str]:
         self.current()  # makes the file from the starter if it's missing
@@ -125,6 +165,53 @@ class DictionaryFile:
         kept = [line for line in lines if _normal(line) != _normal(entry)]
         if len(kept) != len(lines):
             self.path.write_text("\n".join(kept) + "\n", encoding="utf-8")
+
+
+class AddedDates:
+    """When each dictionary entry was added, shown in the app window. Kept in a file of its own, so dictionary.txt
+    stays plain text that's easy to edit by hand. An entry it hasn't seen before counts from the day it first does."""
+
+    def __init__(self, path: Path = DICTIONARY_DATES_PATH) -> None:
+        self.path = path
+
+    def dates(self, lines: list[str], today: date | None = None) -> dict[str, str]:
+        """The day each entry was added, keyed by entry_key. Forgets entries that are gone."""
+        saved = self._read()
+        first_seen = (today or date.today()).isoformat()
+        dates = {entry_key(line): saved.get(entry_key(line), first_seen) for line in lines}
+        if dates != saved:
+            self._write(dates)
+        return dates
+
+    def moved(self, old: str, new: str) -> None:
+        """Keep an entry's date when it's changed."""
+        saved = self._read()
+        if entry_key(old) in saved:
+            saved[entry_key(new)] = saved.pop(entry_key(old))
+            self._write(saved)
+
+    def _read(self) -> dict[str, str]:
+        try:
+            saved = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        return {key: value for key, value in saved.items() if isinstance(value, str)} if isinstance(saved, dict) else {}
+
+    def _write(self, dates: dict[str, str]) -> None:
+        try:
+            self.path.write_text(json.dumps(dates, indent=1, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            log.warning("Couldn't save the dictionary's dates", exc_info=True)
+
+
+def fix_line(heard: str, write: str) -> str:
+    """A fix as it's written in the file."""
+    return f"{heard.strip()} {FIX_ARROW} {write.strip()}"
+
+
+def entry_key(line: str) -> str:
+    """The same for an entry however it's spaced in the file."""
+    return _normal(line)
 
 
 def _checked(text: str, what: str) -> str:

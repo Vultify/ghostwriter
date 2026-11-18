@@ -25,7 +25,12 @@ def api(tmp_path):
     (tmp_path / "dictionary.txt").write_text(STARTER, encoding="utf-8")
     return Api(settings_path=tmp_path / "settings.json", dictionary_path=tmp_path / "dictionary.txt",
                history_path=tmp_path / "history.db", startup_path=tmp_path / "startup.json",
-               login_folder=tmp_path / "Startup")
+               login_folder=tmp_path / "Startup", icons_folder=tmp_path / "app-icons",
+               dates_path=tmp_path / "dictionary-dates.json")
+
+
+def words_and_fixes(entries):
+    return [word["text"] for word in entries["words"]], [(fix["heard"], fix["write"]) for fix in entries["fixes"]]
 
 
 def test_state_has_everything_the_page_shows(api):
@@ -96,11 +101,10 @@ def test_dictionary_edits_keep_the_files_notes(api, tmp_path):
     api.add_word("  Brightwater  ")
     api.add_word("Brightwater")  # a duplicate is ignored
     entries = api.add_fix("my sequel,my SQL", "MySQL")
-    assert entries == {"words": ["Ghostwriter", "Brightwater"],
-                       "fixes": [{"heard": "sea whiz", "write": "CIWS"}, {"heard": "my sequel, my SQL", "write": "MySQL"}]}
+    assert words_and_fixes(entries) == (["Ghostwriter", "Brightwater"], [("sea whiz", "CIWS"), ("my sequel, my SQL", "MySQL")])
     api.remove_word("Ghostwriter")
     entries = api.remove_fix("sea whiz", "CIWS")
-    assert entries["words"] == ["Brightwater"] and len(entries["fixes"]) == 1
+    assert words_and_fixes(entries) == (["Brightwater"], [("my sequel, my SQL", "MySQL")])
     text = (tmp_path / "dictionary.txt").read_text(encoding="utf-8")
     assert text.startswith("# notes stay put\n") and "# a section" in text
 
@@ -109,7 +113,36 @@ def test_dictionary_entries_that_would_break_the_file_are_refused(api):
     for bad in ["", "   ", "a -> b", "# note", "two\nlines"]:
         assert "error" in api.add_word(bad)
     assert "error" in api.add_fix("sea whiz", "")
-    assert api.dictionary()["words"] == ["Ghostwriter"]
+    assert words_and_fixes(api.dictionary())[0] == ["Ghostwriter"]
+    api.add_word("Brightwater")
+    assert "error" in api.change_word("Brightwater", "Ghostwriter")  # already there
+    assert "error" in api.change_word("Brightwater", "a -> b")
+
+
+def test_dictionary_entries_change_in_place_and_keep_their_date(api, tmp_path):
+    (tmp_path / "dictionary-dates.json").write_text('{"Ghostwriter": "2026-11-01"}', encoding="utf-8")
+    entries = api.change_word("Ghostwriter", "Ghost Writer")
+    assert entries["words"] == [{"text": "Ghost Writer", "added": "2026-11-01"}]
+    entries = api.change_fix("sea whiz", "CIWS", "sea whiz, see whiz", "CIWS")
+    assert entries["fixes"][0]["heard"] == "sea whiz, see whiz" and entries["fixes"][0]["added"] == datetime.now().date().isoformat()
+    text = (tmp_path / "dictionary.txt").read_text(encoding="utf-8")
+    assert text == "# notes stay put\nGhost Writer\n\n# a section\nsea whiz, see whiz -> CIWS\n"
+
+
+def test_importing_adds_only_whats_new_and_skips_bad_lines(api, tmp_path):
+    source = tmp_path / "from a friend.txt"
+    source.write_text("# their notes\nGhostwriter\nSupabase\nget hub -> GitHub\n -> broken\nsea whiz -> CIWS\n",
+                      encoding="utf-8")
+
+    class Window:
+        def create_file_dialog(self, *args, **kwargs):
+            return (str(source),)
+
+    api._window = Window()
+    result = api.import_dictionary()
+    assert result["message"] == "Added 1 word and 1 fix."
+    assert words_and_fixes(result) == (["Ghostwriter", "Supabase"], [("sea whiz", "CIWS"), ("get hub", "GitHub")])
+    assert api.import_dictionary()["message"] == "Nothing new in that file."
 
 
 @pytest.mark.parametrize(("git", "latest", "status"), [
@@ -189,8 +222,10 @@ def test_the_page_changes_settings_and_the_dictionary(api, tmp_path):
             "document.getElementById('add-fix').requestSubmit()")
         run("document.getElementById('new-word').value = 'a -> b'; document.getElementById('add-word').requestSubmit()")
         results["error"] = run("document.getElementById('word-error').textContent")
-        run("document.querySelector('#word-list .remove[aria-label=\"Remove Ghostwriter\"]').click()")
-        results["chips"] = run("[...document.querySelectorAll('#word-list li')].map((li) => li.textContent).join('|')")
+        run("document.querySelector('#word-panel .remove[aria-label=\"Remove Ghostwriter\"]').click()")
+        results["chips"] = run("[...document.querySelectorAll('#word-panel .dict-word')].map((node) => node.textContent).join('|')")
+        run("showView('dictionary'); document.getElementById('import-export').click()")
+        results["menu"] = run("[...document.querySelectorAll('#row-menu .menu-item')].filter((item) => item.offsetParent).length")
 
     _open_page(api, drive, tmp_path)
 
@@ -202,6 +237,7 @@ def test_the_page_changes_settings_and_the_dictionary(api, tmp_path):
     assert results["hero_key"] == "Right Ctrl"
     assert "->" in results["error"]
     assert results["chips"] == "Brightwater"
+    assert results["menu"] == 2  # Import and Export, shown on the Dictionary page
     dictionary = (tmp_path / "dictionary.txt").read_text(encoding="utf-8")
     assert "my sequel -> MySQL" in dictionary and "Ghostwriter" not in dictionary.replace("# notes", "")
 

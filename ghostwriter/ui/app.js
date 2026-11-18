@@ -93,6 +93,11 @@ function bindPage() {
     button.addEventListener("click", () => api()[openers[button.dataset.open]]());
   });
   document.getElementById("open-dictionary-file").addEventListener("click", () => api().open_dictionary_file());
+  const importExport = document.getElementById("import-export");
+  importExport.addEventListener("click", () => openMenu(importExport, [
+    { label: "Import from a file…", choose: () => dictionaryFile("import_dictionary") },
+    { label: "Export to a file…", choose: () => dictionaryFile("export_dictionary") },
+  ]));
 
   document.getElementById("check-updates").addEventListener("click", checkForUpdates);
 
@@ -100,6 +105,14 @@ function bindPage() {
   document.getElementById("tab-fixes").addEventListener("click", () => showTab("fixes"));
   document.getElementById("add-word").addEventListener("submit", addWord);
   document.getElementById("add-fix").addEventListener("submit", addFix);
+  document.getElementById("dictionary-search").addEventListener("input", (event) => {
+    dictionaryView.query = event.target.value.trim().toLowerCase();
+    renderEntries();
+  });
+  document.getElementById("dictionary-sort").addEventListener("change", (event) => {
+    dictionaryView.sort = event.target.value;
+    renderEntries();
+  });
 
   let typing = null;
   document.getElementById("history-search").addEventListener("input", (event) => {
@@ -367,50 +380,134 @@ async function drawMicLevel() {
 
 // Dictionary
 
+// What the Dictionary page shows: which tab, the search, the sort, and the entry being changed, if any.
+const dictionaryView = { entries: { words: [], fixes: [] }, tab: "words", query: "", sort: "az", editing: null };
+const addedFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
+const BOOK_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5C5 4.5 8.5 4.5 12 6.5c3.5-2 7-2 9-1V19c-2-1-5.5-1-9 1-3.5-2-7-2-9-1z"/><path d="M12 6.5V20"/></svg>';
+const SWAP_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14"/><path d="M14 4l4 4-4 4"/><path d="M20 16H6"/><path d="M10 12l-4 4 4 4"/></svg>';
+const PENCIL_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>';
+const TRASH_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/><path d="M9 7V4h6v3"/></svg>';
+
 function showTab(name) {
-  const words = name === "words";
-  document.getElementById("tab-words").setAttribute("aria-selected", String(words));
-  document.getElementById("tab-fixes").setAttribute("aria-selected", String(!words));
-  document.getElementById("panel-words").hidden = !words;
-  document.getElementById("panel-fixes").hidden = words;
+  dictionaryView.tab = name;
+  dictionaryView.editing = null;
+  const isWords = name === "words";
+  document.getElementById("tab-words").setAttribute("aria-selected", String(isWords));
+  document.getElementById("tab-fixes").setAttribute("aria-selected", String(!isWords));
+  document.getElementById("word-panel").hidden = !isWords;
+  document.getElementById("fix-panel").hidden = isWords;
+  document.getElementById("dictionary-search").placeholder = isWords ? "Search words…" : "Search fixes…";
+  renderEntries();
 }
 
 function renderDictionary(entries) {
+  dictionaryView.entries = entries;
   document.getElementById("word-count").textContent = entries.words.length;
   document.getElementById("fix-count").textContent = entries.fixes.length;
-
-  const words = entries.words.map((word) => {
-    const chip = Object.assign(document.createElement("li"), { className: "chip" });
-    chip.append(word, removeButton(`Remove ${word}`, () => editDictionary("remove_word", [word], "word-error")));
-    return chip;
-  });
-  document.getElementById("word-list").replaceChildren(...words);
-  document.getElementById("no-words").hidden = words.length > 0;
-
-  const fixes = entries.fixes.map((fix) => {
-    const row = Object.assign(document.createElement("li"), { className: "fix-row" });
-    const heard = Object.assign(document.createElement("span"), { textContent: fix.heard });
-    const arrow = Object.assign(document.createElement("span"), { className: "arrow", textContent: "→" });
-    arrow.setAttribute("aria-label", "becomes");
-    const write = Object.assign(document.createElement("span"), { className: "write", textContent: fix.write });
-    row.append(heard, arrow, write, removeButton(`Remove the fix for ${fix.write}`, () => editDictionary("remove_fix", [fix.heard, fix.write], "fix-error")));
-    return row;
-  });
-  document.getElementById("fix-list").replaceChildren(...fixes);
-  document.getElementById("no-fixes").hidden = fixes.length > 0;
+  renderEntries();
 }
 
-function removeButton(label, onClick) {
-  const button = Object.assign(document.createElement("button"), { type: "button", className: "remove" });
-  button.setAttribute("aria-label", label);
-  button.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
-  button.addEventListener("click", onClick);
-  return button;
+// Both lists, searched and sorted, with the heading and column names of the open tab. Fixes are matched on both
+// what it hears and what it writes.
+function renderEntries() {
+  const isWords = dictionaryView.tab === "words";
+  const shownWords = listEntries(dictionaryView.entries.words, true);
+  const shownFixes = listEntries(dictionaryView.entries.fixes, false);
+  document.getElementById("word-panel").replaceChildren(...shownWords.map((entry) => row(entry, true)));
+  document.getElementById("fix-panel").replaceChildren(...shownFixes.map((entry) => row(entry, false)));
+
+  const all = isWords ? dictionaryView.entries.words : dictionaryView.entries.fixes;
+  document.getElementById("list-title").textContent = `${isWords ? "Your words" : "Your fixes"} (${all.length})`;
+  const head = document.getElementById("table-head");
+  head.className = `table-head ${isWords ? "words" : "fixes"}`;
+  head.replaceChildren(...(isWords ? ["", "Word", "Type", "Added", ""] : ["", "When it hears", "", "Write", "Type", "Added", ""])
+    .map((label) => element("span", "", label)));
+  const empty = document.getElementById("no-entries");
+  empty.hidden = (isWords ? shownWords : shownFixes).length > 0;
+  empty.textContent = all.length
+    ? "Nothing matches."
+    : isWords ? "No words yet. Add names or terms Whisper should spell your way." : "No fixes yet. Add one when Whisper keeps writing a word the wrong way.";
+}
+
+function listEntries(entries, isWords) {
+  const text = (entry) => (isWords ? entry.text : `${entry.heard} ${entry.write}`).toLowerCase();
+  const name = (entry) => (isWords ? entry.text : entry.write);
+  const order = {
+    az: (a, b) => name(a).localeCompare(name(b), undefined, { sensitivity: "base" }),
+    za: (a, b) => name(b).localeCompare(name(a), undefined, { sensitivity: "base" }),
+    new: (a, b) => b.added.localeCompare(a.added),
+    old: (a, b) => a.added.localeCompare(b.added),
+  }[dictionaryView.sort];
+  return entries.filter((entry) => text(entry).includes(dictionaryView.query)).sort(order);
+}
+
+function row(entry, isWords) {
+  return dictionaryView.editing === entry ? editRow(entry, isWords) : entryRow(entry, isWords);
+}
+
+function entryRow(entry, isWords) {
+  const row = element("li", `dict-row ${isWords ? "words" : "fixes"}`);
+  const icon = element("span", "dict-icon");
+  icon.innerHTML = isWords ? BOOK_ICON : SWAP_ICON;
+  row.append(icon);
+  if (isWords) {
+    row.append(element("span", "dict-word", entry.text));
+  } else {
+    const arrow = element("span", "arrow", "→");
+    arrow.setAttribute("aria-label", "becomes");
+    row.append(element("span", "dict-heard", entry.heard), arrow, element("span", "dict-word", entry.write));
+  }
+  const label = isWords ? entry.text : `the fix for ${entry.write}`;
+  const change = iconButton("row-button", `Change ${label}`, PENCIL_ICON);
+  change.addEventListener("click", () => { dictionaryView.editing = entry; renderEntries(); });
+  const remove = iconButton("row-button remove", `Remove ${label}`, TRASH_ICON);
+  remove.addEventListener("click", () => (isWords
+    ? editDictionary("remove_word", [entry.text], "word-error")
+    : editDictionary("remove_fix", [entry.heard, entry.write], "fix-error")));
+  row.append(element("span", "type-badge", isWords ? "Word" : "Fix"), element("span", "added", addedDay(entry.added)), change, remove);
+  return row;
+}
+
+// A row being changed: its text in boxes, saved with Enter or the button, and left alone with Escape.
+function editRow(entry, isWords) {
+  const row = element("li", `dict-row editing ${isWords ? "words" : "fixes"}`);
+  const form = element("form", "edit-form");
+  const box = (value, label) => {
+    const input = Object.assign(document.createElement("input"), { className: "text-input", value, spellcheck: false, autocomplete: "off" });
+    input.setAttribute("aria-label", label);
+    return input;
+  };
+  const inputs = isWords ? [box(entry.text, "Word")] : [box(entry.heard, "When it hears"), box(entry.write, "Write")];
+  const save = Object.assign(element("button", "button primary", "Save"), { type: "submit" });
+  const cancel = Object.assign(element("button", "button", "Cancel"), { type: "button" });
+  const stop = () => { dictionaryView.editing = null; renderEntries(); };
+  cancel.addEventListener("click", stop);
+  form.addEventListener("keydown", (event) => { if (event.key === "Escape") { event.stopPropagation(); stop(); } });
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const values = inputs.map((input) => input.value);
+    const saved = isWords
+      ? await editDictionary("change_word", [entry.text, ...values], "word-error")
+      : await editDictionary("change_fix", [entry.heard, entry.write, ...values], "fix-error");
+    if (saved) stop();
+  });
+  if (isWords) form.append(inputs[0]);
+  else form.append(inputs[0], element("span", "arrow", "→"), inputs[1]);
+  form.append(save, cancel);
+  row.append(form);
+  requestAnimationFrame(() => inputs[0].focus());
+  return row;
+}
+
+function addedDay(day) {
+  const [year, month, date] = day.split("-").map(Number);
+  return addedFormat.format(new Date(year, month - 1, date));
 }
 
 async function editDictionary(action, values, errorId) {
   const entries = await api()[action](...values);
   showError(errorId, entries.error);
+  if (entries.error) dictionaryView.editing = null;
   renderDictionary(entries);
   return !entries.error;
 }
@@ -418,7 +515,10 @@ async function editDictionary(action, values, errorId) {
 async function addWord(event) {
   event.preventDefault();
   const input = document.getElementById("new-word");
-  if (await editDictionary("add_word", [input.value], "word-error")) input.value = "";
+  if (await editDictionary("add_word", [input.value], "word-error")) {
+    input.value = "";
+    if (dictionaryView.tab !== "words") showTab("words");
+  }
   input.focus();
 }
 
@@ -429,8 +529,17 @@ async function addFix(event) {
   if (await editDictionary("add_fix", [heard.value, write.value], "fix-error")) {
     heard.value = "";
     write.value = "";
+    if (dictionaryView.tab !== "fixes") showTab("fixes");
   }
   heard.focus();
+}
+
+async function dictionaryFile(action) {
+  const result = await api()[action]();
+  if (result.words) renderDictionary(result);
+  const note = document.getElementById("dictionary-note");
+  note.textContent = result.message || "";
+  note.hidden = !result.message;
 }
 
 function showError(id, message) {

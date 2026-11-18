@@ -12,10 +12,10 @@ from pathlib import Path
 
 from ghostwriter import __version__, app_icons, models, sounds, startup, updates
 from ghostwriter.audio import loudness
-from ghostwriter.dictionary import DictionaryFile
+from ghostwriter.dictionary import AddedDates, DictionaryFile, entry_key, fix_line
 from ghostwriter.history import FILTER_APPS, MENU_APPS, PAGE_SIZE, History
-from ghostwriter.paths import (APP_ICONS_DIR, DICTIONARY_PATH, HISTORY_PATH, ICON_PATH, LOG_PATH, PROJECT,
-                               SETTINGS_PATH, STARTUP_PATH, UI_DIR, WEB_DATA_DIR, WINDOW_LOG_PATH)
+from ghostwriter.paths import (APP_ICONS_DIR, DICTIONARY_DATES_PATH, DICTIONARY_PATH, HISTORY_PATH, ICON_PATH,
+                               LOG_PATH, PROJECT, SETTINGS_PATH, STARTUP_PATH, UI_DIR, WEB_DATA_DIR, WINDOW_LOG_PATH)
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import HANDS_FREE_MINUTES, HOTKEYS, OTHER_SOUNDS, Settings
 from ghostwriter.system import app_window, desktop, processes, shortcuts
@@ -37,10 +37,12 @@ class Api:
 
     def __init__(self, settings_path: Path = SETTINGS_PATH, dictionary_path: Path = DICTIONARY_PATH,
                  history_path: Path = HISTORY_PATH, startup_path: Path = STARTUP_PATH,
-                 login_folder: Path | None = None, icons_folder: Path = APP_ICONS_DIR) -> None:
+                 login_folder: Path | None = None, icons_folder: Path = APP_ICONS_DIR,
+                 dates_path: Path = DICTIONARY_DATES_PATH) -> None:
         self._settings_path = settings_path
         self._icons_folder = icons_folder
         self._dictionary = DictionaryFile(dictionary_path)
+        self._dates = AddedDates(dates_path)
         self._history = History(history_path)
         self._startup_path = startup_path
         self._login_folder = login_folder  # where the start at login shortcut goes; None is the system's own
@@ -94,7 +96,14 @@ class Api:
         return self.state()
 
     def dictionary(self) -> dict:
-        return self._dictionary.entries()
+        """The words and fixes, each with the day it was added."""
+        entries = self._dictionary.entries()
+        lines = [*entries["words"], *(fix_line(fix["heard"], fix["write"]) for fix in entries["fixes"])]
+        added = self._dates.dates(lines)
+        return {
+            "words": [{"text": word, "added": added[entry_key(word)]} for word in entries["words"]],
+            "fixes": [{**fix, "added": added[entry_key(fix_line(fix["heard"], fix["write"]))]} for fix in entries["fixes"]],
+        }
 
     def add_word(self, word: str) -> dict:
         return self._edit(self._dictionary.add_word, word)
@@ -107,6 +116,44 @@ class Api:
 
     def remove_fix(self, heard: str, write: str) -> dict:
         return self._edit(self._dictionary.remove_fix, heard, write)
+
+    def change_word(self, old: str, new: str) -> dict:
+        return self._edit(lambda: self._dates.moved(old, self._dictionary.change_word(old, new)))
+
+    def change_fix(self, old_heard: str, old_write: str, heard: str, write: str) -> dict:
+        return self._edit(lambda: self._dates.moved(fix_line(old_heard, old_write),
+                                                    self._dictionary.change_fix(old_heard, old_write, heard, write)))
+
+    def import_dictionary(self) -> dict:
+        """Add the words and fixes from a text file the person picks."""
+        import webview
+
+        picked = self._window.create_file_dialog(webview.FileDialog.OPEN, file_types=("Text files (*.txt)", "All files (*.*)"))
+        if not picked:
+            return self.dictionary()
+        try:
+            text = Path(picked[0]).read_text(encoding="utf-8-sig")
+        except (OSError, UnicodeError):
+            return {**self.dictionary(), "message": "Couldn't read that file. Pick a plain text file."}
+        words, fixes = self._dictionary.merge(text)
+        found = " and ".join(part for part in (_count(words, "word"), _count(fixes, "fix", "fixes")) if part)
+        return {**self.dictionary(), "message": f"Added {found}." if found else "Nothing new in that file."}
+
+    def export_dictionary(self) -> dict:
+        """Save a copy of dictionary.txt where the person picks."""
+        import webview
+
+        self._dictionary.current()  # makes sure the file exists first
+        picked = self._window.create_file_dialog(webview.FileDialog.SAVE, save_filename="dictionary.txt",
+                                                 file_types=("Text files (*.txt)",))
+        target = picked if isinstance(picked, str) else (picked[0] if picked else None)
+        if not target:
+            return {"message": ""}
+        try:
+            Path(target).write_text(self._dictionary.path.read_text(encoding="utf-8"), encoding="utf-8")
+        except OSError:
+            return {"message": "Couldn't save there. Try another folder."}
+        return {"message": f"Saved a copy as {Path(target).name}."}
 
     def set_start_at_login(self, on: bool) -> dict:
         shortcuts.set_start_at_login(bool(on), self._login_folder)
@@ -207,8 +254,8 @@ class Api:
         try:
             change(*values)
         except ValueError as error:
-            return {**self._dictionary.entries(), "error": str(error)}
-        return self._dictionary.entries()
+            return {**self.dictionary(), "error": str(error)}
+        return self.dictionary()
 
     def _has_nvidia(self, status: dict) -> bool:
         """Whether the tray app runs faster-whisper on an NVIDIA card. Its own answer is in startup.json; before
@@ -242,6 +289,10 @@ class Api:
         if device == PROCESSOR:
             return "Your processor (slow)"
         return device or "Your graphics card"
+
+
+def _count(number: int, one: str, many: str | None = None) -> str:
+    return "" if not number else f"1 {one}" if number == 1 else f"{number} {many or one + 's'}"
 
 
 def open_window() -> None:
