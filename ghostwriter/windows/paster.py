@@ -72,6 +72,30 @@ def app_icon(program: App | None, size: int = 48) -> bytes | None:
     icon = wintypes.HICON()
     if shell32.SHDefExtractIconW(str(program), 0, 0, ctypes.byref(icon), None, size) != 0 or not icon:
         return None
+    try:
+        on_black, on_white = _draw_icon(icon, size, 0x00), _draw_icon(icon, size, 0xFF)
+    finally:
+        user32.DestroyIcon(icon)
+    if on_black is None or on_white is None:
+        return None
+
+    import numpy as np  # only loaded when a new app needs its icon
+    from PIL import Image
+
+    # Drawn over black and over white, a pixel shows how opaque it is by how little the background shows through.
+    # That works the same for icons with soft edges and for old icons with only a mask, and keeps their black parts.
+    black = np.frombuffer(on_black, np.uint8).reshape(size, size, 4)[..., :3].astype(np.float32)
+    white = np.frombuffer(on_white, np.uint8).reshape(size, size, 4)[..., :3].astype(np.float32)
+    alpha = np.clip(255 - (white - black).max(axis=2), 0, 255)
+    color = np.where(alpha[..., None] > 0, black * 255 / np.maximum(alpha[..., None], 1), 0)
+    rgba = np.dstack([np.clip(color, 0, 255)[..., ::-1], alpha]).round().astype(np.uint8)  # BGR to RGB
+    png = io.BytesIO()
+    Image.fromarray(rgba, "RGBA").save(png, "PNG")
+    return png.getvalue()
+
+
+def _draw_icon(icon: wintypes.HICON, size: int, background: int) -> bytes | None:
+    """The icon drawn over a solid gray level, as top-down BGRA pixels."""
     header = win32.BITMAPINFOHEADER(biSize=ctypes.sizeof(win32.BITMAPINFOHEADER), biWidth=size, biHeight=-size,
                                     biPlanes=1, biBitCount=32)
     bits = ctypes.c_void_p()
@@ -81,26 +105,16 @@ def app_icon(program: App | None, size: int = 48) -> bytes | None:
     try:
         if not bitmap:
             return None
+        ctypes.memset(bits, background, size * size * 4)
         previous = gdi32.SelectObject(canvas, bitmap)
         drawn = user32.DrawIconEx(canvas, 0, 0, icon, size, size, 0, None, win32.DI_NORMAL)
-        pixels = bytearray(ctypes.string_at(bits, size * size * 4))
+        pixels = ctypes.string_at(bits, size * size * 4)
         gdi32.SelectObject(canvas, previous)
+        return pixels if drawn else None
     finally:
         if bitmap:
             gdi32.DeleteObject(bitmap)
         gdi32.DeleteDC(canvas)
-        user32.DestroyIcon(icon)
-    if not drawn:
-        return None
-    if not any(pixels[3::4]):  # an old icon without transparency: everything it drew is solid
-        pixels[3::4] = bytes(255 if any(pixels[i:i + 3]) else 0 for i in range(0, len(pixels), 4))
-
-    from PIL import Image  # only loaded when a new app needs its icon
-
-    picture = Image.frombuffer("RGBA", (size, size), bytes(pixels), "raw", "BGRA", 0, 1)
-    png = io.BytesIO()
-    picture.save(png, "PNG")
-    return png.getvalue()
 
 
 def _file_details(program: Path) -> dict[str, str]:

@@ -55,3 +55,16 @@ def test_windows_reads_a_programs_icon_as_a_png():
     png = paster.app_icon(Path(r"C:\Windows\System32\notepad.exe"))
     assert png and png.startswith(b"\x89PNG")
     assert paster.app_icon(Path(r"C:\no such folder\nothing.exe")) is None
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="reads a Windows program's icon")
+def test_windows_icons_keep_soft_edges_and_their_black_parts():
+    from io import BytesIO
+
+    from PIL import Image
+
+    notepad = Image.open(BytesIO(paster.app_icon(Path(r"C:\Windows\System32\notepad.exe")))).convert("RGBA")
+    edges = [pixel for pixel in notepad.get_flattened_data() if 0 < pixel[3] < 255]
+    assert edges and max(sum(pixel[:3]) for pixel in edges) > 150  # soft edges keep their color, not a dark halo
+    console = Image.open(BytesIO(paster.app_icon(Path(r"C:\Windows\System32\cmd.exe")))).convert("RGBA")
+    assert any(pixel == (0, 0, 0, 255) for pixel in console.get_flattened_data())  # the console's black stays solid
