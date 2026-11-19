@@ -3,6 +3,7 @@ clipboard back. Hyprland presses the keys, so they work in every app, including 
 which app is in front, for History."""
 
 import functools
+import io
 import logging
 import os
 import re
@@ -10,7 +11,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from ghostwriter.linux import desktop_files, hotkey, hyprland
+from ghostwriter.linux import desktop_files, hotkey, hyprland, icon_theme
 from ghostwriter.linux.clipboard import Clipboard, ClipboardError
 from ghostwriter.paths import PROJECT
 
@@ -96,19 +97,62 @@ def app_name(app: App | None) -> str:
         return "Unknown app"
     if app.program and app.program.is_relative_to(PROJECT):
         return "Ghostwriter"  # the app window's own Python
-    if entry := desktop_files.find(app.app_id):
-        return entry.name
-    if web_app := _WEB_APP.match(app.app_id):
-        address = web_app["address"]
-        return entry.name if (entry := desktop_files.opening(address)) else address
     if app.app_id.startswith(_STEAM_GAME) and app.title:
         return app.title
+    if entry := _launcher_entry(app):
+        return entry.name
+    if web_app := _WEB_APP.match(app.app_id):
+        return web_app["address"]
     return app.app_id or (app.program.stem if app.program else "Unknown app")
 
 
-def app_icon(app: App | None) -> bytes | None:
-    """An app's icon as a PNG, for History. Not read on Linux yet, so History shows the app's first letter."""
+def app_icon(app: App | None, size: int = 48) -> bytes | None:
+    """An app's icon as a square PNG, for History: the one its launcher entry names, found in the desktop's icon
+    theme. None when it has none."""
+    if app is None:
+        return None
+    entry = _launcher_entry(app)
+    names = [entry.icon] if entry and entry.icon else []
+    if app.app_id.startswith(_STEAM_GAME):
+        names.append(f"steam_icon_{app.app_id.removeprefix(_STEAM_GAME)}")  # what Steam installs for each game
+    names += [app.app_id, app.app_id.lower(), app.program.stem if app.program else ""]  # icons named after the app
+    path = next((found for name in dict.fromkeys(names) if (found := icon_theme.find(name, size))), None)
+    return _square_png(path, size) if path else None
+
+
+def _launcher_entry(app: App) -> desktop_files.DesktopFile | None:
+    """The launcher entry for the app in front: by its app id, a web app by its address, a Steam game by its id."""
+    if entry := desktop_files.find(app.app_id):
+        return entry
+    if web_app := _WEB_APP.match(app.app_id):
+        return desktop_files.opening(web_app["address"])
+    if app.app_id.startswith(_STEAM_GAME):
+        return desktop_files.opening(f"rungameid/{app.app_id.removeprefix(_STEAM_GAME)}")  # steam://rungameid/N
     return None
+
+
+def _square_png(path: Path, size: int) -> bytes | None:
+    """An icon file (PNG, SVG, or XPM) drawn at a size, centered on a clear square if it isn't square itself."""
+    import gi
+
+    gi.require_version("GdkPixbuf", "2.0")
+    from gi.repository import GdkPixbuf, GLib
+    from PIL import Image
+
+    try:
+        picture = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(path), size, size, True)
+        ok, data = picture.save_to_bufferv("png", [], [])
+    except GLib.Error:
+        log.warning("Couldn't read the icon %s", path, exc_info=True)
+        return None
+    if not ok:
+        return None
+    with Image.open(io.BytesIO(data)) as drawn:
+        square = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        square.paste(drawn.convert("RGBA"), ((size - drawn.width) // 2, (size - drawn.height) // 2))
+    png = io.BytesIO()
+    square.save(png, "PNG")
+    return png.getvalue()
 
 
 def paste_keys(window: dict) -> tuple[str, str]:

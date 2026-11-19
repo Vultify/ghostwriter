@@ -1,4 +1,4 @@
-"""Reading app launcher entries (.desktop files), which hold each app's everyday name."""
+"""Reading app launcher entries (.desktop files), which hold each app's everyday name and icon."""
 
 import functools
 import os
@@ -12,6 +12,7 @@ class DesktopFile:
     name: str
     command: str
     window_class: str  # StartupWMClass, for apps whose app id differs from the file name
+    icon: str = ""  # an icon theme name, or a path to the picture
 
 
 def find(app_id: str) -> DesktopFile | None:
@@ -64,4 +65,5 @@ def _read(path: Path) -> DesktopFile | None:
             fields.setdefault(key.strip(), value.strip())
     if not fields.get("Name"):
         return None
-    return DesktopFile(path.stem, fields["Name"], fields.get("Exec", ""), fields.get("StartupWMClass", ""))
+    return DesktopFile(path.stem, fields["Name"], fields.get("Exec", ""), fields.get("StartupWMClass", ""),
+                       fields.get("Icon", ""))
