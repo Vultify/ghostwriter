@@ -3,7 +3,7 @@
 import time
 import wave
 
-from conftest import press_key, pump_until
+from conftest import needs_speakers, press_key, pump_until
 from fakes import FakePaster, FakeRecorder, FakeTranscriber
 
 from ghostwriter import sounds
@@ -45,6 +45,7 @@ def test_tray_starts_switches_state_and_stops(tmp_path):
     tray.stop()
 
 
+@needs_speakers
 def test_every_sound_style_is_short_and_plays():
     for style in sounds.STYLES:
         for part in ("start", "stop"):

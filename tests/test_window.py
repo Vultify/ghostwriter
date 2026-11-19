@@ -5,8 +5,9 @@ import time
 from datetime import datetime, timedelta
 
 import pytest
+from conftest import HAS_MIC, needs_mic
 
-from ghostwriter import startup, updates, window
+from ghostwriter import models, startup, updates, window
 from ghostwriter.history import PAGE_SIZE, History
 from ghostwriter.paths import ICON_PATH, UI_DIR
 from ghostwriter.settings import HOTKEYS, Settings
@@ -46,7 +47,7 @@ def test_state_has_everything_the_page_shows(api):
     assert state["firstRun"] is False
     assert state["hotkeys"] == list(HOTKEYS)
     assert state["handsFreeMinutes"] == [5, 15, 30]
-    assert state["microphones"] and state["gpu"]
+    assert state["gpu"] and (state["microphones"] or not HAS_MIC)
     assert state["engine"] in state["engines"] and state["modelSize"] in ("1.6 GB", "0.6 GB")
 
 
@@ -64,8 +65,9 @@ def test_settings_shows_the_graphics_whisper_cpp_picked_or_that_its_on_the_proce
     assert api._runs_on("whisper.cpp", startup.read(api._startup_path)) == "Your processor (slow)"
 
 
-def test_the_window_follows_the_tray_apps_answer_on_nvidia(api, tmp_path):
+def test_the_window_follows_the_tray_apps_answer_on_nvidia(api, tmp_path, monkeypatch):
     """If the tray app found the NVIDIA card unusable, Settings shows whisper.cpp's compressed model, not a choice."""
+    monkeypatch.setattr(models, "whisper_cpp_installed", lambda: True)  # install.bat always adds it
     startup.write(tmp_path / "startup.json", model="ready", engine="whisper.cpp", has_nvidia=False)
     state = api.state()
     assert (state["engines"], state["engine"]) == (["whisper.cpp"], "whisper.cpp")
@@ -75,6 +77,7 @@ def test_the_window_follows_the_tray_apps_answer_on_nvidia(api, tmp_path):
     assert (state["model"], state["modelSize"]) == ("Whisper large-v3-turbo", "1.6 GB")
 
 
+@needs_mic
 def test_the_mic_test_opens_the_mic_and_reports_its_level(api):
     assert api.start_mic_test()
     time.sleep(0.3)
@@ -242,6 +245,7 @@ def test_the_page_changes_settings_and_the_dictionary(api, tmp_path):
     assert "my sequel -> MySQL" in dictionary and "Ghostwriter" not in dictionary.replace("# notes", "")
 
 
+@needs_mic
 def test_the_settings_page_sounds_pill_start_with_windows_and_mic_test(api, tmp_path):
     results = {}
 
