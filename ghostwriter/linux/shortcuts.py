@@ -3,13 +3,15 @@ autostart folder while "Start at login" is on. Both are standard XDG desktop ent
 KDE all read the same applications folder, and they all start what's in the autostart folder at login.
 
 Run `python -m ghostwriter.linux.shortcuts` from the project folder to add the launcher entry. It also refreshes this
-copy's Start at login entry, and leaves one that starts another copy alone."""
+copy's Start at login entry, and leaves one that starts another copy alone. On Omarchy it adds the `ghostwriter`
+command and makes Ghostwriter one of the dictation apps in Omarchy's menu (see omarchy_dictation.py)."""
 
 import os
 from pathlib import Path
 
 from gi.repository import GLib
 
+from ghostwriter.linux import omarchy_dictation
 from ghostwriter.linux.desktop_files import data_home
 from ghostwriter.paths import ICON_PATH, PROJECT
 
@@ -121,3 +123,9 @@ if __name__ == "__main__":
     if starts_at_login():
         set_start_at_login(True)
         print(f"Refreshed start at login: {autostart_folder() / ENTRY_NAME}")
+    if Path("/usr/share/omarchy").is_dir():
+        for command in omarchy_dictation.add_commands():
+            print(f"Added the {command.name} command: {command}")
+        if omarchy_dictation.add_menu_row():
+            print(f"Added Ghostwriter to Omarchy's dictation apps ({omarchy_dictation.MENU_PLACE}): "
+                  f"{omarchy_dictation.menu_path()}")

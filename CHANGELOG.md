@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The listening pill works on Linux, at the bottom center of the screen you're on, with the same live mic level, typing dots, and stop square as on Windows. It never takes the keyboard and lets clicks through. It needs `gtk4-layer-shell`, and works on Omarchy, KDE, and other desktops with overlay layers; GNOME has none, so it doesn't show there yet.
 - On Omarchy, Ghostwriter has its own panel in the bar, in Omarchy's style. The ghost turns red while it listens, and a click opens the Dictation switch, switches for sounds, the listening pill, lowering other sounds, and history, and the hotkey. Right click opens the app. `scripts/install_omarchy_panel.sh` puts it in the bar in place of the tray icon.
 - History shows each app's own icon next to its dictations, saved the first time you dictate into it. On Linux it's the icon the app's launcher entry names, from your icon theme, so web apps and Steam games get theirs too.
+- On Omarchy, Ghostwriter can be the dictation app: pick it in Omarchy's menu under Setup > Defaults > Dictation. Omarchy's own dictation keys then run it: hold Right Alt to talk, or press Alt + Space to start and stop hands free. They work without the `input` group, and if Ghostwriter isn't running, a press starts it in the bar. The tray menu, Omarchy's panel, and Settings show Omarchy's keys instead of the hotkey picker. `python -m ghostwriter.linux.shortcuts` adds Ghostwriter to that menu, along with a `ghostwriter` command.
 - Delete a single dictation from History with the menu on its row.
 - History shows your totals: dictations, words, and how far back it goes. Ctrl+F jumps to its search.
 - Change a dictionary word or fix in place, see when each was added, and search or sort the list. Import / Export saves a copy of your dictionary or adds the words and fixes from another file.
@@ -27,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 - The app window has a fresh look: brighter cards, a deeper green for what's selected, icons on every section, and larger, easier to read controls. Home leads with a big hotkey card, History has a card per day with one row per dictation, the Dictionary has its own cards for adding words and fixes over a table of everything in it, and Settings groups its options in labeled cards.
 - The app window opens larger (1360 by 920, smaller on small screens), so every page fits without crowding.
+- On Linux, Settings and the welcome no longer claim the hotkey is hidden from the app in front, since only Windows hides it there.
 
 ## [1.6.0] - 2026-11-16
 

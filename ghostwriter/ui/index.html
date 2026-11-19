@@ -71,7 +71,7 @@
         </div>
         <div class="hero-text">
           <span class="badge" id="hero-status">Ready</span>
-          <div class="hero-title">Hold <kbd data-text="hotkey"></kbd> to talk</div>
+          <div class="hero-title"><span id="hero-verb">Hold</span> <kbd data-text="hotkey"></kbd> to talk</div>
           <p class="hero-hint" id="hero-hint"></p>
           <p class="hint hero-error" id="home-mic-hint" role="alert" hidden></p>
         </div>
@@ -301,7 +301,7 @@
           <section class="card settings-card" aria-labelledby="hotkey-title">
             <div class="card-title">
               <h2 id="hotkey-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01"/><path d="M10 10h.01"/><path d="M14 10h.01"/><path d="M18 10h.01"/><path d="M8 14h8"/></svg>Hotkey</h2>
-              <p class="card-desc">Hold to talk. The key is hidden from the app in front, so it never types.</p>
+              <p class="card-desc" id="hotkey-desc">Hold to talk. The key is hidden from the app in front, so it never types.</p>
             </div>
             <fieldset class="picker keys" id="hotkeys">
               <legend class="sr-only">Hotkey</legend>
@@ -443,7 +443,7 @@
 
     <section class="setup-step" data-step="2" aria-labelledby="key-title" hidden>
       <h1 id="key-title">Pick your talk key</h1>
-      <p>Hold it to talk. It's swallowed, so it never types into the app you're in.</p>
+      <p id="key-text">Hold it to talk. It's swallowed, so it never types into the app you're in.</p>
       <fieldset class="picker" id="setup-hotkeys">
         <legend class="sr-only">Talk key</legend>
       </fieldset>

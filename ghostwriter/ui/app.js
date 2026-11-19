@@ -163,8 +163,9 @@ function render(next) {
   app.classList.toggle("system-frame", !state.ownFrame);  // the desktop draws the frame
   applyTheme();
 
-  const text = { hotkey: settings.hotkey, version: `v${state.version}`, model: state.model, gpu: state.gpu,
-    system: state.system, modelSize: `${state.modelSize}  •  ${state.modelDownloaded ? "Downloaded" : "Downloading"}` };
+  const keys = desktopKeys();
+  const text = { hotkey: keys ? keys.hold || keys.toggle : settings.hotkey, version: `v${state.version}`,
+    model: state.model, gpu: state.gpu, system: state.system, modelSize: `${state.modelSize}  •  ${state.modelDownloaded ? "Downloaded" : "Downloading"}` };
   document.querySelectorAll("[data-text]").forEach((node) => { node.textContent = text[node.dataset.text]; });
   document.getElementById("runs-on-label").textContent = state.gpu.startsWith("Your processor") ? "Runs on" : "GPU";
 
@@ -172,9 +173,9 @@ function render(next) {
     button.setAttribute("aria-pressed", String(settings[button.dataset.setting]));
   });
 
-  document.getElementById("hero-hint").textContent = settings.hands_free
-    ? "Double tap for hands free. Tap once more to stop and paste."
-    : "Hands free is off, so quick taps are simply ignored.";
+  document.getElementById("hero-hint").textContent = heroHint(settings, keys);
+  document.getElementById("hero-verb").textContent = keys && !keys.hold ? "Press" : "Hold";
+  showKeyWording(keys);
   const style = settings.sound[0].toUpperCase() + settings.sound.slice(1);
   document.getElementById("quick-sound-hint").textContent = `${style} on start and stop`;
 
@@ -185,7 +186,7 @@ function render(next) {
   fillHotkeys("setup-hotkeys", settings.hotkey);
   document.querySelectorAll("#themes input").forEach((input) => { input.checked = input.value === settings.theme; });
   document.getElementById("history-off").hidden = settings.history;
-  document.getElementById("setup-tip").hidden = !settings.hands_free;
+  document.getElementById("setup-tip").hidden = !settings.hands_free && !keys;
   document.getElementById("start-at-login-label").textContent = `Start with ${state.system}`;
   document.getElementById("start-at-login").setAttribute("aria-pressed", String(state.startAtLogin));
   fillSoundStyles(settings);
@@ -278,6 +279,47 @@ function fillMinutes(settings) {
   select.replaceChildren(...state.handsFreeMinutes.map((minutes) => new Option(`${minutes} minutes`, String(minutes))));
   select.value = String(settings.hands_free_minutes);
   select.disabled = !settings.hands_free;
+}
+
+// The desktop's own dictation keys while they drive Ghostwriter, with each key name and menu path kept on one line.
+function desktopKeys() {
+  const keys = state.desktopKeys;
+  if (!keys) return null;
+  const together = (name) => name && name.replaceAll(" ", "\u00a0");
+  return { ...keys, hold: together(keys.hold), toggle: together(keys.toggle), change: together(keys.change) };
+}
+
+function heroHint(settings, keys) {
+  if (keys && !keys.hold) return "Press it again to stop and paste.";
+  if (keys) {
+    return settings.hands_free ? `Press ${keys.toggle} or double tap for hands free.` : `Press ${keys.toggle} for hands free.`;
+  }
+  return settings.hands_free
+    ? "Double tap for hands free. Tap once more to stop and paste."
+    : "Hands free is off, so quick taps are simply ignored.";
+}
+
+// What the Hotkey card and the welcome say about the key. Windows hides it from the app in front; elsewhere the app
+// sees it too. While the desktop's own dictation keys drive Ghostwriter, they're picked in its menu, not here.
+function showKeyWording(keys) {
+  const card = document.getElementById("hotkey-desc");
+  const welcome = document.getElementById("key-text");
+  const tip = document.getElementById("setup-tip");
+  card.dataset.hidden ??= card.textContent;
+  welcome.dataset.hidden ??= welcome.textContent;
+  tip.dataset.hidden ??= tip.textContent;
+  const owned = keys
+    ? `${keys.desktop}'s dictation keys run Ghostwriter: ${keys.hold ? `hold ${keys.hold} to talk, or press ` : "press "}`
+      + `${keys.toggle} ${keys.hold ? "for hands free" : "to talk hands free"}.`
+    : "";
+  card.textContent = keys ? `${owned} Pick the dictation app in ${keys.desktop}'s menu, under ${keys.change}.`
+    : state.hotkeyHidden ? card.dataset.hidden : "Hold to talk. Pick a key you don't need for anything else.";
+  welcome.textContent = keys ? owned
+    : state.hotkeyHidden ? welcome.dataset.hidden : "Hold it to talk. Pick one you don't need for anything else.";
+  tip.textContent = keys ? `Tip: press ${keys.toggle} to talk hands free.` : tip.dataset.hidden;
+  document.getElementById("hotkeys").hidden = Boolean(keys);
+  document.getElementById("setup-hotkeys").hidden = Boolean(keys);
+  document.getElementById("key-title").textContent = keys ? "Your talk keys" : "Pick your talk key";
 }
 
 // Settings and the welcome each have a set of keycaps, with their own radio group named after the fieldset. Built

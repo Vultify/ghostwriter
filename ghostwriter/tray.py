@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw
 from ghostwriter.paths import PROJECT
 from ghostwriter.settings import HOTKEYS, LOWERED_SOUNDS, Settings
 from ghostwriter.state import State
-from ghostwriter.system import desktop, tray_icon
+from ghostwriter.system import desktop, hotkey, tray_icon
 
 ICON_SIZE = 64
 SUPERSAMPLE = 4
@@ -48,7 +48,9 @@ class Tray:
             pystray.MenuItem("Open Ghostwriter", lambda: on_open(), default=True),
             *([self._switch("Dictation", "dictation")] if tray_icon.DICTATION_SWITCH else []),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("Hotkey", pystray.Menu(*(self._choice("hotkey", name) for name in HOTKEYS))),
+            # Hidden while the desktop's own dictation keys drive Ghostwriter.
+            pystray.MenuItem("Hotkey", pystray.Menu(*(self._choice("hotkey", name) for name in HOTKEYS)),
+                             visible=lambda item: hotkey.desktop_keys() is None),
             pystray.MenuItem(
                 "Microphone",
                 pystray.Menu(
@@ -110,10 +112,11 @@ class Tray:
             self._tray.icon = self._off_icon
         else:
             self._tray.icon = self._icons[self._state or State.READY]
-        self._tray.title = self._tooltip()
-        tray_icon.publish(self._status(self._state.value if self._state else "starting"))
+        keys = hotkey.desktop_keys()
+        self._tray.title = self._tooltip(keys)
+        tray_icon.publish(self._status(self._state.value if self._state else "starting", keys))
 
-    def _status(self, state: str) -> dict:
+    def _status(self, state: str, keys: dict | None = None) -> dict:
         """What a bar panel needs to show Ghostwriter and change its settings."""
         return {
             "pid": os.getpid(),
@@ -124,11 +127,14 @@ class Tray:
             "microphones": list(self._microphones),
             "defaultMicrophone": f"{desktop.NAME} default",
             "loweredSounds": LOWERED_SOUNDS,
+            "desktopKeys": keys,  # the desktop's own dictation keys, while they drive Ghostwriter
             # The values in use, so the panel shows the right ones before settings.json exists.
             "values": {name: getattr(self.settings, name) for name in PANEL_SETTINGS},
         }
 
-    def _tooltip(self) -> str:
+    def _tooltip(self, keys: dict | None) -> str:
+        if keys:
+            return self._desktop_keys_tooltip(keys)
         hotkey = self.settings.hotkey
         if self._state is not None and not self.dictation_on:
             return f"Ghostwriter: dictation is off, so {hotkey} works normally"
@@ -137,6 +143,19 @@ class Tray:
             State.READY: f"Ghostwriter: hold {hotkey} to talk, double tap for hands free",
             State.LISTENING: "Ghostwriter: listening",
             State.LOCKED: f"Ghostwriter: listening hands free (tap {hotkey} to stop)",
+            State.WORKING: "Ghostwriter: typing",
+        }[self._state]
+
+    def _desktop_keys_tooltip(self, keys: dict) -> str:
+        hold, toggle = keys["hold"], keys["toggle"]
+        if self._state is not None and not self.dictation_on:
+            return f"Ghostwriter: dictation is off, so {keys['desktop']}'s dictation keys do nothing"
+        return {
+            None: "Ghostwriter: starting up",
+            State.READY: f"Ghostwriter: hold {hold} to talk, or press {toggle} for hands free" if hold
+            else f"Ghostwriter: press {toggle} to talk hands free",
+            State.LISTENING: "Ghostwriter: listening",
+            State.LOCKED: f"Ghostwriter: listening hands free (press {toggle} to stop)",
             State.WORKING: "Ghostwriter: typing",
         }[self._state]
 

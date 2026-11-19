@@ -3,12 +3,17 @@ releases.
 
 Ghostwriter reads the keyboards directly (/dev/input), so it works on any desktop, but only for users in the input
 group. Unlike on Windows the key isn't hidden from other apps; none of these keys does anything on its own in most apps.
+With Ghostwriter picked as Omarchy's dictation app, Omarchy's own dictation keys drive it instead, as signals (see
+omarchy_dictation.py), and no input group is needed.
 """
 
 import ctypes
 import fcntl
+import functools
 import os
+import logging
 import select
+import signal
 import struct
 import subprocess
 import threading
@@ -16,7 +21,7 @@ import time
 from collections.abc import Callable, Collection
 from pathlib import Path
 
-from ghostwriter.linux import hyprland
+from ghostwriter.linux import hyprland, omarchy_dictation
 
 # Single keys that make good hotkeys, by their Linux key codes.
 HOTKEYS = {
@@ -26,6 +31,9 @@ HOTKEYS = {
     "Scroll Lock": 70,
     "Pause": 119,
 }
+
+# Windows hides the hotkey from the app in front; here the app sees it too, so the window words the key's job that way.
+HIDES_KEY = False
 
 NO_ACCESS_MESSAGE = (
     "Ghostwriter can't read the keyboard, so the hotkey won't work.\n\n"
@@ -46,6 +54,39 @@ _RESCAN_SECONDS = 2.0  # how often to look for keyboards plugged in or paired si
 
 _RIGHT_ALT_XKB = HOTKEYS["Right Alt"] + 8  # xkb numbers keys 8 higher than Linux does
 _ISO_LEVEL3_SHIFT = 0xFE03  # the key symbol for AltGr
+_SIGNALLED = -1  # in place of a keyboard, for a key held through Omarchy
+
+log = logging.getLogger("ghostwriter")
+_signals_read = _signals_write = -1  # Omarchy's dictation commands, as signal numbers, in the order they came
+
+
+def catch_signals() -> None:
+    """Take Omarchy's dictation commands from here on. Called once, from the main thread, at startup: a signal's
+    default is to end the program, and Omarchy can send one as soon as the bar's status file names this process.
+    Until a KeyHook listens, they're dropped."""
+    global _signals_read, _signals_write
+    _signals_read, _signals_write = os.pipe2(os.O_NONBLOCK | os.O_CLOEXEC)
+    for number in omarchy_dictation.SIGNALS.values():
+        signal.signal(number, _queue_signal)
+
+
+def _queue_signal(number: int, _frame) -> None:
+    # Runs on the main thread between any two lines, so it only writes to a pipe, which takes no locks.
+    try:
+        os.write(_signals_write, bytes([number]))
+    except OSError:
+        pass
+
+
+def desktop_keys() -> dict[str, str | None] | None:
+    """The desktop's own dictation keys, while it has Ghostwriter picked as its dictation app, else None. Asked on
+    every state change, so the layout is only read the first time."""
+    return omarchy_dictation.keys(_layout_uses_altgr()) if omarchy_dictation.owns_keys() else None
+
+
+@functools.cache
+def _layout_uses_altgr() -> bool:
+    return keyboard_uses_altgr()
 
 
 class _RuleNames(ctypes.Structure):
@@ -93,6 +134,10 @@ class KeyHook:
     """Calls on_press and on_release for one key, read straight from every keyboard. Keyboards plugged in or paired
     later join within a couple of seconds.
 
+    While Omarchy has Ghostwriter picked for dictation, its keys come in as signals instead: start and stop call
+    on_press and on_release, and toggle calls on_toggle. Picking or unpicking it in Omarchy's menu switches over
+    within a couple of seconds.
+
     The callbacks run on the reader thread and must return right away. allow_injected also listens to keyboards that
     programs make (uinput); without it, only real keyboards count, like on Windows.
     """
@@ -103,21 +148,29 @@ class KeyHook:
         on_press: Callable[[], None],
         on_release: Callable[[], None],
         allow_injected: bool = False,
+        on_toggle: Callable[[], None] = lambda: None,
     ) -> None:
         self.key_code = key_code
         self.on_press = on_press
         self.on_release = on_release
+        self.on_toggle = on_toggle
         self.allow_injected = allow_injected
-        self._held_by: int | None = None  # the keyboard holding the key down
+        self._held_by: int | None = None  # the keyboard holding the key down, or _SIGNALLED
         self._keyboards: dict[int, str] = {}  # open file -> device path
         self._refused = False
+        self._omarchy = False  # whether Omarchy's keys drive dictation instead of the keyboards
         self._wake_read = self._wake_write = -1  # a pipe that wakes the reader so it can stop
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
-        self._open_new_keyboards()
-        if not self._keyboards and self._refused:
-            raise PermissionError(NO_ACCESS_MESSAGE)
+        _drain(_signals_read)  # anything Omarchy sent while Ghostwriter was starting up
+        self._omarchy = omarchy_dictation.owns_keys()
+        if self._omarchy:
+            log.info("Omarchy's dictation keys run Ghostwriter")
+        else:
+            self._open_new_keyboards()
+            if not self._keyboards and self._refused:
+                raise PermissionError(NO_ACCESS_MESSAGE)
         self._wake_read, self._wake_write = os.pipe()
         self._thread = threading.Thread(target=self._run, name="KeyHook", daemon=True)
         self._thread.start()
@@ -134,23 +187,60 @@ class KeyHook:
 
     def _run(self) -> None:
         next_scan = time.monotonic() + _RESCAN_SECONDS
+        signals = [_signals_read] if _signals_read >= 0 else []
         try:
             while True:
-                ready, _, _ = select.select([self._wake_read, *self._keyboards], [], [], _RESCAN_SECONDS)
+                ready, _, _ = select.select([self._wake_read, *signals, *self._keyboards], [], [], _RESCAN_SECONDS)
                 if self._wake_read in ready:
                     return
-                for keyboard in ready:
-                    self._read(keyboard)
+                for source in ready:
+                    if source == _signals_read:
+                        self._read_signals()
+                    else:
+                        self._read(source)
                 if time.monotonic() >= next_scan:
-                    self._open_new_keyboards()
+                    self._check_omarchy()
+                    if not self._omarchy:
+                        self._open_new_keyboards()
                     next_scan = time.monotonic() + _RESCAN_SECONDS
         finally:
-            for keyboard in self._keyboards:
-                os.close(keyboard)
-            self._keyboards.clear()
+            self._close_keyboards()
             self._held_by = None
             os.close(self._wake_read)
             os.close(self._wake_write)
+
+    def _check_omarchy(self) -> None:
+        """Follow Ghostwriter being picked or unpicked as Omarchy's dictation app."""
+        if omarchy_dictation.owns_keys() == self._omarchy:
+            return
+        self._omarchy = not self._omarchy
+        if self._held_by is not None:  # a hold that began the other way can't end the new way
+            self._key(self._held_by, _RELEASED)
+        if self._omarchy:
+            self._close_keyboards()
+            log.info("Omarchy's dictation keys run Ghostwriter now")
+        else:
+            self._refused = False
+            self._open_new_keyboards()
+            log.info("Omarchy's dictation keys no longer run Ghostwriter, so %s",
+                     "the hotkey is read from the keyboard again" if self._keyboards or not self._refused
+                     else "the hotkey can't work: Ghostwriter isn't allowed to read the keyboard")
+
+    def _read_signals(self) -> None:
+        for number in _drain(_signals_read):
+            if not self._omarchy or not self.key_code:  # no key means dictation is off
+                continue
+            if number == omarchy_dictation.SIGNALS["start"]:
+                self._key(_SIGNALLED, _PRESSED)
+            elif number == omarchy_dictation.SIGNALS["stop"]:
+                self._key(_SIGNALLED, _RELEASED)
+            elif number == omarchy_dictation.SIGNALS["toggle"]:
+                self.on_toggle()
+
+    def _close_keyboards(self) -> None:
+        for keyboard in self._keyboards:
+            os.close(keyboard)
+        self._keyboards.clear()
 
     def _read(self, keyboard: int) -> None:
         try:
@@ -196,6 +286,20 @@ class KeyHook:
         os.close(keyboard)
         if self._held_by == keyboard:  # a keyboard unplugged mid hold lets go of the key
             self._key(keyboard, _RELEASED)
+
+
+def _drain(pipe: int) -> bytes:
+    """Everything waiting in a non-blocking pipe."""
+    waiting = b""
+    while pipe >= 0:
+        try:
+            chunk = os.read(pipe, 256)
+        except BlockingIOError:
+            break
+        if not chunk:
+            break
+        waiting += chunk
+    return waiting
 
 
 def keys_down(codes: Collection[int]) -> bool:

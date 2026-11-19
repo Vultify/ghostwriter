@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 import sounddevice as sd
 
+from ghostwriter.linux import hotkey
 from ghostwriter.paths import PROJECT
 
 # For labels like "Omarchy default" and "Start with Omarchy": the desktop's name where it has its own, else Linux.
@@ -28,9 +29,10 @@ _playing: "_Playback | None" = None  # the last sound started
 def prepare() -> None:
     """Quit cleanly on Ctrl+C and on a plain terminate (logging out, or Quit in Omarchy's panel), however Ghostwriter
     was started: launchers often start programs with Ctrl+C ignored, and Python keeps it ignored. Called once, from
-    the main thread, when the tray app starts."""
+    the main thread, when the tray app starts. Omarchy's dictation keys are caught from here on too."""
     signal.signal(signal.SIGINT, signal.default_int_handler)
     signal.signal(signal.SIGTERM, signal.default_int_handler)
+    hotkey.catch_signals()
 
 
 def claim_single_instance(name: str) -> bool:

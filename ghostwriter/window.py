@@ -18,7 +18,7 @@ from ghostwriter.paths import (APP_ICONS_DIR, DICTIONARY_DATES_PATH, DICTIONARY_
                                LOG_PATH, PROJECT, SETTINGS_PATH, STARTUP_PATH, UI_DIR, WEB_DATA_DIR, WINDOW_LOG_PATH)
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import HANDS_FREE_MINUTES, HOTKEYS, OTHER_SOUNDS, Settings
-from ghostwriter.system import app_window, desktop, processes, shortcuts
+from ghostwriter.system import app_window, desktop, hotkey, processes, shortcuts
 from ghostwriter.whisper_cpp import PROCESSOR
 
 TITLE = "Ghostwriter"
@@ -77,6 +77,8 @@ class Api:
             "startAtLogin": shortcuts.starts_at_login(self._login_folder),
             "soundStyles": list(sounds.STYLES),
             "hotkeys": list(HOTKEYS),
+            "hotkeyHidden": hotkey.HIDES_KEY,
+            "desktopKeys": hotkey.desktop_keys(),
             "microphones": list_microphones(),
             "handsFreeMinutes": list(HANDS_FREE_MINUTES),
             "otherSounds": list(OTHER_SOUNDS),

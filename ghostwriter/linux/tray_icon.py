@@ -285,6 +285,7 @@ def _add_rows(entries: dict[int, _Entry], parent: int, menu: Menu) -> None:
         props = {
             "label": GLib.Variant("s", item.text.replace("_", "__")),  # a lone _ underlines the next letter
             "enabled": GLib.Variant("b", item.enabled),
+            "visible": GLib.Variant("b", item.visible),
         }
         if item.submenu:
             props["children-display"] = GLib.Variant("s", "submenu")

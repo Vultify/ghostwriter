@@ -1,6 +1,7 @@
 {
   "title": "Ghostwriter",
   "stateReady": "Ready, hold %1",
+  "stateReadyPress": "Ready, press %1",
   "stateListening": "Listening",
   "stateLocked": "Listening hands free",
   "stateWorking": "Typing",
@@ -8,6 +9,7 @@
   "stateOff": "Dictation off",
   "stateStopped": "Not running",
   "dictationHint": "Turn dictation off to use %1 normally",
+  "dictationHintOmarchy": "Turn dictation off to pause Omarchy's dictation keys",
   "sounds": "Sounds",
   "soundsDescription": "A soft sound when it starts and stops listening",
   "pill": "Listening pill",

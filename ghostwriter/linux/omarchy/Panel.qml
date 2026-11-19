@@ -33,6 +33,8 @@ Panel {
   readonly property var microphones: Array.isArray(status.microphones) ? status.microphones : []
   readonly property string defaultMicrophone: String(status.defaultMicrophone || "")
   readonly property int loweredSounds: Number(status.loweredSounds || 10)
+  // Omarchy's own dictation keys, while Omarchy has Ghostwriter picked as its dictation app.
+  readonly property var desktopKeys: alive && status.desktopKeys ? status.desktopKeys : null
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -61,7 +63,8 @@ Panel {
     if (state === "listening") return strings.t("stateListening")
     if (state === "locked") return strings.t("stateLocked")
     if (state === "working") return strings.t("stateWorking")
-    return strings.t("stateReady").arg(value("hotkey", ""))
+    if (desktopKeys && !desktopKeys.hold) return strings.t("stateReadyPress").arg(desktopKeys.toggle)
+    return strings.t("stateReady").arg(desktopKeys ? desktopKeys.hold : value("hotkey", ""))
   }
 
   function lowerSoundsText() {
@@ -222,7 +225,8 @@ Panel {
 
             PanelToolTip {
               visible: dictationSwitch.containsMouse && root.dictationOn
-              text: strings.t("dictationHint").arg(root.value("hotkey", ""))
+              text: root.desktopKeys ? strings.t("dictationHintOmarchy")
+                                     : strings.t("dictationHint").arg(root.value("hotkey", ""))
               fontFamily: root.bar.fontFamily
             }
           }
@@ -307,6 +311,7 @@ Panel {
 
           Dropdown {
             width: parent.width
+            visible: !root.desktopKeys  // Omarchy's keys aren't picked here
             label: strings.t("hotkey")
             fontFamily: root.bar.fontFamily
             options: root.hotkeys

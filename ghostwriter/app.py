@@ -65,6 +65,7 @@ class _Key(Enum):
     PRESS = "press"
     RELEASE = "release"
     TIMEOUT = "timeout"
+    TOGGLE = "toggle"  # a desktop's own hands-free key, like Omarchy's Alt + Space
     OFF = "off"  # dictation was turned off
 
 
@@ -116,6 +117,7 @@ class Dictation:
             hotkey,
             on_press=lambda: self._key_events.put(_Key.PRESS),
             on_release=lambda: self._key_events.put(_Key.RELEASE),
+            on_toggle=lambda: self._key_events.put(_Key.TOGGLE),
             allow_injected=allow_injected,
         )
 
@@ -192,6 +194,16 @@ class Dictation:
                     self._set_mode(_Mode.TAPPED)
             elif mode is _Mode.RELEASING:
                 self._set_mode(_Mode.IDLE)
+        elif key is _Key.TOGGLE:
+            # Starts hands free, stops it, or locks on a hold in progress, like a double tap would.
+            if mode in (_Mode.IDLE, _Mode.RELEASING):
+                self._start_recording(_Mode.LOCKED)
+            elif mode in (_Mode.HOLDING, _Mode.TAPPED):
+                self._set_mode(_Mode.LOCKED)
+            else:
+                self._finish_recording(then=_Mode.IDLE)
+            if self._mode is _Mode.LOCKED:
+                log.info("Locked on, hands free. Press the hands-free key again to stop.")
         elif key is _Key.OFF:
             if mode in (_Mode.HOLDING, _Mode.LOCKED):
                 self._finish_recording(then=_Mode.IDLE)
@@ -209,10 +221,10 @@ class Dictation:
         self._mode = mode
         self._update_state()
 
-    def _start_recording(self) -> None:
+    def _start_recording(self, mode: _Mode = _Mode.HOLDING) -> None:
         self.recorder.start()
         self._recording_started = time.perf_counter()
-        self._set_mode(_Mode.HOLDING)
+        self._set_mode(mode)
         log.info("Listening (mic opened in %.0f ms)", self.recorder.open_ms)
 
     def _finish_recording(self, then: _Mode) -> None:
@@ -385,10 +397,14 @@ def _run() -> None:
     notice = ready_notice(settings.hotkey, first_run, speech.device, last_device)
     if notice:
         tray.notify(notice)
+    desktop_keys = system_hotkey.desktop_keys()
     try:
         while not quitting.wait(0.5):
             if settings.reload_if_changed():  # saved by the app window
                 apply_settings()
+            elif (keys := system_hotkey.desktop_keys()) != desktop_keys:  # picked or unpicked in the desktop's menu
+                desktop_keys = keys
+                tray.refresh()
     except KeyboardInterrupt:
         pass
     finally:

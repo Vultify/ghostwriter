@@ -18,6 +18,9 @@ HOTKEYS = {
     "Pause": win32.VK_PAUSE,
 }
 
+# The hook swallows the hotkey, so the app in front never sees it.
+HIDES_KEY = True
+
 # Characters that keyboards with an AltGr key (Right Alt on most non-US layouts) type through it.
 _ALTGR_CHARACTERS = "@€{}[]\\|~#$^`<>"
 _CTRL_AND_ALT = 0x06  # in the shift state VkKeyScanEx reports
@@ -41,10 +44,16 @@ def default_hotkey() -> str:
     return "Right Ctrl" if keyboard_uses_altgr() else "Right Alt"
 
 
+def desktop_keys() -> None:
+    """Windows has no dictation keys of its own for Ghostwriter to follow."""
+    return None
+
+
 class KeyHook:
     """Calls on_press and on_release for one key and swallows it, so the app in front never sees it.
 
-    The callbacks run on the hook thread and must return right away, or Windows drops the hook.
+    The callbacks run on the hook thread and must return right away, or Windows drops the hook. on_toggle is for
+    desktops with their own hands-free key, so Windows never calls it.
     """
 
     def __init__(
@@ -53,6 +62,7 @@ class KeyHook:
         on_press: Callable[[], None],
         on_release: Callable[[], None],
         allow_injected: bool = False,
+        on_toggle: Callable[[], None] = lambda: None,
     ) -> None:
         self.vk_code = vk_code
         self.on_press = on_press
