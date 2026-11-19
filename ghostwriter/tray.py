@@ -174,8 +174,7 @@ class Tray:
 
     def _change(self, **changes) -> None:
         for name, value in changes.items():
-            setattr(self.settings, name, value)
-        self.settings.save()
+            self.settings.change(name, value)
         self._tray.update_menu()
         self._show()
         self.on_change()
