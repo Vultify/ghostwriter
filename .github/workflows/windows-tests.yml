@@ -1,0 +1,47 @@
+# Runs the test suite on Windows for every push, so Linux work that touches shared code gets its Windows check
+# without a trip to the PC. Tests that need an NVIDIA card or the whisper.cpp server skip themselves here; the full
+# hands-on Windows check still happens before every release.
+name: Windows tests
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      # Laid out like install.bat's: Python in .python and the packages in .venv, both inside the project, since
+      # Ghostwriter only counts its own windows by their program living in its folder.
+      - name: Set up Python inside the project
+        run: |
+          Copy-Item $env:pythonLocation .python -Recurse
+          .python\python.exe -m venv .venv
+
+      - name: Install the test tools
+        run: .venv\Scripts\python.exe -m pip install faster-whisper pytest
+
+      # Last, so any package the test tools pulled in at another version goes back to the one users get.
+      - name: Install the tested package versions
+        run: .venv\Scripts\python.exe -m pip install --require-hashes -r requirements-windows.lock
+
+      - name: Run the tests
+        run: .venv\Scripts\python.exe -m pytest tests -rs
+
+      - name: Show Ghostwriter's logs
+        if: failure()
+        run: Get-ChildItem logs -Filter *.log -ErrorAction SilentlyContinue | ForEach-Object { "== $($_.Name)"; Get-Content $_.FullName -Tail 60 }

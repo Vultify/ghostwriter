@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - History shows your totals: dictations, words, and how far back it goes. Ctrl+F jumps to its search.
 - Change a dictionary word or fix in place, see when each was added, and search or sort the list. Import / Export saves a copy of your dictionary or adds the words and fixes from another file.
 - Test your mic right from Home, with a live wave in the hotkey card.
+- Every push runs the test suite on Windows on GitHub. Tests that need an NVIDIA card, whisper.cpp, a mic, or speakers skip there, and still run on a real PC before each release.
 
 ### Changed
 - The app window has a fresh look: brighter cards, a deeper green for what's selected, icons on every section, and larger, easier to read controls. Home leads with a big hotkey card, History has a card per day with one row per dictation, the Dictionary has its own cards for adding words and fixes over a table of everything in it, and Settings groups its options in labeled cards.

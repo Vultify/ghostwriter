@@ -10,6 +10,7 @@ import wave
 from datetime import date, timedelta
 
 import pytest
+from conftest import needs_speakers
 
 from ghostwriter.other_sounds import PENDING_DAYS, OtherSounds
 
@@ -127,6 +128,7 @@ SILENT_PLAYER = ("import os, sys, time, winsound; print(os.getpid(), flush=True)
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="checks the Windows volume mixer")
+@needs_speakers
 def test_a_real_app_in_the_windows_volume_mixer_goes_down_and_back(tmp_path):
     from ghostwriter.windows import volume
 

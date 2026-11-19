@@ -12,12 +12,27 @@ from ctypes import wintypes
 from pathlib import Path
 
 import pytest
+import sounddevice
 
 from ghostwriter.dictionary import DictionaryFile
 from ghostwriter.transcriber import Transcriber, gpu_available
 
 WINDOWS = sys.platform == "win32"
 TEST_DICTIONARY = Path(__file__).resolve().parent / "dictionary.txt"
+
+
+def _has_device(kind: str) -> bool:
+    try:
+        sounddevice.query_devices(kind=kind)
+        return True
+    except (sounddevice.PortAudioError, ValueError):
+        return False
+
+
+# GitHub's test machines have no sound card, so tests that need one skip there instead of failing.
+HAS_MIC = _has_device("input")
+needs_mic = pytest.mark.skipif(not HAS_MIC, reason="this PC has no microphone")
+needs_speakers = pytest.mark.skipif(not _has_device("output"), reason="this PC has no speakers")
 
 if WINDOWS:
     from ghostwriter.windows import win32

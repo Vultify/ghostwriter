@@ -3,6 +3,7 @@
 import time
 
 import numpy as np
+from conftest import needs_mic
 
 from ghostwriter.recorder import QUIET_RMS, TAIL_SECONDS, Recorder
 from ghostwriter.transcriber import SAMPLE_RATE
@@ -11,6 +12,7 @@ HOLD_SECONDS = 0.5
 MAX_OPEN_MS = 150
 
 
+@needs_mic
 def test_recorder_opens_quickly_and_never_listens_past_the_tail():
     recorder = Recorder()
     recorder.start()

@@ -5,7 +5,7 @@ import os
 import time
 
 import pytest
-from conftest import press_key
+from conftest import needs_mic, press_key
 from fakes import FakePaster, FakeRecorder, FakeTranscriber
 
 from ghostwriter import app, sounds
@@ -155,6 +155,7 @@ def test_other_sounds_only_takes_the_listed_levels(tmp_path):
             settings.change("other_sounds", wrong)
 
 
+@needs_mic
 def test_a_chosen_mic_records_and_an_unplugged_one_falls_back_to_default():
     for microphone in (list_microphones()[0], "A mic that isn't plugged in"):
         recorder = Recorder(microphone=microphone)
