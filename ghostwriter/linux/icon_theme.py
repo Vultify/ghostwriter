@@ -11,6 +11,7 @@ from ghostwriter.linux.desktop_files import data_home
 
 EXTENSIONS = (".png", ".svg", ".xpm")
 FALLBACK_THEME = "hicolor"
+KDE_THEME = "breeze"  # KDE's own default
 
 
 @dataclass(frozen=True)
@@ -29,7 +30,7 @@ def find(name: str, size: int) -> Path | None:
     if os.path.isabs(name):
         return Path(name) if os.path.isfile(name) else None
     stem = name[: -len(Path(name).suffix)] if Path(name).suffix in EXTENSIONS else name  # some entries add one
-    for theme in _themes():
+    for theme in _themes(current_theme()):  # read each time, so switching themes takes effect
         if found := _in_theme(theme, stem, size):
             return found
     for folder in _base_folders():  # icons that aren't in any theme
@@ -40,23 +41,34 @@ def find(name: str, size: int) -> Path | None:
 
 
 def current_theme() -> str:
-    """The icon theme the desktop uses: GNOME's setting (which Omarchy sets too), else GTK's settings file."""
+    """The icon theme the desktop uses: KDE's own setting on KDE, else GNOME's (which Omarchy sets too), else GTK's
+    settings file."""
     from gi.repository import Gio
 
+    config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    if "KDE" in os.environ.get("XDG_CURRENT_DESKTOP", "").upper().split(":"):
+        return _setting(config / "kdeglobals", "Icons", "Theme") or KDE_THEME
     schema = "org.gnome.desktop.interface"
-    if Gio.SettingsSchemaSource.get_default().lookup(schema, True):
+    source = Gio.SettingsSchemaSource.get_default()
+    if source and source.lookup(schema, True):
         if theme := Gio.Settings.new(schema).get_string("icon-theme"):
             return theme
-    settings = configparser.ConfigParser()
-    config = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
-    settings.read(config / "gtk-3.0" / "settings.ini")
-    return settings.get("Settings", "gtk-icon-theme-name", fallback=FALLBACK_THEME)
+    return _setting(config / "gtk-3.0" / "settings.ini", "Settings", "gtk-icon-theme-name") or FALLBACK_THEME
+
+
+def _setting(path: Path, section: str, key: str) -> str:
+    settings = configparser.ConfigParser(interpolation=None, strict=False)
+    try:
+        settings.read(path, encoding="utf-8")
+    except (configparser.Error, UnicodeError):
+        return ""
+    return settings.get(section, key, fallback="").strip()
 
 
 @functools.cache
-def _themes() -> tuple[str, ...]:
-    """The current theme and everything it inherits from, in order, ending with hicolor."""
-    order, waiting = [], [current_theme()]
+def _themes(current: str) -> tuple[str, ...]:
+    """A theme and everything it inherits from, in order, ending with hicolor."""
+    order, waiting = [], [current]
     while waiting:
         theme = waiting.pop(0)
         if theme in order or not _index(theme):
@@ -115,11 +127,19 @@ def _folders(theme: str) -> tuple[_Folder, ...]:
         section = _section(theme, name)
         if section.get("Scale", "1") != "1":  # high-DPI copies of the same icons
             continue
-        size = int(section.get("Size", "0") or 0)
+        size = _number(section.get("Size"), 0)
         scalable = section.get("Type", "Threshold") == "Scalable"
-        folders.append(_Folder(name, size, scalable, int(section.get("MinSize", size) or size),
-                               int(section.get("MaxSize", size) or size)))
+        folders.append(_Folder(name, size, scalable, _number(section.get("MinSize"), size),
+                               _number(section.get("MaxSize"), size)))
     return tuple(folders)
+
+
+def _number(value: str | None, default: int) -> int:
+    """A size from a theme's index, which themes don't always write cleanly."""
+    try:
+        return int(float(value)) if value else default
+    except ValueError:
+        return default
 
 
 @functools.cache

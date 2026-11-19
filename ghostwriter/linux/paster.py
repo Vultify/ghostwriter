@@ -115,9 +115,17 @@ def app_icon(app: App | None, size: int = 48) -> bytes | None:
     names = [entry.icon] if entry and entry.icon else []
     if app.app_id.startswith(_STEAM_GAME):
         names.append(f"steam_icon_{app.app_id.removeprefix(_STEAM_GAME)}")  # what Steam installs for each game
-    names += [app.app_id, app.app_id.lower(), app.program.stem if app.program else ""]  # icons named after the app
-    path = next((found for name in dict.fromkeys(names) if (found := icon_theme.find(name, size))), None)
+    # Icons named after the app. Not after its program: a web app's is the browser, and a script's is Python.
+    names += [app.app_id, app.app_id.lower()]
+    path = _find_icon(names, size)
+    if path is None:  # an app installed since the icon folders were last read
+        icon_theme.clear_cache()
+        path = _find_icon(names, size)
     return _square_png(path, size) if path else None
+
+
+def _find_icon(names: list[str], size: int) -> Path | None:
+    return next((found for name in dict.fromkeys(names) if (found := icon_theme.find(name, size))), None)
 
 
 def _launcher_entry(app: App) -> desktop_files.DesktopFile | None:

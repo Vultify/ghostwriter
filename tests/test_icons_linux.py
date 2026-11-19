@@ -15,6 +15,8 @@ from PIL import Image  # noqa: E402
 from ghostwriter.linux import desktop_files, icon_theme  # noqa: E402
 from ghostwriter.linux.paster import App, app_icon  # noqa: E402
 
+READ_THEME = icon_theme.current_theme  # the real one, since the fixture stands in for it
+
 SVG = ('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">'
        '<rect width="16" height="16" fill="#ff0000"/></svg>')
 
@@ -107,3 +109,38 @@ def test_a_wide_icon_is_centered_on_a_clear_square():
 def test_an_app_without_an_icon_gets_none():
     assert _icon("mystery-app") is None
     assert app_icon(None) is None
+
+
+def test_an_app_installed_while_ghostwriter_runs_gets_its_icon(tmp_path):
+    assert _icon("gw-newapp") is None  # the icon folders have been read by now
+    (tmp_path / "shared" / "applications" / "gw-newapp.desktop").write_text("[Desktop Entry]\nName=New\nIcon=gw-newapp\n")
+    desktop_files.installed.cache_clear()
+    _png(tmp_path / "shared" / "icons" / "hicolor" / "48x48" / "apps" / "gw-newapp.png", (48, 48), (10, 20, 30))
+    assert _icon("gw-newapp").getpixel((24, 24))[:3] == (10, 20, 30)
+
+
+def test_switching_icon_themes_takes_effect_at_once(monkeypatch):
+    assert _icon("gw-terminal").getpixel((24, 24))[:3] == (255, 255, 0)
+    monkeypatch.setattr(icon_theme, "current_theme", lambda: "hicolor")
+    assert _icon("gw-terminal").getpixel((24, 24))[:3] == (0, 0, 0)
+
+
+def test_a_carelessly_written_theme_still_finds_icons(tmp_path):
+    (tmp_path / "shared" / "icons" / "Plain" / "index.theme").write_text(
+        "[Icon Theme]\nName=Plain\nInherits=hicolor\nDirectories=48x48/apps\n\n[48x48/apps]\nSize=forty-eight\n")
+    icon_theme.clear_cache()
+    assert _icon("gw-editor").getpixel((24, 24))[:3] == (0, 255, 0)  # from hicolor
+
+
+def test_an_app_is_never_given_its_browsers_or_pythons_icon(tmp_path):
+    _png(tmp_path / "shared" / "icons" / "hicolor" / "48x48" / "apps" / "chromium.png", (48, 48), (1, 2, 3))
+    assert app_icon(App(Path("/usr/lib/chromium/chromium"), "chrome-no-entry.example__-Default", "")) is None
+
+
+def test_kde_uses_its_own_icon_theme(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "KDE")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    assert READ_THEME() == "breeze"  # KDE's default when it hasn't been changed
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "kdeglobals").write_text("[General]\nColorScheme=BreezeDark\n\n[Icons]\nTheme=Papirus\n")
+    assert READ_THEME() == "Papirus"
