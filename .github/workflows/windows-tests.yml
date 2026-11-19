@@ -25,14 +25,21 @@ jobs:
         with:
           python-version: "3.11"
 
+      # Laid out like install.bat's: Python in .python and the packages in .venv, both inside the project, since
+      # Ghostwriter only counts its own windows by their program living in its folder.
+      - name: Set up Python inside the project
+        run: |
+          Copy-Item $env:pythonLocation .python -Recurse
+          .python\python.exe -m venv .venv
+
       - name: Install the tested package versions
-        run: python -m pip install --require-hashes -r requirements-windows.lock
+        run: .venv\Scripts\python.exe -m pip install --require-hashes -r requirements-windows.lock
 
       - name: Install the test tools
-        run: python -m pip install faster-whisper pytest
+        run: .venv\Scripts\python.exe -m pip install faster-whisper pytest
 
       - name: Run the tests
-        run: python -m pytest tests -rs
+        run: .venv\Scripts\python.exe -m pytest tests -rs
 
       - name: Show Ghostwriter's logs
         if: failure()

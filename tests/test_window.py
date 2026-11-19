@@ -34,7 +34,8 @@ def words_and_fixes(entries):
     return [word["text"] for word in entries["words"]], [(fix["heard"], fix["write"]) for fix in entries["fixes"]]
 
 
-def test_state_has_everything_the_page_shows(api):
+def test_state_has_everything_the_page_shows(api, monkeypatch):
+    monkeypatch.setattr(models, "whisper_cpp_installed", lambda: True)  # install.bat always adds it
     state = api.state()
     assert state["settings"]["theme"] == "system"
     assert state["settings"]["hands_free"] is True
