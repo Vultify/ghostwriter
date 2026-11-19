@@ -1,0 +1,35 @@
+# Runs the test suite on Windows for every push, so Linux work that touches shared code gets its Windows check
+# without a trip to the PC. Tests that need an NVIDIA card or the whisper.cpp server skip themselves here; the full
+# hands-on Windows check still happens before every release.
+name: Windows tests
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install the tested package versions
+        run: python -m pip install --require-hashes -r requirements-windows.lock
+
+      - name: Install the test tools
+        run: python -m pip install faster-whisper pytest
+
+      - name: Run the tests
+        run: python -m pytest tests -rs
