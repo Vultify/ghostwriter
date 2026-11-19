@@ -140,6 +140,15 @@ Added 2026-11-17: my mockups for each page, to make the window more eye catching
 - [x] Brighter cards and a deeper green, read from the mockups; a larger window
 - [ ] Linux: check the pages there, and read app icons from launcher entries
 
+## Speech model tiers (Phantom, Spirit, Wisp)
+Planned 2026-11-18; the full plan is in [plans/model-tiers.md](plans/model-tiers.md). Three tiers named by how strong the PC is replace the engine picker, Ghostwriter picks one on its own, and whisper.cpp becomes the only engine.
+- [ ] Check first: q8_0 on built-in graphics, the best small model for Wisp, and accuracy against hand-checked transcripts of my own recordings
+- [ ] whisper.cpp everywhere: remove faster-whisper and the NVIDIA-only downloads
+- [ ] Tiers saved in settings (`tier`), with Phantom (full size), Spirit (q8_0), and Wisp (small model)
+- [ ] First run: NVIDIA goes straight to Phantom; other PCs start on Wisp, take a speed test, and move up in the background when they're fast enough; a failed run drops a tier, and a PC too weak for Wisp says so
+- [ ] Settings shows the three tiers with a line each, Recommended on the picked one, and details behind an ⓘ
+- **Checkpoint:** the 4090 picks Phantom, a laptop with built-in graphics picks Spirit or Wisp, and dictation feels instant on both
+
 ## Phase 12: local AI cleanup (on/off switch, its own page in the app)
 - [ ] Small local model on the GPU removes filler words, formats lists, and fixes punctuation
 - [ ] Voice commands ("new line", "scratch that")
