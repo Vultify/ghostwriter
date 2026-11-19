@@ -262,11 +262,11 @@ class Dictation:
     @staticmethod
     def _save(history: History, text: str, program: system_paster.App | None, seconds: float) -> None:
         name = system_paster.app_name(program)
+        app_icons.remember(name, program)  # first, so the window never sees the dictation before its app's icon
         try:
             history.add(text, name, seconds)
         except sqlite3.Error:
             log.exception("Couldn't save the dictation to history")
-        app_icons.remember(name, program)
 
 
 class StatusDisplay:

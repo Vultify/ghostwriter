@@ -100,7 +100,7 @@ def test_deleting_the_newest_then_dictating_again_still_changes_the_stamp(histor
     newest = history.search()["items"][0]["id"]
     before = history.stamp()
     history.delete(newest)
-    history.add("new", "Notepad", 1.0, at=datetime(2026, 11, 18, 9, 6))
+    history.add("new", "Notepad", 1.0, at=datetime(2026, 11, 18, 9, 4))  # even at an earlier time
     assert history.search()["items"][0]["id"] == newest
     assert history.stamp() != before
 
@@ -145,18 +145,26 @@ def test_dictations_are_saved_even_when_the_paste_fails(history):
     assert [(item["text"], item["seconds"], item["words"]) for item in history.search()["items"]] == [("hello", 2.0, 1)] * 2
 
 
-def test_an_older_history_file_is_upgraded_and_keeps_its_dictations(history, monkeypatch):
-    history.add("Kept through the upgrade.", "Notepad", 1.0)
-    with sqlite3.connect(history.path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 1
-    monkeypatch.setattr(history_module, "_UPGRADES", ("ALTER TABLE dictations ADD COLUMN style TEXT",))
-    history = History(history.path)  # the next start of Ghostwriter, with the upgrade
+def test_an_older_history_file_is_upgraded_and_keeps_its_dictations(tmp_path, monkeypatch):
+    path = tmp_path / "history.db"
+    with sqlite3.connect(path) as db:  # a file as 1.6.0 left it: the first table, no upgrades
+        db.executescript(history_module._SCHEMA)
+        db.execute("INSERT INTO dictations (at, text, app, seconds, words) "
+                   "VALUES ('2026-11-01T09:00:00', 'Kept through the upgrade.', 'Notepad', 1.0, 4)")
+    history = History(path)
     assert history.search()["items"][0]["text"] == "Kept through the upgrade."
-    with sqlite3.connect(history.path) as db:
+    before = history.stamp()
+    with sqlite3.connect(path) as db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+    monkeypatch.setattr(history_module, "_UPGRADES", (*history_module._UPGRADES,
+                                                      "ALTER TABLE dictations ADD COLUMN style TEXT"))
+    history = History(path)  # the next start of Ghostwriter, with one more upgrade
+    assert history.search()["items"][0]["text"] == "Kept through the upgrade."
+    with sqlite3.connect(path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
         assert "style" in [column[1] for column in db.execute("PRAGMA table_info(dictations)")]
-    history.add("After it.", "Notepad", 1.0)  # opening again doesn't rerun the upgrade
-    assert history.search()["total"] == 2
+    history.add("After it.", "Notepad", 1.0)  # opening again doesn't rerun the upgrades
+    assert history.search()["total"] == 2 and history.stamp() != before
 
 
 def test_a_newer_history_file_isnt_turned_back_by_an_older_ghostwriter(history):

@@ -32,7 +32,11 @@ CREATE INDEX IF NOT EXISTS dictations_by_time ON dictations (at);
 _COLUMNS = "id, at, text, app, seconds, words"
 # Each change to the table since it first shipped, in order, one SQL statement each, like "ALTER TABLE
 # dictations ADD COLUMN ...". The file's user_version counts the ones it already has.
-_UPGRADES: tuple[str, ...] = ()
+_UPGRADES: tuple[str, ...] = (
+    # How many times dictations were deleted, for stamp(): SQLite reuses a deleted top id, so the count and the
+    # newest id alone can come out the same after a delete and a new dictation.
+    "CREATE TABLE deletions (times INTEGER NOT NULL)",
+)
 
 
 class History:
@@ -85,24 +89,25 @@ class History:
                 "total": total, "total_words": total_words, "first": first, "recent": [dict(row) for row in recent]}
 
     def stamp(self) -> str:
-        """Changes whenever a dictation is added or deleted, so the window knows to refresh. The newest time is in it
-        because SQLite reuses a deleted top id, so a delete plus a new dictation can leave the count and id alike."""
+        """Changes whenever a dictation is added or deleted, so the window knows to refresh."""
         with self._open() as db:
-            count, newest, latest = db.execute(
-                "SELECT count(*), coalesce(max(id), 0), coalesce(max(at), '') FROM dictations").fetchone()
-        return f"{count}-{newest}-{latest}"
+            count, newest = db.execute("SELECT count(*), coalesce(max(id), 0) FROM dictations").fetchone()
+            deleted = db.execute("SELECT coalesce(max(times), 0) FROM deletions").fetchone()[0]
+        return f"{count}-{newest}-{deleted}"
 
     def delete(self, dictation_id: int) -> None:
         """Delete one dictation and zero its text inside history.db. SQLite's short-lived journal file can still leave
         a copy in free disk space, like any deleted file, until the disk reuses it."""
         with self._open() as db:
             db.execute("PRAGMA secure_delete = ON")
-            db.execute("DELETE FROM dictations WHERE id = ?", [int(dictation_id)])
+            if db.execute("DELETE FROM dictations WHERE id = ?", [int(dictation_id)]).rowcount:
+                _count_deletion(db)
 
     def clear(self) -> None:
         """Delete every dictation, then compact the file so the deleted text doesn't linger in it."""
         with self._open() as db:
             db.execute("DELETE FROM dictations")
+            _count_deletion(db)
             db.commit()
             db.execute("VACUUM")
 
@@ -138,6 +143,12 @@ def _upgrade(db: sqlite3.Connection) -> None:
     except BaseException:
         db.rollback()
         raise
+
+def _count_deletion(db: sqlite3.Connection) -> None:
+    times = db.execute("SELECT coalesce(max(times), 0) FROM deletions").fetchone()[0]
+    db.execute("DELETE FROM deletions")
+    db.execute("INSERT INTO deletions (times) VALUES (?)", [times + 1])
+
 
 def _escape_like(text: str) -> str:
     """Make % and _ in a search match themselves instead of acting as wildcards."""

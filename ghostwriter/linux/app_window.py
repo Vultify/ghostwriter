@@ -30,6 +30,7 @@ SCREEN_MARGIN = 40  # kept free around a floating window on a screen too small f
 TITLE = "Ghostwriter"  # the window's title, as window.py sets it
 DIALOG_TITLES = "^(Open|Save) file$"  # pywebview's file dialogs, for Import and Export
 DIALOG_WIDTH, DIALOG_HEIGHT = 875, 600  # the size Omarchy gives file dialogs that come through the desktop portal
+DIALOG_MIN_WIDTH, DIALOG_MIN_HEIGHT = 600, 400
 # Floats the window centered at its size, like Omarchy does for LocalSend. Set again before every launch, replacing
 # the last one, the way Omarchy's own About window sets its rule, so nothing is added to the Hyprland config.
 # The file dialogs get a rule of their own: GTK opens them directly rather than through the portal, so Omarchy's
@@ -91,10 +92,10 @@ def _float_on_hyprland() -> None:
         free_height = screen["height"] / screen["scale"] - top - bottom - 2 * SCREEN_MARGIN
         width = max(MIN_WIDTH, min(WIDTH, free_width))
         height = max(MIN_HEIGHT, min(HEIGHT, free_height))
-        rule = _FLOAT_RULE.format(app_id=json.dumps(f"^{re.escape(APP_ID)}$"), title=json.dumps(f"^{TITLE}$"),
+        rule = _FLOAT_RULE.format(app_id=json.dumps(f"^{re.escape(APP_ID)}$"), title=json.dumps(f"^{re.escape(TITLE)}$"),
                                   width=round(width), height=round(height), dialog_titles=json.dumps(DIALOG_TITLES),
-                                  dialog_width=round(min(DIALOG_WIDTH, free_width)),
-                                  dialog_height=round(min(DIALOG_HEIGHT, free_height)))
+                                  dialog_width=round(max(DIALOG_MIN_WIDTH, min(DIALOG_WIDTH, free_width))),
+                                  dialog_height=round(max(DIALOG_MIN_HEIGHT, min(DIALOG_HEIGHT, free_height))))
         reply = hyprland.request("eval " + rule).strip()
         if reply != "ok":
             raise hyprland.HyprlandError(reply)

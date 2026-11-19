@@ -7,7 +7,7 @@ import sys
 import time
 
 from ghostwriter.linux import app_window, desktop, shortcuts
-from ghostwriter.window import Api
+from ghostwriter.window import TITLE, Api
 
 
 def _api(folder):
@@ -67,6 +67,11 @@ def test_on_a_tiny_screen_it_never_goes_below_the_size_the_page_needs(monkeypatc
                         lambda command: sent.append(command) or (json.dumps([screen]) if command == "j/monitors" else "ok"))
     app_window._float_on_hyprland()
     assert f"size = {{ {app_window.MIN_WIDTH}, {app_window.MIN_HEIGHT} }}" in sent[-1]
+    assert "size = { 875, 494 }" in sent[-1]  # the file dialogs, shrunk to fit too
+
+
+def test_the_float_rule_matches_the_windows_own_title():
+    assert app_window.TITLE == TITLE
 
 
 def test_opening_again_leaves_the_open_windows_rule_alone(monkeypatch):

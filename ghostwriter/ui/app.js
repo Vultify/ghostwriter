@@ -488,7 +488,17 @@ function editRow(entry, isWords) {
     const entries = isWords
       ? await api().change_word(entry.text, ...values)
       : await api().change_fix(entry.heard, entry.write, ...values);
-    if (entries.error) {  // kept open with what was typed, so it can be fixed
+    if (entries.error) {
+      const stillThere = isWords
+        ? entries.words.some((word) => word.text === entry.text)
+        : entries.fixes.some((fix) => fix.heard === entry.heard && fix.write === entry.write);
+      if (!stillThere) {  // changed or removed outside the window, so the list catches up instead
+        dictionaryView.editing = null;
+        renderDictionary(entries);
+        showError(isWords ? "word-error" : "fix-error", entries.error);
+        return;
+      }
+      dictionaryView.entries = entries;  // kept open with what was typed, so it can be fixed
       error.textContent = entries.error;
       error.hidden = false;
       inputs[0].focus();

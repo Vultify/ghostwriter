@@ -8,6 +8,8 @@ import time
 from ctypes import wintypes
 from pathlib import Path
 
+import numpy as np
+
 from ghostwriter.paths import PROJECT
 from ghostwriter.windows import win32
 from ghostwriter.windows.clipboard import Clipboard
@@ -79,7 +81,6 @@ def app_icon(program: App | None, size: int = 48) -> bytes | None:
     if on_black is None or on_white is None:
         return None
 
-    import numpy as np  # only loaded when a new app needs its icon
     from PIL import Image
 
     # Drawn over black and over white, a pixel shows how opaque it is by how little the background shows through.
@@ -108,6 +109,7 @@ def _draw_icon(icon: wintypes.HICON, size: int, background: int) -> bytes | None
         ctypes.memset(bits, background, size * size * 4)
         previous = gdi32.SelectObject(canvas, bitmap)
         drawn = user32.DrawIconEx(canvas, 0, 0, icon, size, size, 0, None, win32.DI_NORMAL)
+        gdi32.GdiFlush()  # GDI may batch the drawing, and the pixels are read straight from memory
         pixels = ctypes.string_at(bits, size * size * 4)
         gdi32.SelectObject(canvas, previous)
         return pixels if drawn else None

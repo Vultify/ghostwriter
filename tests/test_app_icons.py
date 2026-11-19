@@ -9,6 +9,12 @@ from ghostwriter.system import paster
 PNG = b"\x89PNG\r\n\x1a\nfake"
 
 
+@pytest.fixture(autouse=True)
+def no_remembered_misses(monkeypatch):
+    """Each test starts with no apps remembered as having no icon."""
+    monkeypatch.setattr(app_icons, "_without_icon", {})
+
+
 def test_an_apps_icon_is_saved_once_and_read_back_as_a_data_url(tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(paster, "app_icon", lambda app: calls.append(app) or PNG)
@@ -32,13 +38,17 @@ def test_ghostwriter_and_apps_without_an_icon_save_nothing(tmp_path, monkeypatch
     assert not tmp_path.exists() or not any(tmp_path.iterdir())
 
 
-def test_an_app_without_an_icon_is_only_looked_up_once(tmp_path, monkeypatch):
-    calls = []
-    monkeypatch.setattr(app_icons, "_without_icon", set())
+def test_an_app_without_an_icon_is_looked_up_again_only_after_a_while(tmp_path, monkeypatch):
+    calls, now = [], [1000.0]
     monkeypatch.setattr(paster, "app_icon", lambda app: calls.append(app))
+    monkeypatch.setattr(app_icons.time, "monotonic", lambda: now[0])
     for _ in range(3):
         app_icons.remember("Some game", Path("game.exe"), tmp_path)
-    assert calls == [Path("game.exe")]
+    app_icons.remember("Some game", Path("other/game.exe"), tmp_path)  # another program with the same name
+    assert calls == [Path("game.exe"), Path("other/game.exe")]
+    now[0] += app_icons.RETRY_SECONDS
+    app_icons.remember("Some game", Path("game.exe"), tmp_path)  # a failure can be temporary
+    assert calls[-1] == Path("game.exe") and len(calls) == 3
 
 
 def test_a_broken_icon_never_stops_the_dictation(tmp_path, monkeypatch):
