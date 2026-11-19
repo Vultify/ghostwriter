@@ -32,11 +32,12 @@ jobs:
           Copy-Item $env:pythonLocation .python -Recurse
           .python\python.exe -m venv .venv
 
-      - name: Install the tested package versions
-        run: .venv\Scripts\python.exe -m pip install --require-hashes -r requirements-windows.lock
-
       - name: Install the test tools
         run: .venv\Scripts\python.exe -m pip install faster-whisper pytest
+
+      # Last, so any package the test tools pulled in at another version goes back to the one users get.
+      - name: Install the tested package versions
+        run: .venv\Scripts\python.exe -m pip install --require-hashes -r requirements-windows.lock
 
       - name: Run the tests
         run: .venv\Scripts\python.exe -m pytest tests -rs
