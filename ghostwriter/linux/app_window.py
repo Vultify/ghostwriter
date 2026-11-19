@@ -27,12 +27,20 @@ _WINDOW_MODULE = "ghostwriter.window"
 WIDTH, HEIGHT = 1360, 920  # the window's size, as on Windows
 MIN_WIDTH, MIN_HEIGHT = 940, 640  # the smallest the page fits in, as window.py tells GTK
 SCREEN_MARGIN = 40  # kept free around a floating window on a screen too small for the full size
+TITLE = "Ghostwriter"  # the window's title, as window.py sets it
+DIALOG_TITLES = "^(Open|Save) file$"  # pywebview's file dialogs, for Import and Export
+DIALOG_WIDTH, DIALOG_HEIGHT = 875, 600  # the size Omarchy gives file dialogs that come through the desktop portal
 # Floats the window centered at its size, like Omarchy does for LocalSend. Set again before every launch, replacing
 # the last one, the way Omarchy's own About window sets its rule, so nothing is added to the Hyprland config.
+# The file dialogs get a rule of their own: GTK opens them directly rather than through the portal, so Omarchy's
+# file dialog rule never sees them, and GTK's own size can be taller than a small screen.
 _FLOAT_RULE = """
 if ghostwriter_window_rule then ghostwriter_window_rule:set_enabled(false) end
-ghostwriter_window_rule = hl.window_rule({{ match = {{ class = {app_id} }}, float = true, center = true,
-  size = {{ {width}, {height} }} }})
+if ghostwriter_dialog_rule then ghostwriter_dialog_rule:set_enabled(false) end
+ghostwriter_window_rule = hl.window_rule({{ match = {{ class = {app_id}, title = {title} }},
+  float = true, center = true, size = {{ {width}, {height} }} }})
+ghostwriter_dialog_rule = hl.window_rule({{ match = {{ class = {app_id}, title = {dialog_titles} }},
+  float = true, center = true, size = {{ {dialog_width}, {dialog_height} }} }})
 """
 
 log = logging.getLogger("ghostwriter")
@@ -83,8 +91,10 @@ def _float_on_hyprland() -> None:
         free_height = screen["height"] / screen["scale"] - top - bottom - 2 * SCREEN_MARGIN
         width = max(MIN_WIDTH, min(WIDTH, free_width))
         height = max(MIN_HEIGHT, min(HEIGHT, free_height))
-        rule = _FLOAT_RULE.format(app_id=json.dumps(f"^{re.escape(APP_ID)}$"), width=round(width),
-                                  height=round(height))
+        rule = _FLOAT_RULE.format(app_id=json.dumps(f"^{re.escape(APP_ID)}$"), title=json.dumps(f"^{TITLE}$"),
+                                  width=round(width), height=round(height), dialog_titles=json.dumps(DIALOG_TITLES),
+                                  dialog_width=round(min(DIALOG_WIDTH, free_width)),
+                                  dialog_height=round(min(DIALOG_HEIGHT, free_height)))
         reply = hyprland.request("eval " + rule).strip()
         if reply != "ok":
             raise hyprland.HyprlandError(reply)
