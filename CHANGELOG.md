@@ -31,6 +31,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The app window opens larger (1360 by 920, smaller on small screens), so every page fits without crowding.
 - On Linux, Settings and the welcome no longer claim the hotkey is hidden from the app in front, since only Windows hides it there.
 
+### Fixed
+- Settings no longer reset to their defaults when the tray app, the app window, or Omarchy's panel reads settings.json while another one is saving it, and a change saved in one of them is no longer undone by a change made in another a moment later.
+
 ## [1.6.0] - 2026-11-16
 
 Other apps' sound fades while you dictate, safer installs and updates, and a few fixes.

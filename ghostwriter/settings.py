@@ -22,7 +22,9 @@ OTHER_SOUNDS = (100, 50, 30, 10, 0)
 LOWERED_SOUNDS = 10  # the default, and what the tray's on/off switch turns them down to
 THEMES = ("system", "light", "dark")  # for the app window; "system" follows the system's own setting
 
-_READ_TRIES = 5  # a read that catches a save halfway tries again this many times, 20 ms apart
+# A read that catches a save halfway tries again, 20 ms apart, for up to half a second: a save takes about a
+# millisecond, so a file still unreadable after that is broken, and the next save writes it whole again.
+_READ_TRIES = 25
 
 log = logging.getLogger("ghostwriter")
 
