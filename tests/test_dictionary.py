@@ -66,6 +66,19 @@ def test_a_new_user_gets_the_starter_dictionary(tmp_path):
     assert starter.fixes == []  # the fix examples are notes until someone turns them on
 
 
+def test_importing_a_big_file_writes_the_dictionary_once(tmp_path, monkeypatch):
+    path = tmp_path / "dictionary.txt"
+    path.write_text("Ghostwriter\n", encoding="utf-8")
+    dictionary = DictionaryFile(path, starter=None)
+    writes = []
+    real_write = Path.write_text
+    monkeypatch.setattr(Path, "write_text", lambda self, *args, **kwargs: writes.append(self) or real_write(self, *args, **kwargs))
+    lines = [f"Word{number}" for number in range(500)] + ["Word1", "ghost writer -> Ghostwriter", "Ghostwriter"]
+    assert dictionary.merge("\n".join(lines)) == (500, 1)  # a line repeated in the file counts once
+    assert writes == [path]
+    assert path.read_text(encoding="utf-8").splitlines()[-1] == "ghost writer -> Ghostwriter"
+
+
 SPOKEN = [
     ("I'm testing Ghostwriter right now.", "Ghostwriter"),
     ("Our shop is in Gloucester, Massachusetts.", "Gloucester"),

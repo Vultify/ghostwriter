@@ -93,6 +93,18 @@ def test_deleting_one_dictation_keeps_the_rest_and_changes_the_stamp(history):
     assert (summary["total"], summary["total_words"], summary["first"]) == (2, 4, "2026-11-02T09:00:00")
 
 
+def test_deleting_the_newest_then_dictating_again_still_changes_the_stamp(history):
+    """SQLite gives the next dictation the deleted one's id, so the count and newest id come out the same."""
+    history.add("first", "Notepad", 1.0, at=datetime(2026, 11, 18, 9, 0))
+    history.add("deleted", "Notepad", 1.0, at=datetime(2026, 11, 18, 9, 5))
+    newest = history.search()["items"][0]["id"]
+    before = history.stamp()
+    history.delete(newest)
+    history.add("new", "Notepad", 1.0, at=datetime(2026, 11, 18, 9, 6))
+    assert history.search()["items"][0]["id"] == newest
+    assert history.stamp() != before
+
+
 def test_clearing_deletes_everything_and_changes_the_stamp(history):
     history.add("a private thought", "Notepad", 1.0)
     before = history.stamp()

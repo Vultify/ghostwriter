@@ -14,12 +14,13 @@ from ghostwriter.paths import APP_ICONS_DIR
 OWN_NAME = "Ghostwriter"  # the window draws its own ghost for these
 
 log = logging.getLogger("ghostwriter")
+_without_icon: set[str] = set()  # apps already found to have none, so they aren't looked up on every dictation
 
 
 def remember(name: str, app, folder: Path = APP_ICONS_DIR) -> None:
     """Save an app's icon if it isn't saved yet. Never raises: a missing icon only costs the picture."""
     path = _path(name, folder)
-    if name == OWN_NAME or app is None or path.exists():
+    if name == OWN_NAME or app is None or name in _without_icon or path.exists():
         return
     from ghostwriter.system import paster  # only the tray app saves icons; the window just reads them
 
@@ -28,6 +29,8 @@ def remember(name: str, app, folder: Path = APP_ICONS_DIR) -> None:
         if png:
             folder.mkdir(exist_ok=True)
             path.write_bytes(png)
+        else:
+            _without_icon.add(name)
     except Exception:
         log.warning("Couldn't save the icon for %s", name, exc_info=True)
 

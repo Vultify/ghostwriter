@@ -314,8 +314,8 @@ function fillSoundStyles(settings) {
 // and rests in its usual shape; Settings as a level bar that fills from the left.
 
 const MIC_TESTS = {
-  home: { button: "home-mic-test", meter: "home-meter", bars: 27 },
-  settings: { button: "mic-test", meter: "mic-meter", bars: 40 },
+  home: { button: "home-mic-test", meter: "home-meter", hint: "home-mic-hint", bars: 27 },
+  settings: { button: "mic-test", meter: "mic-meter", hint: "mic-hint", bars: 40 },
 };
 const WAVE_SHAPE = [6, 9, 12, 9, 14, 11, 9, 16, 22, 30, 38, 46, 34, 54, 34, 46, 38, 30, 22, 16, 9, 11, 14, 9, 12, 9, 6];
 const MIC_TEST_SECONDS = 20;  // stops by itself, so the mic never stays open by accident
@@ -324,9 +324,11 @@ const micTest = { where: null, timer: null, levels: [], startedAt: 0 };
 async function startMicTest(where) {
   stopMicTest();
   const opened = await api().start_mic_test();
-  const hint = document.getElementById("mic-hint");
-  hint.textContent = "Couldn't open that mic. Check that it's plugged in, or pick another one.";
-  hint.hidden = opened;
+  Object.entries(MIC_TESTS).forEach(([place, { hint }]) => {
+    const node = document.getElementById(hint);
+    node.textContent = "Couldn't open that mic. Check that it's plugged in, or pick another one.";
+    node.hidden = opened || place !== where;
+  });
   if (!opened) return;
   const test = MIC_TESTS[where];
   Object.assign(micTest, { where, levels: [], startedAt: performance.now(), timer: setInterval(drawMicLevel, 60) });
@@ -478,18 +480,27 @@ function editRow(entry, isWords) {
   const stop = () => { dictionaryView.editing = null; renderEntries(); };
   cancel.addEventListener("click", stop);
   form.addEventListener("keydown", (event) => { if (event.key === "Escape") { event.stopPropagation(); stop(); } });
+  const error = Object.assign(element("p", "form-error"), { hidden: true });
+  error.setAttribute("role", "alert");
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const values = inputs.map((input) => input.value);
-    const saved = isWords
-      ? await editDictionary("change_word", [entry.text, ...values], "word-error")
-      : await editDictionary("change_fix", [entry.heard, entry.write, ...values], "fix-error");
-    if (saved) stop();
+    const entries = isWords
+      ? await api().change_word(entry.text, ...values)
+      : await api().change_fix(entry.heard, entry.write, ...values);
+    if (entries.error) {  // kept open with what was typed, so it can be fixed
+      error.textContent = entries.error;
+      error.hidden = false;
+      inputs[0].focus();
+      return;
+    }
+    dictionaryView.editing = null;
+    renderDictionary(entries);
   });
   if (isWords) form.append(inputs[0]);
   else form.append(inputs[0], element("span", "arrow", "→"), inputs[1]);
   form.append(save, cancel);
-  row.append(form);
+  row.append(form, error);
   requestAnimationFrame(() => inputs[0].focus());
   return row;
 }
@@ -502,7 +513,6 @@ function addedDay(day) {
 async function editDictionary(action, values, errorId) {
   const entries = await api()[action](...values);
   showError(errorId, entries.error);
-  if (entries.error) dictionaryView.editing = null;
   renderDictionary(entries);
   return !entries.error;
 }
@@ -592,9 +602,9 @@ async function watchHistory() {
   const day = new Date().toDateString();
   if (stamp === shown.stamp && day === shown.day) return;
   Object.assign(shown, { stamp, day });
-  // A new dictation may have brought an app's first icon, so ask again for the ones that had none.
-  icons.forEach((url, name) => { if (url === null) icons.delete(name); });
   const summary = await api().history_summary();
+  // A new dictation may have brought its app's first icon, so ask again for recent apps that had none.
+  summary.recent.forEach(({ app }) => { if (icons.get(app) === null) icons.delete(app); });
   await loadIcons(summary.recent);
   renderSummary(summary);
   await showHistory();
@@ -607,6 +617,7 @@ async function showHistory(changes = {}) {
   const result = await api().history(shown.query, shown.app, shown.limit);
   if (request !== shown.request) return;  // a newer search already started
   await loadIcons([...result.items, ...result.apps.map((app) => ({ app }))]);
+  if (request !== shown.request) return;  // a newer search finished while this one waited on icons
   fillFilters(result.apps);
   renderHistory(result);
 }

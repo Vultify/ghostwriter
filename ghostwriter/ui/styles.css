@@ -528,6 +528,8 @@ kbd {
 
 .hero-hint { margin: 0; max-width: 34ch; font-size: 14px; line-height: 1.5; color: var(--muted); }
 
+.hero-error { margin-top: 6px; font-size: 13px; color: var(--danger); }
+
 .hero-mic {
   flex-shrink: 0;
   align-self: stretch;
@@ -984,6 +986,8 @@ kbd {
 .dict-row.editing { display: block; padding: 8px 4px; }
 
 .edit-form { display: flex; align-items: center; gap: 10px; }
+
+.dict-row.editing .form-error { margin-top: 6px; }
 
 .edit-form .arrow { color: var(--muted); }
 

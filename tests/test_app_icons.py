@@ -32,6 +32,15 @@ def test_ghostwriter_and_apps_without_an_icon_save_nothing(tmp_path, monkeypatch
     assert not tmp_path.exists() or not any(tmp_path.iterdir())
 
 
+def test_an_app_without_an_icon_is_only_looked_up_once(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(app_icons, "_without_icon", set())
+    monkeypatch.setattr(paster, "app_icon", lambda app: calls.append(app))
+    for _ in range(3):
+        app_icons.remember("Some game", Path("game.exe"), tmp_path)
+    assert calls == [Path("game.exe")]
+
+
 def test_a_broken_icon_never_stops_the_dictation(tmp_path, monkeypatch):
     def broken(app):
         raise OSError("no access")

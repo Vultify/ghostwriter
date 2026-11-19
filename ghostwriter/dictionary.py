@@ -101,8 +101,7 @@ class DictionaryFile:
         self._remove(word.strip())
 
     def add_fix(self, heard: str, write: str) -> None:
-        versions = [part.strip() for part in _checked(heard, "what it hears").split(",") if part.strip()]
-        line = f"{', '.join(versions)} {FIX_ARROW} {_checked(write, 'what to write')}"
+        line = _fix_entry(heard, write)
         if _normal(line) not in {_normal(entry) for entry in self._entries()}:
             self._append(line)
 
@@ -115,26 +114,31 @@ class DictionaryFile:
 
     def change_fix(self, old_heard: str, old_write: str, heard: str, write: str) -> str:
         """Change a fix in place, keeping its spot in the file. Returns the new line."""
-        versions = [part.strip() for part in _checked(heard, "what it hears").split(",") if part.strip()]
-        return self._replace(fix_line(old_heard, old_write), fix_line(", ".join(versions), _checked(write, "what to write")))
+        return self._replace(fix_line(old_heard, old_write), _fix_entry(heard, write))
 
     def merge(self, text: str) -> tuple[int, int]:
         """Add the words and fixes from another dictionary file that this one doesn't have yet, skipping lines that
         don't fit the format. Returns how many words and fixes were added."""
-        before = self.entries()
+        lines = self._lines()
+        known = {_normal(entry) for entry in self._entries()}
+        new_lines, words, fixes = [], 0, 0
         for line in text.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
             try:
-                if FIX_ARROW in line:
-                    self.add_fix(*(part.strip() for part in line.split(FIX_ARROW, 1)))
-                else:
-                    self.add_word(line)
+                is_fix = FIX_ARROW in line
+                entry = _fix_entry(*line.split(FIX_ARROW, 1)) if is_fix else _checked(line, "word")
             except ValueError:
                 continue
-        after = self.entries()
-        return len(after["words"]) - len(before["words"]), len(after["fixes"]) - len(before["fixes"])
+            if _normal(entry) in known:
+                continue
+            known.add(_normal(entry))
+            new_lines.append(entry)
+            fixes, words = fixes + is_fix, words + (not is_fix)
+        if new_lines:  # one write, so a big import doesn't rewrite the file once per line
+            self.path.write_text("\n".join([*lines, *new_lines]) + "\n", encoding="utf-8")
+        return words, fixes
 
     def _replace(self, old: str, new: str) -> str:
         if _normal(new) != _normal(old) and _normal(new) in {_normal(entry) for entry in self._entries()}:
@@ -207,6 +211,12 @@ class AddedDates:
 def fix_line(heard: str, write: str) -> str:
     """A fix as it's written in the file."""
     return f"{heard.strip()} {FIX_ARROW} {write.strip()}"
+
+
+def _fix_entry(heard: str, write: str) -> str:
+    """A fix from the app window or an imported file, checked and written the way the file keeps it."""
+    versions = [part.strip() for part in _checked(heard, "what it hears").split(",") if part.strip()]
+    return fix_line(", ".join(versions), _checked(write, "what to write"))
 
 
 def entry_key(line: str) -> str:

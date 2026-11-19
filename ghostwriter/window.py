@@ -128,7 +128,7 @@ class Api:
         """Add the words and fixes from a text file the person picks."""
         import webview
 
-        picked = self._window.create_file_dialog(webview.FileDialog.OPEN, file_types=("Text files (*.txt)", "All files (*.*)"))
+        picked = self._window.create_file_dialog(webview.FileDialog.OPEN, file_types=("Text files (*.txt)", "All files (*)"))
         if not picked:
             return self.dictionary()
         try:

@@ -85,13 +85,16 @@ class History:
                 "total": total, "total_words": total_words, "first": first, "recent": [dict(row) for row in recent]}
 
     def stamp(self) -> str:
-        """Changes whenever a dictation is added or deleted, so the window knows to refresh."""
+        """Changes whenever a dictation is added or deleted, so the window knows to refresh. The newest time is in it
+        because SQLite reuses a deleted top id, so a delete plus a new dictation can leave the count and id alike."""
         with self._open() as db:
-            count, newest = db.execute("SELECT count(*), coalesce(max(id), 0) FROM dictations").fetchone()
-        return f"{count}-{newest}"
+            count, newest, latest = db.execute(
+                "SELECT count(*), coalesce(max(id), 0), coalesce(max(at), '') FROM dictations").fetchone()
+        return f"{count}-{newest}-{latest}"
 
     def delete(self, dictation_id: int) -> None:
-        """Delete one dictation, overwriting its text in the file too."""
+        """Delete one dictation and zero its text inside history.db. SQLite's short-lived journal file can still leave
+        a copy in free disk space, like any deleted file, until the disk reuses it."""
         with self._open() as db:
             db.execute("PRAGMA secure_delete = ON")
             db.execute("DELETE FROM dictations WHERE id = ?", [int(dictation_id)])
