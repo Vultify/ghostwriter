@@ -266,6 +266,17 @@ def test_picking_or_unpicking_it_in_omarchys_menu_switches_over_live(omarchy, ke
     assert recorded.wait_for(5) == ["press", "release"] * 2 + ["toggle"]
 
 
+def test_a_press_right_after_picking_it_isnt_lost_waiting_for_the_rescan(omarchy, keyboards, started, monkeypatch):
+    omarchy(picked=False)
+    keyboards()
+    monkeypatch.setattr(hotkey, "_RESCAN_SECONDS", 60)
+    recorded = Recorded()
+    started(recorded)
+    omarchy(picked=True)
+    _send("start")
+    assert recorded.wait_for(1) == ["press"]
+
+
 def test_omarchys_keys_do_nothing_while_dictation_is_off(omarchy, keyboards, started):
     recorded = Recorded()
     started(recorded).set_key(0)

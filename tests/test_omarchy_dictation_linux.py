@@ -66,26 +66,43 @@ def _wait_for(path: Path, lines: int) -> list[str]:
     return found
 
 
-def test_each_command_reaches_the_running_ghostwriter_as_its_signal(desktop):
-    stand_in = desktop / "ghostwriter"
-    stand_in.mkdir()
-    (stand_in / "__init__.py").touch()
-    (stand_in / "__main__.py").write_text(
+@pytest.fixture
+def stand_in(desktop):
+    """A running stand-in Ghostwriter and the file it writes down its signals in."""
+    package = desktop / "ghostwriter"
+    package.mkdir()
+    (package / "__init__.py").touch()
+    (package / "__main__.py").write_text(
         STAND_IN.format(numbers=sorted(int(number) for number in omarchy_dictation.SIGNALS.values())))
     heard = desktop / "heard"
     process = subprocess.Popen([sys.executable, "-m", "ghostwriter", str(heard)], cwd=desktop)
-    try:
-        deadline = time.monotonic() + 5
-        while not heard.exists() and time.monotonic() < deadline:  # its signals are blocked once the file exists
-            time.sleep(0.02)
-        _status(desktop, pid=process.pid)
-        for command in ("start", "stop", "toggle"):
-            assert _dictate(command).returncode == 0
-            time.sleep(0.05)  # Omarchy runs them one at a time too
-        assert _wait_for(heard, 3) == ["SIGUSR1", "SIGUSR2", "SIGRTMIN"]
-    finally:
-        process.kill()
-        process.wait()
+    deadline = time.monotonic() + 5
+    while not heard.exists() and time.monotonic() < deadline:  # its signals are blocked once the file exists
+        time.sleep(0.02)
+    yield process, heard
+    process.kill()
+    process.wait()
+
+
+def test_each_command_reaches_the_running_ghostwriter_as_its_signal(desktop, stand_in):
+    process, heard = stand_in
+    _status(desktop, pid=process.pid)
+    for command in ("start", "stop", "toggle"):
+        assert _dictate(command).returncode == 0
+        time.sleep(0.05)  # Omarchy runs them one at a time too
+    assert _wait_for(heard, 3) == ["SIGUSR1", "SIGUSR2", "SIGRTMIN"]
+    assert not (desktop / "started").exists()
+
+
+def test_a_ghostwriter_still_loading_is_never_signalled(desktop, stand_in):
+    # Started by a press moments ago, it hasn't written its status yet, and a signal would end it.
+    _, heard = stand_in
+    _status(desktop, pid=os.getpid(), state="stopped")
+    (desktop / "state" / "ghostwriter" / "starting").touch()
+    for command in ("stop", "toggle", "start"):
+        assert _dictate(command).returncode == 0
+    time.sleep(0.2)
+    assert heard.read_text() == ""
     assert not (desktop / "started").exists()
 
 

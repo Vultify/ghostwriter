@@ -134,16 +134,14 @@ esac
 
 state_folder="${{XDG_STATE_HOME:-$HOME/.local/state}}/ghostwriter"
 
-# The running Ghostwriter, from the status file it keeps for Omarchy's panel, checked against the process itself
-# since a stale file can name a process that has since ended or been reused.
+# The running Ghostwriter, from the status file it keeps for Omarchy's panel. Only that file counts: Ghostwriter
+# writes it once it can take these signals, and a copy still loading would be ended by one. The process is checked
+# too, since a stale file can name a process that has since ended or been reused.
 running() {{
   local pid state
   read -r pid state < <(jq -r '"\\(.pid) \\(.state)"' "$state_folder/status.json" 2>/dev/null)
-  if [[ $pid =~ ^[0-9]+$ && $state != stopped && $(tr '\\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null) == *"-m ghostwriter "* ]]; then
+  [[ $pid =~ ^[0-9]+$ && $state != stopped && $(tr '\\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null) == *"-m ghostwriter "* ]] &&
     echo "$pid"
-  else
-    pgrep -u "$UID" -n -f -- '-m ghostwriter( |$)'
-  fi
 }}
 
 if pid=$(running); then
@@ -175,8 +173,12 @@ set -e
 
 omarchy-dictation-use ghostwriter
 omarchy-restart-hyprctl
-# Started now if it isn't running, so the first press already dictates.
+# Started now if it isn't running, so the first press already dictates. The marker keeps presses while it loads
+# from starting a second copy.
 if ! pgrep -u "$UID" -f -- '-m ghostwriter( |$)' >/dev/null; then
+  state_folder="${{XDG_STATE_HOME:-$HOME/.local/state}}/ghostwriter"
+  mkdir -p "$state_folder"
+  touch "$state_folder/starting"
   setsid -f uwsm-app -- ghostwriter --tray >/dev/null 2>&1
 fi
 omarchy-notification-send -g "Ghostwriter Dictation Ready" "$(omarchy-i18n dictation.hint)" -t 10000

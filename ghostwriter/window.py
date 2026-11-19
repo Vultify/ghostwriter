@@ -201,12 +201,14 @@ class Api:
     def history_stamp(self) -> str:
         return self._history.stamp()
 
-    def settings_stamp(self) -> int:
-        """Changes whenever settings.json is saved, by the window or the tray menu."""
+    def settings_stamp(self) -> str:
+        """Changes whenever settings.json is saved, by the window or the tray menu, and when a desktop's own dictation
+        keys take over or let go."""
         try:
-            return self._settings_path.stat().st_mtime_ns
+            saved = self._settings_path.stat().st_mtime_ns
         except FileNotFoundError:
-            return 0
+            saved = 0
+        return f"{saved} {hotkey.desktop_keys()}"
 
     def delete_dictation(self, dictation_id: int) -> None:
         self._history.delete(dictation_id)

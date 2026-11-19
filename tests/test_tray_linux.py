@@ -12,7 +12,7 @@ from gi.repository import Gio, GLib
 
 from ghostwriter.paths import PROJECT
 from ghostwriter.settings import Settings
-from ghostwriter.linux import desktop, tray_icon
+from ghostwriter.linux import desktop, omarchy_dictation, tray_icon
 from ghostwriter.state import State
 from ghostwriter.tray import Tray
 
@@ -21,6 +21,12 @@ ITEM = "org.kde.StatusNotifierItem"
 MENU = "com.canonical.dbusmenu"
 
 bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+
+
+@pytest.fixture(autouse=True)
+def keys_not_omarchys(tmp_path, monkeypatch):
+    """Ghostwriter's own hotkey drives the tray here, even when it's the user's pick for Omarchy's dictation keys."""
+    monkeypatch.setattr(omarchy_dictation, "backend_path", lambda: tmp_path / "dictation")
 
 
 def _call(name: str, path: str, interface: str, method: str, args: GLib.Variant | None, reply: str):

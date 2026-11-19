@@ -227,7 +227,10 @@ class KeyHook:
                      else "the hotkey can't work: Ghostwriter isn't allowed to read the keyboard")
 
     def _read_signals(self) -> None:
-        for number in _drain(_signals_read):
+        signals = _drain(_signals_read)
+        if not self._omarchy:
+            self._check_omarchy()  # picked moments ago, before the next rescan noticed
+        for number in signals:
             if not self._omarchy or not self.key_code:  # no key means dictation is off
                 continue
             if number == omarchy_dictation.SIGNALS["start"]:
