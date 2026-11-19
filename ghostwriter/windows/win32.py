@@ -245,6 +245,7 @@ for _func, _argtypes, _restype in (
     (gdi32.SelectObject, [wintypes.HDC, wintypes.HGDIOBJ], wintypes.HGDIOBJ),
     (gdi32.DeleteObject, [wintypes.HGDIOBJ], wintypes.BOOL),
     (gdi32.DeleteDC, [wintypes.HDC], wintypes.BOOL),
+    (gdi32.GdiFlush, [], wintypes.BOOL),
     (shell32.SHDefExtractIconW, [wintypes.LPCWSTR, ctypes.c_int, wintypes.UINT, ctypes.POINTER(wintypes.HICON),
                                  ctypes.POINTER(wintypes.HICON), wintypes.UINT], ctypes.c_long),
     (user32.DrawIconEx, [wintypes.HDC, ctypes.c_int, ctypes.c_int, wintypes.HICON, ctypes.c_int, ctypes.c_int,

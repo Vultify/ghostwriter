@@ -51,6 +51,20 @@ def test_an_app_without_an_icon_is_looked_up_again_only_after_a_while(tmp_path, 
     assert calls[-1] == Path("game.exe") and len(calls) == 3
 
 
+def test_web_apps_sharing_one_browser_are_each_looked_up(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(paster, "app_icon", lambda app: calls.append(app))
+    browser = Path("/usr/lib/chromium/chromium")
+    app_icons.remember("WhatsApp", browser, tmp_path)
+    app_icons.remember("YouTube", browser, tmp_path)
+    assert calls == [browser, browser]
+
+
+def test_an_icon_that_cant_be_written_never_stops_the_dictation(tmp_path, monkeypatch):
+    monkeypatch.setattr(paster, "app_icon", lambda app: PNG)
+    app_icons.remember("Notepad", Path("notepad.exe"), tmp_path / "gone" / "app-icons")  # doesn't raise
+
+
 def test_a_broken_icon_never_stops_the_dictation(tmp_path, monkeypatch):
     def broken(app):
         raise OSError("no access")

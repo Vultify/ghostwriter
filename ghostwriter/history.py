@@ -91,8 +91,9 @@ class History:
     def stamp(self) -> str:
         """Changes whenever a dictation is added or deleted, so the window knows to refresh."""
         with self._open() as db:
-            count, newest = db.execute("SELECT count(*), coalesce(max(id), 0) FROM dictations").fetchone()
-            deleted = db.execute("SELECT coalesce(max(times), 0) FROM deletions").fetchone()[0]
+            count, newest, deleted = db.execute(
+                "SELECT count(*), coalesce(max(id), 0), (SELECT coalesce(max(times), 0) FROM deletions) "
+                "FROM dictations").fetchone()
         return f"{count}-{newest}-{deleted}"
 
     def delete(self, dictation_id: int) -> None:
@@ -144,10 +145,11 @@ def _upgrade(db: sqlite3.Connection) -> None:
         db.rollback()
         raise
 
+
 def _count_deletion(db: sqlite3.Connection) -> None:
-    times = db.execute("SELECT coalesce(max(times), 0) FROM deletions").fetchone()[0]
-    db.execute("DELETE FROM deletions")
-    db.execute("INSERT INTO deletions (times) VALUES (?)", [times + 1])
+    """Bump the deletion counter, kept as the table's one row."""
+    db.execute("INSERT OR REPLACE INTO deletions (rowid, times) "
+               "VALUES (1, coalesce((SELECT max(times) FROM deletions), 0) + 1)")
 
 
 def _escape_like(text: str) -> str:
