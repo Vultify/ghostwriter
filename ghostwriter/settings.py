@@ -44,13 +44,12 @@ class Settings:
     history: bool = True  # save each dictation in history.db
     engine: str = "auto"  # speech engine, from models.ENGINE_SETTINGS
     path: Path = field(default=SETTINGS_PATH, repr=False, compare=False)
-    _modified: int | None = field(default=None, repr=False, compare=False)
+    _broken: int | None = field(default=None, repr=False, compare=False)  # when the unreadable file was saved
 
     @classmethod
     def load(cls, path: Path = SETTINGS_PATH) -> "Settings":
         """Read the settings file, keeping defaults for anything missing or unreadable."""
         settings = cls(path=path)
-        settings._modified = _modified_time(path)
         settings._take(_read(path) or {})
         return settings
 
@@ -74,9 +73,7 @@ class Settings:
         current._take(self.saved() if on_disk is None else on_disk)
         merged = {**current.saved(), name: value}
         self._write(merged)
-        # With nothing new in the file, reload_if_changed has nothing to pick up. With another program's change in
-        # it, the next look must read the file: on Windows two saves in the same clock tick share a modified time.
-        self._modified = _modified_time(self.path) if merged == self.saved() else None
+        self._take(merged)  # what another program saved is in use right away, along with this change
 
     def saved(self) -> dict:
         """Every saved setting by name, as settings.json holds them."""
@@ -84,19 +81,21 @@ class Settings:
 
     def save(self) -> None:
         self._write(self.saved())
-        self._modified = _modified_time(self.path)
 
     def _write(self, saved: dict) -> None:
         self.path.write_text(json.dumps(saved, indent=2) + "\n", encoding="utf-8")
 
     def reload_if_changed(self) -> bool:
-        """Pick up changes another program saved, like the app window. Returns whether any setting changed."""
-        modified = _modified_time(self.path)
-        if modified == self._modified:
+        """Pick up changes another program saved, like the app window. Returns whether any setting changed.
+
+        It reads the file every time instead of trusting its modified time: the file is tiny, and on Windows two
+        saves in the same clock tick share a modified time, so one of them would go unnoticed."""
+        version = _modified_time(self.path)
+        if version is not None and version == self._broken:  # still the unreadable file warned about last time
             return False
-        self._modified = modified  # taken before reading, so a save still going on shows up as news next time
         saved = _read(self.path)
         if saved is None:  # gone or unreadable: keep the settings in use rather than falling back to defaults
+            self._broken = version
             return False
         fresh = Settings(path=self.path)
         fresh._take(saved)

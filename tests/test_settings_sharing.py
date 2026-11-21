@@ -53,8 +53,7 @@ def test_a_change_keeps_what_another_program_saved_a_moment_ago(tmp_path):
     tray.change("sounds", False)  # the tray menu, still holding the old pill setting
     saved = json.loads(path.read_text(encoding="utf-8"))
     assert (saved["pill"], saved["sounds"]) == (False, False)
-    assert tray.reload_if_changed()  # the window's change still reaches the running app
-    assert tray.pill is False
+    assert tray.pill is False  # the window's change reached the running app with the tray's own save
     assert not tray.reload_if_changed()
 
 
@@ -64,3 +63,35 @@ def test_a_change_with_nothing_new_on_disk_isnt_news(tmp_path):
     running.change("sounds", False)
     assert not running.reload_if_changed()
     assert Settings.load(path).sounds is False
+
+
+def test_a_save_in_the_same_clock_tick_still_reaches_the_running_app(tmp_path):
+    path = tmp_path / "settings.json"
+    tray = Settings.load(path)
+    tray.save()
+    stamp = path.stat().st_mtime_ns
+    Settings.load(path).change("pill", False)  # the app window, in the same tick as the tray's save
+    os.utime(path, ns=(stamp, stamp))
+    assert tray.reload_if_changed()
+    assert tray.pill is False and not tray.reload_if_changed()
+
+
+def test_a_change_takes_in_what_another_program_saved_right_away(tmp_path):
+    path = tmp_path / "settings.json"
+    tray = Settings.load(path)
+    tray.save()
+    Settings.load(path).change("pill", False)
+    tray.change("sounds", False)
+    assert (tray.pill, tray.sounds) == (False, False)  # the menu and apply_settings see both at once
+
+
+def test_a_broken_file_is_warned_about_once_and_read_again_when_it_changes(tmp_path, caplog):
+    path = tmp_path / "settings.json"
+    tray = Settings.load(path)
+    tray.save()
+    path.write_text("{ not json", encoding="utf-8")
+    assert not tray.reload_if_changed() and not tray.reload_if_changed()
+    assert caplog.text.count("Ignoring unreadable") == 1
+    Settings(path=path, pill=False).save()
+    assert tray.reload_if_changed() and tray.pill is False
+
