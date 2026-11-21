@@ -95,3 +95,15 @@ def test_a_broken_file_is_warned_about_once_and_read_again_when_it_changes(tmp_p
     Settings(path=path, pill=False).save()
     assert tray.reload_if_changed() and tray.pill is False
 
+
+def test_a_file_that_was_unreadable_for_a_moment_is_read_again_in_the_same_tick(tmp_path):
+    path = tmp_path / "settings.json"
+    tray = Settings.load(path)
+    tray.save()
+    path.write_text("{ half saved", encoding="utf-8")
+    stamp = path.stat().st_mtime_ns
+    assert not tray.reload_if_changed()
+    Settings(path=path, pill=False).save()  # the rest of the save lands in the same clock tick
+    os.utime(path, ns=(stamp, stamp))
+    assert tray.reload_if_changed() and tray.pill is False
+

@@ -62,20 +62,21 @@ class DictionaryFile:
     def __init__(self, path: Path = DICTIONARY_PATH, starter: Path | None = STARTER_PATH) -> None:
         self.path = path
         self.starter = starter
-        self._modified: int | None = None
+        self._text: str | None = None  # the file as last loaded
         self._dictionary = Dictionary()
 
     def current(self) -> Dictionary:
         if not self.path.exists() and self.starter and self.starter.exists():
             shutil.copyfile(self.starter, self.path)
             log.info("Created %s from %s", self.path.name, self.starter.name)
+        # Compared by contents, since two saves in the same Windows clock tick share a modified time.
         try:
-            modified = self.path.stat().st_mtime_ns
+            text = self.path.read_text(encoding="utf-8")
         except FileNotFoundError:
             return Dictionary()
-        if modified != self._modified:
-            self._dictionary = Dictionary.parse(self.path.read_text(encoding="utf-8"))
-            self._modified = modified
+        if text != self._text:
+            self._dictionary = Dictionary.parse(text)
+            self._text = text
             log.info("Dictionary loaded: %d words, %d fixes", len(self._dictionary.words), len(self._dictionary.fixes))
         return self._dictionary
 

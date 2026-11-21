@@ -6,6 +6,7 @@ notices changes and applies them.
 Start it with: python -m ghostwriter.window
 """
 
+import hashlib
 import logging
 import subprocess
 from pathlib import Path
@@ -204,10 +205,11 @@ class Api:
     def settings_stamp(self) -> str:
         """Changes whenever settings.json is saved, by the window or the tray menu, and when a desktop's own dictation
         keys take over or let go."""
+        # From the file's contents, since two saves in the same Windows clock tick share a modified time.
         try:
-            saved = self._settings_path.stat().st_mtime_ns
-        except FileNotFoundError:
-            saved = 0
+            saved = hashlib.sha256(self._settings_path.read_bytes()).hexdigest()[:16]
+        except OSError:
+            saved = ""
         return f"{saved} {hotkey.desktop_keys()}"
 
     def delete_dictation(self, dictation_id: int) -> None:

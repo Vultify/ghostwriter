@@ -100,3 +100,15 @@ def test_every_dictionary_word_comes_out_right_when_spoken(transcriber, sentence
     dictionary = fixed_dictionary().current()
     heard = dictionary.apply(transcriber.transcribe(audio, prompt=dictionary.prompt))
     assert expected in heard
+
+
+def test_an_edit_in_the_same_clock_tick_still_applies(tmp_path):
+    path = tmp_path / "dictionary.txt"
+    path.write_text("Ghostwriter\n", encoding="utf-8")
+    dictionary = DictionaryFile(path, starter=None)
+    assert dictionary.current().words == ["Ghostwriter"]
+    stamp = path.stat().st_mtime_ns
+    path.write_text("Ghostwriter\nBrightwater\n", encoding="utf-8")
+    os.utime(path, ns=(stamp, stamp))
+    assert dictionary.current().words == ["Ghostwriter", "Brightwater"]
+

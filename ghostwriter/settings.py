@@ -6,6 +6,7 @@ through a save, and each save writes only the setting it changes over the file a
 
 import json
 import logging
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -44,7 +45,9 @@ class Settings:
     history: bool = True  # save each dictation in history.db
     engine: str = "auto"  # speech engine, from models.ENGINE_SETTINGS
     path: Path = field(default=SETTINGS_PATH, repr=False, compare=False)
-    _broken: int | None = field(default=None, repr=False, compare=False)  # when the unreadable file was saved
+    _broken: bytes | None = field(default=None, repr=False, compare=False)  # the unreadable file, as last read
+    # The tray menu changes settings on its own thread while the main loop checks the file.
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
     @classmethod
     def load(cls, path: Path = SETTINGS_PATH) -> "Settings":
@@ -67,6 +70,10 @@ class Settings:
         file has them now, so a change another program saved a moment ago isn't undone."""
         if name not in _CHECKS or not _CHECKS[name](value):
             raise ValueError(f"{value!r} isn't a valid {name}")
+        with self._lock:
+            self._change(name, value)
+
+    def _change(self, name: str, value) -> None:
         setattr(self, name, value)
         on_disk = _read(self.path)
         current = Settings(path=self.path)
@@ -90,13 +97,21 @@ class Settings:
 
         It reads the file every time instead of trusting its modified time: the file is tiny, and on Windows two
         saves in the same clock tick share a modified time, so one of them would go unnoticed."""
-        version = _modified_time(self.path)
-        if version is not None and version == self._broken:  # still the unreadable file warned about last time
+        with self._lock:
+            return self._reload()
+
+    def _reload(self) -> bool:
+        try:
+            raw = self.path.read_bytes()
+        except OSError:
+            raw = None
+        if raw is not None and raw == self._broken:  # the same unreadable file as last time: already warned about
             return False
         saved = _read(self.path)
         if saved is None:  # gone or unreadable: keep the settings in use rather than falling back to defaults
-            self._broken = version
+            self._broken = raw
             return False
+        self._broken = None
         fresh = Settings(path=self.path)
         fresh._take(saved)
         changed = False
@@ -139,10 +154,3 @@ def _read(path: Path) -> dict | None:
             continue
         return saved if isinstance(saved, dict) else None
     return None
-
-
-def _modified_time(path: Path) -> int | None:
-    try:
-        return path.stat().st_mtime_ns
-    except FileNotFoundError:
-        return None
