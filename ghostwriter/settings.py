@@ -74,8 +74,9 @@ class Settings:
         current._take(self.saved() if on_disk is None else on_disk)
         merged = {**current.saved(), name: value}
         self._write(merged)
-        if merged == self.saved():  # nothing new in the file, so reload_if_changed has nothing to pick up
-            self._modified = _modified_time(self.path)
+        # With nothing new in the file, reload_if_changed has nothing to pick up. With another program's change in
+        # it, the next look must read the file: on Windows two saves in the same clock tick share a modified time.
+        self._modified = _modified_time(self.path) if merged == self.saved() else None
 
     def saved(self) -> dict:
         """Every saved setting by name, as settings.json holds them."""
