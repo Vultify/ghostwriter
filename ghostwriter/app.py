@@ -368,7 +368,13 @@ def _run() -> None:
         on_state=StatusDisplay(tray, indicator, settings, other_sounds), dictionary=dictionary,
     )
 
+    applying = threading.Lock()  # the tray menu and the main loop can both apply settings
+
     def apply_settings() -> None:
+        with applying:
+            _apply_settings()
+
+    def _apply_settings() -> None:
         dictation.set_hotkey(settings.hotkey_code if tray.dictation_on else None)
         dictation.hands_free = settings.hands_free
         dictation.max_recording_seconds = settings.hands_free_minutes * 60

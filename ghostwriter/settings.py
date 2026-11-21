@@ -53,7 +53,10 @@ class Settings:
     def load(cls, path: Path = SETTINGS_PATH) -> "Settings":
         """Read the settings file, keeping defaults for anything missing or unreadable."""
         settings = cls(path=path)
-        settings._take(_read(path) or {})
+        raw, saved = _read_file(path)
+        settings._take(saved or {})
+        if saved is None:
+            settings._broken = raw
         return settings
 
     def _take(self, saved: dict) -> None:
@@ -67,7 +70,8 @@ class Settings:
 
     def change(self, name: str, value) -> None:
         """Set one setting and save it, refusing values the app can't use. The other settings are written as the
-        file has them now, so a change another program saved a moment ago isn't undone."""
+        file has them now, so a change another program saved a moment ago isn't undone, and are taken in here too:
+        a caller applies every setting after a change, not only this one."""
         if name not in _CHECKS or not _CHECKS[name](value):
             raise ValueError(f"{value!r} isn't a valid {name}")
         with self._lock:
@@ -75,7 +79,11 @@ class Settings:
 
     def _change(self, name: str, value) -> None:
         setattr(self, name, value)
-        on_disk = _read(self.path)
+        raw, on_disk = _read_file(self.path)
+        if on_disk is None and raw is not None:
+            # There, but unreadable right now: saving would write defaults over every other setting.
+            log.warning("Didn't save %s, since %s can't be read right now", name, self.path.name)
+            return
         current = Settings(path=self.path)
         current._take(self.saved() if on_disk is None else on_disk)
         merged = {**current.saved(), name: value}
@@ -91,6 +99,7 @@ class Settings:
 
     def _write(self, saved: dict) -> None:
         self.path.write_text(json.dumps(saved, indent=2) + "\n", encoding="utf-8")
+        self._broken = None
 
     def reload_if_changed(self) -> bool:
         """Pick up changes another program saved, like the app window. Returns whether any setting changed.
@@ -101,13 +110,7 @@ class Settings:
             return self._reload()
 
     def _reload(self) -> bool:
-        try:
-            raw = self.path.read_bytes()
-        except OSError:
-            raw = None
-        if raw is not None and raw == self._broken:  # the same unreadable file as last time: already warned about
-            return False
-        saved = _read(self.path)
+        raw, saved = _read_file(self.path, skip=self._broken)
         if saved is None:  # gone or unreadable: keep the settings in use rather than falling back to defaults
             self._broken = raw
             return False
@@ -141,16 +144,30 @@ _CHECKS = {
 
 def _read(path: Path) -> dict | None:
     """The saved settings, or None when there's no file or it can't be read."""
+    return _read_file(path)[1]
+
+
+def _read_file(path: Path, skip: bytes | None = None) -> tuple[bytes | None, dict | None]:
+    """The file as read and the settings in it, from one read, so what's parsed is what's remembered. The settings
+    are None when there's no file or it can't be read; an unreadable file the same as skip isn't waited on again."""
+    raw = None
     for attempt in range(_READ_TRIES):
         try:
-            saved = json.loads(path.read_text(encoding="utf-8"))
+            raw = path.read_bytes()
         except FileNotFoundError:
-            return None
-        except (OSError, ValueError) as error:  # most often a read in the middle of another program's save
-            if attempt == _READ_TRIES - 1:
-                log.warning("Ignoring unreadable %s: %s", path.name, error)
-                return None
-            time.sleep(0.02)
-            continue
-        return saved if isinstance(saved, dict) else None
-    return None
+            return None, None
+        except OSError as error:  # held by another program, most often one saving it
+            problem = error
+        else:
+            if raw == skip:
+                return raw, None
+            try:
+                saved = json.loads(raw.decode("utf-8"))
+                return raw, saved if isinstance(saved, dict) else None
+            except ValueError as error:  # most often a read in the middle of another program's save
+                problem = error
+        if attempt == _READ_TRIES - 1:
+            log.warning("Ignoring unreadable %s: %s", path.name, problem)
+            return raw, None
+        time.sleep(0.02)
+    return raw, None

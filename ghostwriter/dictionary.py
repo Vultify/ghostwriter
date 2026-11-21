@@ -74,6 +74,11 @@ class DictionaryFile:
             text = self.path.read_text(encoding="utf-8")
         except FileNotFoundError:
             return Dictionary()
+        except (OSError, UnicodeError) as error:  # held by another program, or not saved as UTF-8
+            if self._text is not None:
+                log.warning("Couldn't read %s, so the last version is still in use: %s", self.path.name, error)
+                self._text = None  # warned once; it's read again next time
+            return self._dictionary
         if text != self._text:
             self._dictionary = Dictionary.parse(text)
             self._text = text

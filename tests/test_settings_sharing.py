@@ -19,14 +19,14 @@ def _save_elsewhere(path: Path, text: str) -> None:
 def test_a_read_in_the_middle_of_a_save_waits_for_the_whole_file(tmp_path, monkeypatch):
     path = tmp_path / "settings.json"
     path.write_text(json.dumps({"hotkey": "Caps Lock", "pill": False}), encoding="utf-8")
-    real_read_text = Path.read_text
+    real_read_bytes = Path.read_bytes
     reads = []
 
-    def caught_halfway(self, *args, **kwargs):
+    def caught_halfway(self):
         reads.append(self)
-        return '{"hotkey": "Ca' if len(reads) == 1 else real_read_text(self, *args, **kwargs)
+        return b'{"hotkey": "Ca' if len(reads) == 1 else real_read_bytes(self)
 
-    monkeypatch.setattr(Path, "read_text", caught_halfway)
+    monkeypatch.setattr(Path, "read_bytes", caught_halfway)
     loaded = Settings.load(path)
     assert (loaded.hotkey, loaded.pill) == ("Caps Lock", False)
     assert len(reads) == 2
@@ -106,4 +106,14 @@ def test_a_file_that_was_unreadable_for_a_moment_is_read_again_in_the_same_tick(
     Settings(path=path, pill=False).save()  # the rest of the save lands in the same clock tick
     os.utime(path, ns=(stamp, stamp))
     assert tray.reload_if_changed() and tray.pill is False
+
+
+def test_a_change_never_writes_defaults_over_a_file_it_cant_read(tmp_path):
+    path = tmp_path / "settings.json"
+    Settings(path=path, hotkey="Right Ctrl", pill=False).save()
+    good = path.read_text(encoding="utf-8")
+    path.write_text(good[: len(good) // 2], encoding="utf-8")  # left half saved
+    window = Settings.load(path)
+    window.change("theme", "light")
+    assert path.read_text(encoding="utf-8") == good[: len(good) // 2]  # nothing written over it
 

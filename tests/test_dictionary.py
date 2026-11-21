@@ -112,3 +112,14 @@ def test_an_edit_in_the_same_clock_tick_still_applies(tmp_path):
     os.utime(path, ns=(stamp, stamp))
     assert dictionary.current().words == ["Ghostwriter", "Brightwater"]
 
+
+def test_a_dictionary_that_cant_be_read_keeps_the_last_version(tmp_path):
+    path = tmp_path / "dictionary.txt"
+    path.write_text("Ghostwriter\n", encoding="utf-8")
+    dictionary = DictionaryFile(path, starter=None)
+    assert dictionary.current().words == ["Ghostwriter"]
+    path.write_bytes("Caf\xe9\n".encode("latin-1"))  # saved in the wrong encoding
+    assert dictionary.current().words == ["Ghostwriter"]
+    path.write_text("Ghostwriter\nCaf\u00e9\n", encoding="utf-8")
+    assert dictionary.current().words == ["Ghostwriter", "Caf\u00e9"]
+

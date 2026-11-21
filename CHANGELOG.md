@@ -32,7 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - On Linux, Settings and the welcome no longer claim the hotkey is hidden from the app in front, since only Windows hides it there.
 
 ### Fixed
-- Settings no longer reset to their defaults when the tray app, the app window, or Omarchy's panel reads settings.json while another one is saving it, and a change saved in one of them is no longer undone by a change made in another a moment later.
+- Settings no longer reset to their defaults when the tray app, the app window, or Omarchy's panel reads settings.json while another one is saving it, and a change saved in one of them is no longer undone by a change made in another a moment later. Changes saved within a few milliseconds of each other, to settings or the dictionary, are no longer missed, and a dictation still goes through if the dictionary file is briefly locked.
 
 ## [1.6.0] - 2026-11-16
 
