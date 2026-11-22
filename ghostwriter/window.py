@@ -53,7 +53,6 @@ class Api:
         self._first_run = status.get("model") == "downloading" and status.get("first_run", False)
         self._window = None
         self._maximized = False
-        self._last_settings: Settings | None = None
         self._nvidia: str | None = None
         self._nvidia_checked = False
         self._tray_has_nvidia: bool | None = None  # the tray app's last answer, kept through torn reads
@@ -66,11 +65,6 @@ class Api:
 
     def state(self) -> dict:
         settings = Settings.load(self._settings_path)
-        readable = settings.readable
-        if readable:
-            self._last_settings = settings
-        elif self._last_settings:  # unreadable for now: show what was last read, not the defaults
-            settings = self._last_settings
         status = startup.read(self._startup_path)
         has_nvidia = self._has_nvidia(status)
         engine = models.resolve(settings.engine, has_nvidia)
@@ -81,7 +75,6 @@ class Api:
             "system": desktop.NAME,
             "ownFrame": app_window.OWN_FRAME,
             "ownApp": OWN_APP,
-            "settingsReadable": readable,
             "appMenu": desktop.APP_MENU,
             "startAtLogin": shortcuts.starts_at_login(self._login_folder),
             "soundStyles": list(sounds.STYLES),
@@ -103,10 +96,8 @@ class Api:
         }
 
     def set_setting(self, name: str, value) -> dict:
-        if Settings.load(self._settings_path).change(name, value):
-            return self.state()
-        return {**self.state(), "settingsError": "settings.json can't be read right now, so that change wasn't saved. "
-                                                 "Try again in a few seconds."}
+        Settings.load(self._settings_path).change(name, value)
+        return self.state()
 
     def dictionary(self) -> dict:
         """The words and fixes, each with the day it was added, or an error when the file can't be read."""

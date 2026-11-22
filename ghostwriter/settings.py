@@ -26,8 +26,6 @@ THEMES = ("system", "light", "dark")  # for the app window; "system" follows the
 # A read that catches a save halfway tries again, 20 ms apart, for up to half a second: a save takes about a
 # millisecond, so a file still unreadable after that is broken, and the next save writes it whole again.
 _READ_TRIES = 25
-HELD = b"\0held by another program"  # what _read_file reports for a file it couldn't open
-REPAIR_SECONDS = 10  # how long settings.json stays unreadable, unchanged, before the tray repairs it
 
 log = logging.getLogger("ghostwriter")
 
@@ -48,8 +46,6 @@ class Settings:
     engine: str = "auto"  # speech engine, from models.ENGINE_SETTINGS
     path: Path = field(default=SETTINGS_PATH, repr=False, compare=False)
     _broken: bytes | None = field(default=None, repr=False, compare=False)  # the unreadable file, as last read
-    _broken_since: float = field(default=0.0, repr=False, compare=False)  # when it was first seen that way
-    _from_file: bool = field(default=False, repr=False, compare=False)  # read from the file at least once
     # The tray menu changes settings on its own thread while the main loop checks the file.
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
@@ -60,9 +56,7 @@ class Settings:
         raw, saved = _read_file(path)
         settings._take(saved or {})
         if saved is None:
-            settings._broken, settings._broken_since = raw, time.monotonic()
-        else:
-            settings._from_file = True
+            settings._broken = raw
         return settings
 
     def _take(self, saved: dict) -> None:
@@ -71,38 +65,30 @@ class Settings:
                 setattr(self, name, saved[name])
 
     @property
-    def readable(self) -> bool:
-        """Whether these settings came from the file, rather than defaults standing in for an unreadable one."""
-        return self._broken is None
-
-    @property
     def hotkey_code(self) -> int:
         return HOTKEYS[self.hotkey]
 
-    def change(self, name: str, value) -> bool:
+    def change(self, name: str, value) -> None:
         """Set one setting and save it, refusing values the app can't use. The other settings are written as the
         file has them now, so a change another program saved a moment ago isn't undone, and are taken in here too:
-        a caller applies every setting after a change, not only this one. Returns whether it was saved."""
+        a caller applies every setting after a change, not only this one."""
         if name not in _CHECKS or not _CHECKS[name](value):
             raise ValueError(f"{value!r} isn't a valid {name}")
         with self._lock:
-            return self._change(name, value)
+            self._change(name, value)
 
-    def _change(self, name: str, value) -> bool:
+    def _change(self, name: str, value) -> None:
+        setattr(self, name, value)
         raw, on_disk = _read_file(self.path)
         if on_disk is None and raw is not None:
-            # There, but unreadable: saving would write defaults over every other setting. The tray app repairs a
-            # file that stays broken (see _reload), so the change waits for that and nothing changes meanwhile.
+            # There, but unreadable right now: saving would write defaults over every other setting.
             log.warning("Didn't save %s, since %s can't be read right now", name, self.path.name)
-            return False
-        setattr(self, name, value)
+            return
         current = Settings(path=self.path)
         current._take(self.saved() if on_disk is None else on_disk)
         merged = {**current.saved(), name: value}
         self._write(merged)
         self._take(merged)  # what another program saved is in use right away, along with this change
-        self._from_file = True
-        return True
 
     def saved(self) -> dict:
         """Every saved setting by name, as settings.json holds them."""
@@ -110,18 +96,6 @@ class Settings:
 
     def save(self) -> None:
         self._write(self.saved())
-
-    def _repair(self, broken: bytes) -> None:
-        """Write the settings in use over a settings.json that stays unreadable, keeping a copy of the broken one."""
-        backup = self.path.with_name(f"{self.path.name}.broken-{time.strftime('%Y%m%d-%H%M%S')}")
-        try:
-            backup.write_bytes(broken)
-            self._write(self.saved())
-        except OSError:
-            log.warning("Couldn't repair the unreadable %s", self.path.name, exc_info=True)
-            return
-        log.warning("%s couldn't be read, so it was saved again from the settings in use; the old file is %s",
-                    self.path.name, backup.name)
 
     def _write(self, saved: dict) -> None:
         self.path.write_text(json.dumps(saved, indent=2) + "\n", encoding="utf-8")
@@ -138,18 +112,9 @@ class Settings:
     def _reload(self) -> bool:
         raw, saved = _read_file(self.path, skip=self._broken)
         if saved is None:  # gone or unreadable: keep the settings in use rather than falling back to defaults
-            if raw is None or raw == HELD:
-                return False  # gone, or held by another program: nothing to repair
-            if raw != self._broken:
-                self._broken, self._broken_since = raw, time.monotonic()
-            elif self._from_file and time.monotonic() - self._broken_since >= REPAIR_SECONDS:
-                # The same unreadable file for a while, so not a save still going on or a hand edit being fixed.
-                # Only settings once read from the file repair it; defaults standing in would reset everything.
-                self._repair(raw)
-                self._broken_since = time.monotonic()  # a repair that failed waits as long again
+            self._broken = raw
             return False
         self._broken = None
-        self._from_file = True
         fresh = Settings(path=self.path)
         fresh._take(saved)
         changed = False
@@ -184,8 +149,7 @@ def _read(path: Path) -> dict | None:
 
 def _read_file(path: Path, skip: bytes | None = None) -> tuple[bytes | None, dict | None]:
     """The file as read and the settings in it, from one read, so what's parsed is what's remembered. The settings
-    are None when there's no file (and the file None too) or it can't be read (the file HELD when it couldn't be
-    opened); an unreadable file the same as skip isn't waited on again."""
+    are None when there's no file or it can't be read; an unreadable file the same as skip isn't waited on again."""
     raw = None
     for attempt in range(_READ_TRIES):
         try:
@@ -193,7 +157,7 @@ def _read_file(path: Path, skip: bytes | None = None) -> tuple[bytes | None, dic
         except FileNotFoundError:
             return None, None
         except OSError as error:  # held by another program, most often one saving it
-            raw, problem = HELD, error
+            problem = error
         else:
             if raw == skip:
                 return raw, None

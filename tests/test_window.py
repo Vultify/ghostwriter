@@ -399,14 +399,9 @@ def test_opening_twice_gives_one_window_and_quitting_closes_it():
     assert _wait_for(lambda: not app_window._app_windows(window.TITLE), timeout=10), "the window didn't close"
 
 
-def test_the_window_explains_a_dictionary_or_settings_file_it_cant_read(api, tmp_path):
+def test_the_window_explains_a_dictionary_file_it_cant_read(api, tmp_path):
     (tmp_path / "dictionary.txt").write_bytes("Caf\xe9\n".encode("latin-1"))
     entries = api.dictionary()
     assert list(entries) == ["readError"] and "UTF-8" in entries["readError"]  # no lists, so the page keeps its own
     assert "UTF-8" in api.add_word("Brightwater")["error"]
-    api.set_setting("theme", "light")
-    (tmp_path / "settings.json").write_text("{ half", encoding="utf-8")
-    refused = api.set_setting("pill", False)
-    assert "settings.json" in refused["settingsError"]
-    assert refused["settings"]["theme"] == "light"  # the last settings read, not the defaults
     assert api.state()["ownApp"] == "Ghostwriter"

@@ -173,9 +173,8 @@ class Tray:
         )
 
     def _change(self, **changes) -> None:
-        saved = all([self.settings.change(name, value) for name, value in changes.items()])
-        if not saved:
-            self.notify("settings.json can't be read right now, so that change wasn't saved. Try again in a few seconds.")
+        for name, value in changes.items():
+            self.settings.change(name, value)
         self._tray.update_menu()
         self._show()
         self.on_change()

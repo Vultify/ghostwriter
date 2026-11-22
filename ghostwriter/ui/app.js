@@ -141,11 +141,7 @@ function bindPage() {
 }
 
 async function change(name, value) {
-  const next = await api().set_setting(name, value);
-  render(next);
-  const note = document.getElementById("settings-note");
-  note.textContent = next.settingsError ?? "";
-  note.hidden = !next.settingsError;
+  render(await api().set_setting(name, value));
 }
 
 function showView(name) {
@@ -164,7 +160,6 @@ function showView(name) {
 
 function render(next) {
   state = next;
-  if (state.settingsReadable) document.getElementById("settings-note").hidden = true;  // the problem is gone
   const settings = state.settings;
   app.classList.toggle("system-frame", !state.ownFrame);  // the desktop draws the frame
   applyTheme();
