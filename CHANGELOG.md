@@ -18,8 +18,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Pick a mic on Linux, from the tray menu, Omarchy's panel, or Settings, under the same names the desktop's sound settings use. If the picked mic is unplugged, Ghostwriter records from the system's default mic instead.
 - The listening pill works on Linux, at the bottom center of the screen you're on, with the same live mic level, typing dots, and stop square as on Windows. It never takes the keyboard and lets clicks through. It needs `gtk4-layer-shell`, and works on Omarchy, KDE, and other desktops with overlay layers; GNOME has none, so it doesn't show there yet.
 - On Omarchy, Ghostwriter has its own panel in the bar, in Omarchy's style. The ghost turns red while it listens, and a click opens the Dictation switch, switches for sounds, the listening pill, lowering other sounds, and history, and the hotkey. Right click opens the app. `scripts/install_omarchy_panel.sh` puts it in the bar in place of the tray icon.
-- History shows each app's own icon next to its dictations, saved the first time you dictate into it. On Linux it's the icon the app's launcher entry names, from your icon theme, so web apps and Steam games get theirs too.
+- On Linux, History's app icons are the ones the app's launcher entry names, from your icon theme, so web apps and Steam games get theirs too.
 - On Omarchy, Ghostwriter can be the dictation app: pick it in Omarchy's menu under Setup > Defaults > Dictation. Omarchy's own dictation keys then run it: hold Right Alt to talk, or press Alt + Space to start and stop hands free. They work without the `input` group, and if Ghostwriter isn't running, a press starts it in the bar. The tray menu, Omarchy's panel, and Settings show Omarchy's keys instead of the hotkey picker. `python -m ghostwriter.linux.shortcuts` adds Ghostwriter to that menu, along with a `ghostwriter` command.
+
+### Changed
+- On Linux, Settings and the welcome no longer claim the hotkey is hidden from the app in front, since only Windows hides it there.
+
+### Fixed
+- On Linux, the old clipboard comes back even when Hyprland refuses the paste keys.
+
+## [1.7.0] - 2026-11-22
+
+A fresh look for the app window, more you can do in History and the Dictionary, and fixes for settings and the dictionary.
+
+### Added
+- History shows each app's own icon next to its dictations, saved the first time you dictate into it.
 - Delete a single dictation from History with the menu on its row.
 - History shows your totals: dictations, words, and how far back it goes. Ctrl+F jumps to its search.
 - Change a dictionary word or fix in place, see when each was added, and search or sort the list. Import / Export saves a copy of your dictionary or adds the words and fixes from another file.
@@ -29,12 +42,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 - The app window has a fresh look: brighter cards, a deeper green for what's selected, icons on every section, and larger, easier to read controls. Home leads with a big hotkey card, History has a card per day with one row per dictation, the Dictionary has its own cards for adding words and fixes over a table of everything in it, and Settings groups its options in labeled cards.
 - The app window opens larger (1360 by 920, smaller on small screens), so every page fits without crowding.
-- On Linux, Settings and the welcome no longer claim the hotkey is hidden from the app in front, since only Windows hides it there.
 
 ### Fixed
 - A dictionary.txt that isn't saved as UTF-8 no longer stops the app window from updating; the Dictionary page says what's wrong instead.
 - A dictionary fix that hears only punctuation or an emoji is refused, since it would match at every word.
-- On Linux, the old clipboard comes back even when Hyprland refuses the paste keys.
 - Settings no longer reset to their defaults when the tray app, the app window, or Omarchy's panel reads settings.json while another one is saving it, and a change saved in one of them is no longer undone by a change made in another a moment later. Changes saved within a few milliseconds of each other, to settings or the dictionary, are no longer missed, and a dictation still goes through if the dictionary file is briefly locked.
 
 ## [1.6.0] - 2026-11-16
@@ -162,7 +173,8 @@ The first release: local, unlimited dictation that replaces Wispr Flow for my da
 - A log at `logs/ghostwriter.log`, one copy running at a time, and an error message if it can't start.
 - Tests for the clipboard, hotkey, mic, dictionary, lock mode, settings, and the full dictation loop.
 
-[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/Vultify/ghostwriter/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/Vultify/ghostwriter/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/Vultify/ghostwriter/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/Vultify/ghostwriter/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Vultify/ghostwriter/compare/v1.3.0...v1.4.0

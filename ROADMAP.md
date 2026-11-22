@@ -149,6 +149,9 @@ Planned 2026-11-18; the full plan is in [plans/model-tiers.md](plans/model-tiers
 - [ ] Settings shows the three tiers with a line each, Recommended on the picked one, and details behind an ⓘ
 - **Checkpoint:** the 4090 picks Phantom, a laptop with built-in graphics picks Spirit or Wisp, and dictation feels instant on both
 
+## Version 1.7.0 released 2026-11-22
+The fresh app window from my mockups, app icons, totals and single deletes in History, an editable Dictionary with import and export, and settings that no longer reset or lose changes.
+
 ## Phase 12: local AI cleanup (on/off switch, its own page in the app)
 - [ ] Small local model on the GPU removes filler words, formats lists, and fixes punctuation
 - [ ] Voice commands ("new line", "scratch that")
