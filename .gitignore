@@ -16,6 +16,7 @@ __pycache__/
 recordings/
 logs/
 settings.json
+settings.json.broken-*
 startup.json
 lowered-sounds.json
 .installed

@@ -169,6 +169,7 @@ function showView(name) {
 
 function render(next) {
   state = next;
+  document.getElementById("settings-note").hidden = true;  // change() shows it again when a save didn't land
   const settings = state.settings;
   app.classList.toggle("system-frame", !state.ownFrame);  // the desktop draws the frame
   applyTheme();
@@ -578,6 +579,7 @@ function addedDay(day) {
 async function editDictionary(action, values, errorId) {
   const entries = await api()[action](...values);
   showError(errorId, entries.error);
+  if (!entries.error) showDictionaryNote("");  // a change that saved means the file reads fine again
   renderDictionary(entries);
   return !entries.error;
 }

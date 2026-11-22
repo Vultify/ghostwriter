@@ -61,8 +61,15 @@ class Paster:
             hyprland.press_keys(*paste_keys(hyprland.active_window()))
             time.sleep(self.restore_delay)
         finally:
-            restored = readable and self.clipboard.restore(previous, written)  # even if Hyprland refused the keys
+            restored = readable and self._restore(previous, written)  # even if Hyprland refused the keys
         return restored
+
+    def _restore(self, previous, written) -> bool:
+        try:
+            return self.clipboard.restore(previous, written)
+        except ClipboardError:  # logged here, so an error from the paste itself isn't hidden by this one
+            log.warning("Couldn't put the old clipboard back", exc_info=True)
+            return False
 
 
 @dataclass(frozen=True)

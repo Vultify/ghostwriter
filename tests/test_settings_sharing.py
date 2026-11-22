@@ -118,14 +118,32 @@ def test_a_change_never_writes_defaults_over_a_file_it_cant_read(tmp_path):
     assert path.read_text(encoding="utf-8") == good[: len(good) // 2]  # nothing written over it
 
 
-def test_a_settings_file_that_stays_broken_is_repaired_from_the_settings_in_use(tmp_path):
+def test_a_settings_file_that_stays_broken_is_repaired_from_the_settings_in_use(tmp_path, monkeypatch):
+    clock = [100.0]
+    monkeypatch.setattr(settings_module.time, "monotonic", lambda: clock[0])
     path = tmp_path / "settings.json"
     tray = Settings.load(path)
     tray.change("hotkey", "Caps Lock")
     path.write_text("{ broken for good", encoding="utf-8")
-    assert not tray.reload_if_changed()  # might still be a save going on
+    assert not tray.reload_if_changed()  # might still be a save going on, or a hand edit being fixed
     assert not Settings.load(path).change("pill", False)  # the window waits for the repair
-    assert not tray.reload_if_changed()  # the same broken file a check later: repaired
+    clock[0] += settings_module.REPAIR_SECONDS - 1
+    assert not tray.reload_if_changed() and "broken" in path.read_text(encoding="utf-8")  # not yet
+    clock[0] += 1
+    assert not tray.reload_if_changed()  # unchanged and unreadable long enough: repaired
     assert json.loads(path.read_text(encoding="utf-8"))["hotkey"] == "Caps Lock"
-    assert (tmp_path / "settings.json.broken").read_text(encoding="utf-8") == "{ broken for good"
+    [backup] = tmp_path.glob("settings.json.broken-*")
+    assert backup.read_text(encoding="utf-8") == "{ broken for good"
     assert Settings.load(path).change("pill", False)
+
+
+def test_a_settings_file_held_by_another_program_is_never_written_over(tmp_path, monkeypatch):
+    path = tmp_path / "settings.json"
+    Settings(path=path, hotkey="Caps Lock").save()
+    monkeypatch.setattr(settings_module, "_READ_TRIES", 2)
+    monkeypatch.setattr(Path, "read_bytes", lambda self: (_ for _ in ()).throw(PermissionError("held")))
+    window = Settings.load(path)
+    assert not window.readable
+    assert not window.change("pill", False)
+    monkeypatch.undo()
+    assert json.loads(path.read_text(encoding="utf-8"))["hotkey"] == "Caps Lock"

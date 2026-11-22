@@ -404,6 +404,9 @@ def test_the_window_explains_a_dictionary_or_settings_file_it_cant_read(api, tmp
     entries = api.dictionary()
     assert (entries["words"], entries["fixes"]) == ([], []) and "UTF-8" in entries["error"]
     assert "UTF-8" in api.add_word("Brightwater")["error"]
+    api.set_setting("theme", "light")
     (tmp_path / "settings.json").write_text("{ half", encoding="utf-8")
-    assert "settings.json" in api.set_setting("pill", False)["settingsError"]
+    refused = api.set_setting("pill", False)
+    assert "settings.json" in refused["settingsError"]
+    assert refused["settings"]["theme"] == "light"  # the last settings read, not the defaults
     assert api.state()["ownApp"] == "Ghostwriter"

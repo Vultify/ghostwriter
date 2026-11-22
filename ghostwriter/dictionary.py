@@ -19,6 +19,7 @@ log = logging.getLogger("ghostwriter")
 class Dictionary:
     words: list[str] = field(default_factory=list)
     fixes: list[tuple[re.Pattern[str], str]] = field(default_factory=list)
+    ignored: int = 0  # fix versions with nothing to match, left out
 
     @classmethod
     def parse(cls, text: str) -> "Dictionary":
@@ -29,7 +30,9 @@ class Dictionary:
                 continue
             if FIX_ARROW in line:
                 heard, wanted = (part.strip() for part in line.split(FIX_ARROW, 1))
-                dictionary.fixes += [(_loose_pattern(version), wanted) for version in heard.split(",") if _matchable(version)]
+                versions = [version for version in heard.split(",") if version.strip()]
+                dictionary.fixes += [(_loose_pattern(version), wanted) for version in versions if _matchable(version)]
+                dictionary.ignored += sum(not _matchable(version) for version in versions)
                 dictionary._add_word(wanted)
             else:
                 dictionary._add_word(line)
@@ -63,6 +66,7 @@ class DictionaryFile:
         self.path = path
         self.starter = starter
         self._text: str | None = None  # the file as last loaded
+        self._read_failed = False  # warned about an unreadable file
         self._dictionary = Dictionary()
 
     def current(self) -> Dictionary:
@@ -75,13 +79,18 @@ class DictionaryFile:
         except FileNotFoundError:
             return Dictionary()
         except ValueError as error:
-            if self._text is not None:
-                log.warning("%s, so the last version is still in use", error)
-                self._text = None  # warned once; it's read again next time
+            if not self._read_failed:
+                log.warning("%s %s", error, "The last version is still in use." if self._text else "Dictating without it.")
+                self._read_failed = True
+            self._text = None  # read again next time
             return self._dictionary
+        self._read_failed = False
         if text != self._text:
             self._dictionary = Dictionary.parse(text)
             self._text = text
+            if self._dictionary.ignored:
+                log.warning("Ignoring %d fix versions that hear only punctuation or emoji, which would match at every word",
+                            self._dictionary.ignored)
             log.info("Dictionary loaded: %d words, %d fixes", len(self._dictionary.words), len(self._dictionary.fixes))
         return self._dictionary
 
