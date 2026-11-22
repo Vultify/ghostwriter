@@ -6,6 +6,19 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<!-- Icons used in more than one place, drawn once. Each <svg> that uses one sets its size and stroke. -->
+<svg class="icon-sheet" aria-hidden="true">
+  <symbol id="icon-mic" viewBox="0 0 24 24"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/></symbol>
+  <symbol id="icon-document" viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/></symbol>
+  <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></symbol>
+  <symbol id="icon-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="icon-waveform" viewBox="0 0 24 24"><path d="M3 10v4"/><path d="M7.5 7v10"/><path d="M12 4v16"/><path d="M16.5 7v10"/><path d="M21 10v4"/></symbol>
+  <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/><path d="M9 7V4h6v3"/></symbol>
+  <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17"/><path d="M8 3v4"/><path d="M16 3v4"/></symbol>
+  <symbol id="icon-book" viewBox="0 0 24 24"><path d="M3 5.5C5 4.5 8.5 4.5 12 6.5c3.5-2 7-2 9-1V19c-2-1-5.5-1-9 1-3.5-2-7-2-9-1z"/><path d="M12 6.5V20"/></symbol>
+  <symbol id="icon-swap" viewBox="0 0 24 24"><path d="M4 8h14"/><path d="M14 4l4 4-4 4"/><path d="M20 16H6"/><path d="M10 12l-4 4 4 4"/></symbol>
+</svg>
 <div class="app" id="app" data-theme="dark">
 
 <header class="titlebar">
@@ -78,7 +91,7 @@
         <div class="hero-mic">
           <div class="wave" id="home-meter" aria-hidden="true"></div>
           <button type="button" class="button with-icon" id="home-mic-test">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-mic"/></svg>
             <span>Test mic</span>
           </button>
         </div>
@@ -93,7 +106,7 @@
           </div>
         </div>
         <div class="card stat">
-          <span class="icon-tile" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/></svg></span>
+          <span class="icon-tile" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><use href="#icon-mic"/></svg></span>
           <div>
             <div class="stat-label">Dictations today</div>
             <div class="stat-value" id="dictations-today">0</div>
@@ -111,17 +124,17 @@
       <div class="home-bottom">
         <section class="card recent" aria-labelledby="recent-title">
           <div class="card-head">
-            <h2 id="recent-title" class="titled"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>Recent</h2>
-            <button type="button" class="text-link with-icon" data-view="history">View all <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button>
+            <h2 id="recent-title" class="titled"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-document"/></svg>Recent</h2>
+            <button type="button" class="text-link with-icon" data-view="history">View all <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-arrow"/></svg></button>
           </div>
           <ul class="entries" id="recent-list"></ul>
           <p class="empty" id="recent-empty" hidden></p>
         </section>
 
         <section class="card quick" aria-labelledby="quick-title">
-          <h2 id="quick-title" class="titled"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Quick settings</h2>
+          <h2 id="quick-title" class="titled"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-gear"/></svg>Quick settings</h2>
           <div class="quick-row">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 10v4"/><path d="M7.5 7v10"/><path d="M12 4v16"/><path d="M16.5 7v10"/><path d="M21 10v4"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><use href="#icon-waveform"/></svg>
             <div class="quick-label">
               <div>Sounds</div>
               <div class="setting-hint" id="quick-sound-hint">Chime on start and stop</div>
@@ -137,7 +150,7 @@
             <button type="button" class="switch" data-setting="hands_free" aria-label="Hands free" aria-pressed="false"><span></span></button>
           </div>
           <div class="quick-row">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><use href="#icon-mic"/></svg>
             <div class="quick-label">
               <label for="home-mic">Microphone</label>
               <select id="home-mic" data-setting="microphone"></select>
@@ -154,7 +167,7 @@
           <p>Everything you've dictated, kept only on this PC.</p>
         </div>
         <button type="button" class="button with-icon clear-button" id="clear-history" disabled>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/><path d="M9 7V4h6v3"/></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-trash"/></svg>
           <span>Clear history</span>
         </button>
         <div class="confirm" id="clear-confirm" hidden>
@@ -172,7 +185,7 @@
       <div class="history-tools">
         <div class="search">
           <label class="sr-only" for="history-search">Search history</label>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><use href="#icon-search"/></svg>
           <input type="search" class="text-input" id="history-search" placeholder="Search your transcriptions…" autocomplete="off" spellcheck="false">
           <kbd class="search-key" aria-hidden="true">Ctrl + F</kbd>
         </div>
@@ -191,7 +204,7 @@
           <div><div class="total-value" id="total-words">0</div><div class="total-label">Total words</div></div>
         </div>
         <div class="total">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17"/><path d="M8 3v4"/><path d="M16 3v4"/></svg>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-calendar"/></svg>
           <div><div class="total-value" id="history-range">None yet</div><div class="total-label">History range</div></div>
         </div>
       </section>
@@ -231,7 +244,7 @@
       <div class="add-cards">
         <form class="card add-card" id="add-word">
           <div class="add-head">
-            <span class="icon-tile" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5C5 4.5 8.5 4.5 12 6.5c3.5-2 7-2 9-1V19c-2-1-5.5-1-9 1-3.5-2-7-2-9-1z"/><path d="M12 6.5V20"/></svg></span>
+            <span class="icon-tile" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-book"/></svg></span>
             <div>
               <h2>Add custom word</h2>
               <p class="setting-hint">A hint Whisper gets before it listens, so it spells names and terms your way.</p>
@@ -247,7 +260,7 @@
 
         <form class="card add-card" id="add-fix">
           <div class="add-head">
-            <span class="icon-tile" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14"/><path d="M14 4l4 4-4 4"/><path d="M20 16H6"/><path d="M10 12l-4 4 4 4"/></svg></span>
+            <span class="icon-tile" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-swap"/></svg></span>
             <div>
               <h2>Add automatic fix</h2>
               <p class="setting-hint">Swap a phrase it keeps mishearing for the right text, every time. Separate sound-alikes with commas.</p>
@@ -256,7 +269,7 @@
           <div class="add-row">
             <label class="sr-only" for="new-heard">When it hears</label>
             <input class="text-input" id="new-heard" placeholder="e.g. ghost writer" autocomplete="off" spellcheck="false">
-            <span class="arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span>
+            <span class="arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-arrow"/></svg></span>
             <label class="sr-only" for="new-write">Write</label>
             <input class="text-input" id="new-write" placeholder="e.g. Ghostwriter" autocomplete="off" spellcheck="false">
             <button type="submit" class="button primary">Add fix</button>
@@ -270,7 +283,7 @@
           <h2 id="list-title">Your words</h2>
           <div class="search list-search">
             <label class="sr-only" for="dictionary-search">Search the dictionary</label>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><use href="#icon-search"/></svg>
             <input type="search" class="text-input" id="dictionary-search" placeholder="Search words…" autocomplete="off" spellcheck="false">
           </div>
           <label class="sr-only" for="dictionary-sort">Sort</label>
@@ -295,6 +308,7 @@
           <p>Customize how Ghostwriter works, sounds, and looks.</p>
         </div>
       </header>
+      <p class="notice" id="settings-note" role="status" hidden></p>
 
       <div class="columns">
         <div class="column">
@@ -320,7 +334,7 @@
           </section>
 
           <section class="card settings-card" aria-labelledby="mic-title">
-            <h2 id="mic-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/></svg>Microphone</h2>
+            <h2 id="mic-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><use href="#icon-mic"/></svg>Microphone</h2>
             <div class="mic-row">
               <select id="settings-mic" data-setting="microphone" aria-labelledby="mic-title"></select>
               <button type="button" class="button with-icon" id="mic-test">
@@ -333,7 +347,7 @@
           </section>
 
           <section class="card settings-card" aria-labelledby="model-title">
-            <h2 id="model-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3 10v4"/><path d="M7.5 7v10"/><path d="M12 4v16"/><path d="M16.5 7v10"/><path d="M21 10v4"/></svg>Speech model</h2>
+            <h2 id="model-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><use href="#icon-waveform"/></svg>Speech model</h2>
             <fieldset class="choices engines" id="engines">
               <legend class="sr-only">Speech engine</legend>
             </fieldset>
@@ -396,7 +410,7 @@
           </section>
 
           <section class="card settings-card" aria-labelledby="general-title">
-            <h2 id="general-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>General</h2>
+            <h2 id="general-title" class="titled"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-gear"/></svg>General</h2>
             <div class="setting-row">
               <div>
                 <div id="start-at-login-label">Start with Windows</div>
@@ -414,7 +428,7 @@
             <div class="setting-row">
               <div>Files</div>
               <div class="button-row">
-                <button type="button" class="button with-icon" data-open="log"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/></svg><span>Open log</span></button>
+                <button type="button" class="button with-icon" data-open="log"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-document"/></svg><span>Open log</span></button>
                 <button type="button" class="button with-icon" data-open="folder"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Open folder</span></button>
               </div>
             </div>

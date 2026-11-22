@@ -116,3 +116,31 @@ def test_knows_the_app_in_front(text_box):
 ])
 def test_terminals_paste_with_ctrl_shift_v_and_everything_else_with_ctrl_v(window, keys):
     assert paste_keys(window) == keys
+
+
+def test_the_clipboard_comes_back_even_when_hyprland_refuses_the_paste_keys(monkeypatch):
+    calls = []
+
+    class FakeClipboard:
+        def snapshot(self):
+            return "before"
+
+        def write_text(self, text):
+            return "written"
+
+        def restore(self, previous, written):
+            calls.append((previous, written))
+            return True
+
+    def refuse(*keys):
+        raise hyprland.HyprlandError("refused")
+
+    monkeypatch.setattr(hyprland, "running", lambda: True)
+    monkeypatch.setattr(hyprland, "active_window", lambda: {"class": "notes"})
+    monkeypatch.setattr(hyprland, "press_keys", refuse)
+    monkeypatch.setattr("ghostwriter.linux.paster._wait_for_modifiers_released", lambda: None)
+    paster = Paster(restore_delay=0)
+    paster.clipboard = FakeClipboard()
+    with pytest.raises(hyprland.HyprlandError):
+        paster.paste("hello")
+    assert calls == [("before", "written")]

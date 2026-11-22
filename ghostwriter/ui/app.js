@@ -21,16 +21,22 @@ window.addEventListener("pywebviewready", async () => {
   if (state.firstRun) startSetup();
   else watchEngine();  // in case an engine switch is still going
   app.classList.add("loaded");
-  renderDictionary(await api().dictionary());
-  await watchHistory();
-  watchSettings.stamp = await api().settings_stamp();
+  // The checks below start whatever the first reads find, so one bad file can't leave the window frozen.
   setInterval(watchHistory, 1000);
   setInterval(watchSettings, 1000);
+  try {
+    const entries = await api().dictionary();
+    renderDictionary(entries);
+    showDictionaryNote(entries.error);
+    await watchHistory();
+  } finally {
+    watchSettings.stamp ??= await api().settings_stamp();
+  }
 });
 
 // The tray menu can change settings while the window is open; this keeps the page in step with it.
 async function watchSettings() {
-  if (document.hidden) return;
+  if (document.hidden || watchSettings.stamp === undefined) return;
   const stamp = await api().settings_stamp();
   if (stamp === watchSettings.stamp) return;
   watchSettings.stamp = stamp;
@@ -140,7 +146,11 @@ function bindPage() {
 }
 
 async function change(name, value) {
-  render(await api().set_setting(name, value));
+  const next = await api().set_setting(name, value);
+  render(next);
+  const note = document.getElementById("settings-note");
+  note.textContent = next.settingsError ?? "";
+  note.hidden = !next.settingsError;
 }
 
 function showView(name) {
@@ -422,10 +432,10 @@ async function drawMicLevel() {
 // What the Dictionary page shows: which tab, the search, the sort, and the entry being changed, if any.
 const dictionaryView = { entries: { words: [], fixes: [] }, tab: "words", query: "", sort: "az", editing: null };
 const addedFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
-const BOOK_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5C5 4.5 8.5 4.5 12 6.5c3.5-2 7-2 9-1V19c-2-1-5.5-1-9 1-3.5-2-7-2-9-1z"/><path d="M12 6.5V20"/></svg>';
-const SWAP_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14"/><path d="M14 4l4 4-4 4"/><path d="M20 16H6"/><path d="M10 12l-4 4 4 4"/></svg>';
+const BOOK_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-book"/></svg>';
+const SWAP_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-swap"/></svg>';
 const PENCIL_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>';
-const TRASH_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/><path d="M9 7V4h6v3"/></svg>';
+const TRASH_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-trash"/></svg>';
 
 function showTab(name) {
   dictionaryView.tab = name;
@@ -597,9 +607,13 @@ async function addFix(event) {
 async function dictionaryFile(action) {
   const result = await api()[action]();
   if (result.words) renderDictionary(result);
+  showDictionaryNote(result.message || result.error);
+}
+
+function showDictionaryNote(message) {
   const note = document.getElementById("dictionary-note");
-  note.textContent = result.message || "";
-  note.hidden = !result.message;
+  note.textContent = message || "";
+  note.hidden = !message;
 }
 
 function showError(id, message) {
@@ -614,7 +628,7 @@ const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute:
 const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
 const dayAndYearFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 const DOTS_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
-const CALENDAR_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17"/><path d="M8 3v4"/><path d="M16 3v4"/></svg>';
+const CALENDAR_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#icon-calendar"/></svg>';
 const COPY_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>';
 const COPIED_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
 
@@ -630,7 +644,7 @@ async function loadIcons(items) {
 const GHOST_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path class="ghost-mark" d="M4 11a8 8 0 0 1 16 0v10l-2.67-1.8L14.67 21 12 19.2 9.33 21l-2.66-1.8L4 21z"/><circle class="ghost-eye" cx="9.5" cy="10.5" r="1.4"/><circle class="ghost-eye" cx="14.5" cy="10.5" r="1.4"/></svg>';
 
 function appIcon(name) {
-  if (name === "Ghostwriter") {
+  if (name === state.ownApp) {
     const ghost = element("span", "app-icon ghost");
     ghost.innerHTML = GHOST_ICON;
     return ghost;

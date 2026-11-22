@@ -18,7 +18,7 @@
   color-scheme: dark;
   --bg: #0C1014; --chrome: #0A0D11; --chrome-line: #1B2026; --card: #161B1F; --card-line: #262B31;
   --field: #101417; --field-line: #2C3238; --row: #222830; --cap: #1E2429; --cap-line: #363D44;
-  --nav-on: #1C2126; --panel: #14181C; --card-head: #1A1F23; --text: #F2F3F5; --text2: #D0D3D8; --muted: #A1A6AD; --faint: #8B9097;
+  --panel: #14181C; --card-head: #1A1F23; --text: #F2F3F5; --text2: #D0D3D8; --muted: #A1A6AD; --faint: #8B9097;
   --tile: rgba(125, 240, 195, 0.10); --hero-from: rgba(125, 240, 195, 0.14); --hero-to: rgba(125, 240, 195, 0.03);
   --glow: rgba(125, 240, 195, 0.45);
   --accent: #7DF0C3; --ink: #7DF0C3; --ink-hover: #A9F6D9; --on-accent: #0E0F11;
@@ -32,7 +32,7 @@
   color-scheme: light;
   --bg: #F4F5F6; --chrome: #E9EAEC; --chrome-line: #DADBDE; --card: #FFFFFF; --card-line: #E2E3E6;
   --field: #F4F5F6; --field-line: #D3D4D9; --row: #ECEDEF; --cap: #F0F1F3; --cap-line: #C5C6CC;
-  --nav-on: #FFFFFF; --panel: #FFFFFF; --card-head: #F7F8F9; --text: #16171A; --text2: #3D3F47; --muted: #5C5E67; --faint: #686A73;
+  --panel: #FFFFFF; --card-head: #F7F8F9; --text: #16171A; --text2: #3D3F47; --muted: #5C5E67; --faint: #686A73;
   --tile: rgba(10, 117, 83, 0.09); --hero-from: rgba(16, 160, 110, 0.12); --hero-to: rgba(16, 160, 110, 0.02);
   --glow: rgba(10, 140, 95, 0.30);
   --accent: #5EE0B0; --ink: #0A7553; --ink-hover: #075C41; --on-accent: #0B1F18;
@@ -69,6 +69,8 @@ button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 [hidden] { display: none !important; }
+
+.icon-sheet { position: absolute; width: 0; height: 0; overflow: hidden; }
 
 .sr-only {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
@@ -307,7 +309,6 @@ main::-webkit-scrollbar-thumb:hover { background: var(--faint); }
 
 .column > .card:last-child { flex-grow: 1; }  /* both columns end at the same line */
 
-.divider { height: 1px; background: var(--card-line); }
 
 /* Controls */
 
@@ -763,7 +764,7 @@ kbd {
   border-top: 1px solid var(--row);
 }
 
-.entry.long:hover, .entry.long:focus-within, .entry.long.hovered {
+.entry.long:hover, .entry.long:focus-within {
   background: var(--cap);
   box-shadow: inset 3px 0 0 var(--accent);
 }
@@ -787,7 +788,7 @@ kbd {
   white-space: nowrap;
 }
 
-.entry.long:hover .word-badge, .entry.long.hovered .word-badge { background: var(--cap-line); }
+.entry.long:hover .word-badge { background: var(--cap-line); }
 
 .history-list .empty { padding: 16px 4px; }
 

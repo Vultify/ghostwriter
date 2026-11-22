@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ghostwriter.paths import PROJECT
+from ghostwriter.paths import OWN_APP, PROJECT
 from ghostwriter.windows import win32
 from ghostwriter.windows.clipboard import Clipboard
 from ghostwriter.windows.processes import program_path
@@ -60,7 +60,7 @@ def app_name(program: App | None) -> str:
     if program is None:
         return "Unknown app"
     if program.is_relative_to(PROJECT):
-        return "Ghostwriter"  # the app window's own Python
+        return OWN_APP  # the app window's own Python
     details = _file_details(program)
     # Store apps keep their real name in the product name; other programs in the description.
     keys = ("ProductName", "FileDescription") if "WindowsApps" in program.parts else ("FileDescription", "ProductName")

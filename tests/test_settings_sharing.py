@@ -117,3 +117,15 @@ def test_a_change_never_writes_defaults_over_a_file_it_cant_read(tmp_path):
     window.change("theme", "light")
     assert path.read_text(encoding="utf-8") == good[: len(good) // 2]  # nothing written over it
 
+
+def test_a_settings_file_that_stays_broken_is_repaired_from_the_settings_in_use(tmp_path):
+    path = tmp_path / "settings.json"
+    tray = Settings.load(path)
+    tray.change("hotkey", "Caps Lock")
+    path.write_text("{ broken for good", encoding="utf-8")
+    assert not tray.reload_if_changed()  # might still be a save going on
+    assert not Settings.load(path).change("pill", False)  # the window waits for the repair
+    assert not tray.reload_if_changed()  # the same broken file a check later: repaired
+    assert json.loads(path.read_text(encoding="utf-8"))["hotkey"] == "Caps Lock"
+    assert (tmp_path / "settings.json.broken").read_text(encoding="utf-8") == "{ broken for good"
+    assert Settings.load(path).change("pill", False)

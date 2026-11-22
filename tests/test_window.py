@@ -397,3 +397,13 @@ def test_opening_twice_gives_one_window_and_quitting_closes_it():
     assert len(app_window._app_windows(window.TITLE)) == 1
     window.close_window()
     assert _wait_for(lambda: not app_window._app_windows(window.TITLE), timeout=10), "the window didn't close"
+
+
+def test_the_window_explains_a_dictionary_or_settings_file_it_cant_read(api, tmp_path):
+    (tmp_path / "dictionary.txt").write_bytes("Caf\xe9\n".encode("latin-1"))
+    entries = api.dictionary()
+    assert (entries["words"], entries["fixes"]) == ([], []) and "UTF-8" in entries["error"]
+    assert "UTF-8" in api.add_word("Brightwater")["error"]
+    (tmp_path / "settings.json").write_text("{ half", encoding="utf-8")
+    assert "settings.json" in api.set_setting("pill", False)["settingsError"]
+    assert api.state()["ownApp"] == "Ghostwriter"

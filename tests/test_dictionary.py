@@ -123,3 +123,20 @@ def test_a_dictionary_that_cant_be_read_keeps_the_last_version(tmp_path):
     path.write_text("Ghostwriter\nCaf\u00e9\n", encoding="utf-8")
     assert dictionary.current().words == ["Ghostwriter", "Caf\u00e9"]
 
+
+def test_a_fix_needs_a_letter_or_number_in_what_it_hears(tmp_path):
+    path = tmp_path / "dictionary.txt"
+    path.write_text("Ghostwriter\n", encoding="utf-8")
+    dictionary = DictionaryFile(path, starter=None)
+    for heard in ("\u2026", "?!", "ok, ?!"):
+        with pytest.raises(ValueError, match="letter or number"):
+            dictionary.add_fix(heard, "...")
+    assert Dictionary.parse("?! -> nope\nsea whiz, \u2026 -> CIWS\n").apply("hello sea whiz there") == "hello CIWS there"
+
+
+def test_the_window_side_reads_a_badly_saved_dictionary_as_a_plain_error(tmp_path):
+    path = tmp_path / "dictionary.txt"
+    path.write_bytes("Caf\xe9\n".encode("latin-1"))
+    dictionary = DictionaryFile(path, starter=None)
+    with pytest.raises(ValueError, match="UTF-8"):
+        dictionary.entries()

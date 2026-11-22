@@ -16,7 +16,7 @@ from ghostwriter.audio import loudness
 from ghostwriter.dictionary import AddedDates, DictionaryFile, entry_key, fix_line
 from ghostwriter.history import FILTER_APPS, MENU_APPS, PAGE_SIZE, History
 from ghostwriter.paths import (APP_ICONS_DIR, DICTIONARY_DATES_PATH, DICTIONARY_PATH, HISTORY_PATH, ICON_PATH,
-                               LOG_PATH, PROJECT, SETTINGS_PATH, STARTUP_PATH, UI_DIR, WEB_DATA_DIR, WINDOW_LOG_PATH)
+                               LOG_PATH, OWN_APP, PROJECT, SETTINGS_PATH, STARTUP_PATH, UI_DIR, WEB_DATA_DIR, WINDOW_LOG_PATH)
 from ghostwriter.recorder import Recorder, list_microphones
 from ghostwriter.settings import HANDS_FREE_MINUTES, HOTKEYS, OTHER_SOUNDS, Settings
 from ghostwriter.system import app_window, desktop, hotkey, processes, shortcuts
@@ -74,6 +74,7 @@ class Api:
             "settings": settings.saved(),
             "system": desktop.NAME,
             "ownFrame": app_window.OWN_FRAME,
+            "ownApp": OWN_APP,
             "appMenu": desktop.APP_MENU,
             "startAtLogin": shortcuts.starts_at_login(self._login_folder),
             "soundStyles": list(sounds.STYLES),
@@ -95,12 +96,17 @@ class Api:
         }
 
     def set_setting(self, name: str, value) -> dict:
-        Settings.load(self._settings_path).change(name, value)
-        return self.state()
+        if Settings.load(self._settings_path).change(name, value):
+            return self.state()
+        return {**self.state(), "settingsError": "settings.json can't be read right now, so that change wasn't saved. "
+                                                 "Ghostwriter repairs the file in a moment; try again then."}
 
     def dictionary(self) -> dict:
-        """The words and fixes, each with the day it was added."""
-        entries = self._dictionary.entries()
+        """The words and fixes, each with the day it was added, or an error when the file can't be read."""
+        try:
+            entries = self._dictionary.entries()
+        except ValueError as error:
+            return {"words": [], "fixes": [], "error": str(error)}
         lines = [*entries["words"], *(fix_line(fix["heard"], fix["write"]) for fix in entries["fixes"])]
         added = self._dates.dates(lines)
         return {
@@ -153,7 +159,9 @@ class Api:
         if not target:
             return {"message": ""}
         try:
-            Path(target).write_text(self._dictionary.path.read_text(encoding="utf-8"), encoding="utf-8")
+            Path(target).write_text(self._dictionary.text(), encoding="utf-8")
+        except ValueError as error:
+            return {"message": str(error)}
         except OSError:
             return {"message": "Couldn't save there. Try another folder."}
         return {"message": f"Saved a copy as {Path(target).name}."}
@@ -260,7 +268,7 @@ class Api:
         try:
             change(*values)
         except ValueError as error:
-            return {**self.dictionary(), "error": str(error)}
+            return {**self.dictionary(), "error": str(error)}  # the file's own read error wins, if it has one
         return self.dictionary()
 
     def _has_nvidia(self, status: dict) -> bool:

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from ghostwriter.linux import desktop_files, hotkey, hyprland, icon_theme
 from ghostwriter.linux.clipboard import Clipboard, ClipboardError
-from ghostwriter.paths import PROJECT
+from ghostwriter.paths import OWN_APP, PROJECT
 
 log = logging.getLogger(__name__)
 
@@ -56,10 +56,13 @@ class Paster:
             log.warning("Couldn't read the clipboard, so it won't be put back after pasting", exc_info=True)
             previous, readable = None, False
         written = self.clipboard.write_text(text)
-        _wait_for_modifiers_released()
-        hyprland.press_keys(*paste_keys(hyprland.active_window()))
-        time.sleep(self.restore_delay)
-        return readable and self.clipboard.restore(previous, written)
+        try:
+            _wait_for_modifiers_released()
+            hyprland.press_keys(*paste_keys(hyprland.active_window()))
+            time.sleep(self.restore_delay)
+        finally:
+            restored = readable and self.clipboard.restore(previous, written)  # even if Hyprland refused the keys
+        return restored
 
 
 @dataclass(frozen=True)
@@ -96,7 +99,7 @@ def app_name(app: App | None) -> str:
     if app is None:
         return "Unknown app"
     if app.program and app.program.is_relative_to(PROJECT):
-        return "Ghostwriter"  # the app window's own Python
+        return OWN_APP  # the app window's own Python
     if app.app_id.startswith(_STEAM_GAME) and app.title:
         return app.title
     if entry := _launcher_entry(app):

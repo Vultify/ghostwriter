@@ -32,6 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - On Linux, Settings and the welcome no longer claim the hotkey is hidden from the app in front, since only Windows hides it there.
 
 ### Fixed
+- A settings.json left unreadable, by a crash or a hand edit, is saved again from the settings in use, with the broken file kept as settings.json.broken. Until then the window says why a change didn't save.
+- A dictionary.txt that isn't saved as UTF-8 no longer stops the app window from updating; the Dictionary page says what's wrong instead.
+- A dictionary fix that hears only punctuation or an emoji is refused, since it would match at every word.
+- On Linux, the old clipboard comes back even when Hyprland refuses the paste keys.
 - Settings no longer reset to their defaults when the tray app, the app window, or Omarchy's panel reads settings.json while another one is saving it, and a change saved in one of them is no longer undone by a change made in another a moment later. Changes saved within a few milliseconds of each other, to settings or the dictionary, are no longer missed, and a dictation still goes through if the dictionary file is briefly locked.
 
 ## [1.6.0] - 2026-11-16

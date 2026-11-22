@@ -10,9 +10,8 @@ import logging
 import time
 from pathlib import Path
 
-from ghostwriter.paths import APP_ICONS_DIR
+from ghostwriter.paths import APP_ICONS_DIR, OWN_APP
 
-OWN_NAME = "Ghostwriter"  # the window draws its own ghost for these
 
 RETRY_SECONDS = 3600  # how long an app that gave no icon goes before it's asked again
 log = logging.getLogger("ghostwriter")
@@ -24,7 +23,7 @@ _without_icon: dict[tuple[str, str], float] = {}
 def remember(name: str, app, folder: Path = APP_ICONS_DIR) -> None:
     """Save an app's icon if it isn't saved yet. Never raises: a missing icon only costs the picture."""
     path = _path(name, folder)
-    if name == OWN_NAME or app is None or path.exists():
+    if name == OWN_APP or app is None or path.exists():
         return
     key = (name, str(getattr(app, "program", app)))
     missed = _without_icon.get(key)

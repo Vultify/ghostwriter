@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parent.parent
+OWN_APP = "Ghostwriter"  # how History names the app window itself
 SETTINGS_PATH = PROJECT / "settings.json"
 DICTIONARY_PATH = PROJECT / "dictionary.txt"  # personal, so it isn't in git
 STARTER_PATH = PROJECT / "dictionary.example.txt"  # copied to dictionary.txt on first run

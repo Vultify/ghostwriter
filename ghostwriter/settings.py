@@ -68,27 +68,29 @@ class Settings:
     def hotkey_code(self) -> int:
         return HOTKEYS[self.hotkey]
 
-    def change(self, name: str, value) -> None:
+    def change(self, name: str, value) -> bool:
         """Set one setting and save it, refusing values the app can't use. The other settings are written as the
         file has them now, so a change another program saved a moment ago isn't undone, and are taken in here too:
-        a caller applies every setting after a change, not only this one."""
+        a caller applies every setting after a change, not only this one. Returns whether it was saved."""
         if name not in _CHECKS or not _CHECKS[name](value):
             raise ValueError(f"{value!r} isn't a valid {name}")
         with self._lock:
-            self._change(name, value)
+            return self._change(name, value)
 
-    def _change(self, name: str, value) -> None:
+    def _change(self, name: str, value) -> bool:
         setattr(self, name, value)
         raw, on_disk = _read_file(self.path)
         if on_disk is None and raw is not None:
-            # There, but unreadable right now: saving would write defaults over every other setting.
+            # There, but unreadable: saving would write defaults over every other setting. The tray app repairs a
+            # file that stays broken (see _reload), so the change waits for that.
             log.warning("Didn't save %s, since %s can't be read right now", name, self.path.name)
-            return
+            return False
         current = Settings(path=self.path)
         current._take(self.saved() if on_disk is None else on_disk)
         merged = {**current.saved(), name: value}
         self._write(merged)
         self._take(merged)  # what another program saved is in use right away, along with this change
+        return True
 
     def saved(self) -> dict:
         """Every saved setting by name, as settings.json holds them."""
@@ -96,6 +98,18 @@ class Settings:
 
     def save(self) -> None:
         self._write(self.saved())
+
+    def _repair(self, broken: bytes) -> None:
+        """Write the settings in use over a settings.json that stays unreadable, keeping a copy of the broken one."""
+        backup = self.path.with_name(self.path.name + ".broken")
+        try:
+            backup.write_bytes(broken)
+            self._write(self.saved())
+        except OSError:
+            log.warning("Couldn't repair the unreadable %s", self.path.name, exc_info=True)
+            return
+        log.warning("%s couldn't be read, so it was saved again from the settings in use; the old file is %s",
+                    self.path.name, backup.name)
 
     def _write(self, saved: dict) -> None:
         self.path.write_text(json.dumps(saved, indent=2) + "\n", encoding="utf-8")
@@ -112,7 +126,10 @@ class Settings:
     def _reload(self) -> bool:
         raw, saved = _read_file(self.path, skip=self._broken)
         if saved is None:  # gone or unreadable: keep the settings in use rather than falling back to defaults
-            self._broken = raw
+            if raw is not None and raw == self._broken:
+                self._repair(raw)  # the same unreadable file a check ago, so not a save still going on
+            else:
+                self._broken = raw
             return False
         self._broken = None
         fresh = Settings(path=self.path)

@@ -29,7 +29,7 @@ class Dictionary:
                 continue
             if FIX_ARROW in line:
                 heard, wanted = (part.strip() for part in line.split(FIX_ARROW, 1))
-                dictionary.fixes += [(_loose_pattern(version), wanted) for version in heard.split(",") if version.strip()]
+                dictionary.fixes += [(_loose_pattern(version), wanted) for version in heard.split(",") if _matchable(version)]
                 dictionary._add_word(wanted)
             else:
                 dictionary._add_word(line)
@@ -71,12 +71,12 @@ class DictionaryFile:
             log.info("Created %s from %s", self.path.name, self.starter.name)
         # Compared by contents, since two saves in the same Windows clock tick share a modified time.
         try:
-            text = self.path.read_text(encoding="utf-8")
+            text = self.text()
         except FileNotFoundError:
             return Dictionary()
-        except (OSError, UnicodeError) as error:  # held by another program, or not saved as UTF-8
+        except ValueError as error:
             if self._text is not None:
-                log.warning("Couldn't read %s, so the last version is still in use: %s", self.path.name, error)
+                log.warning("%s, so the last version is still in use", error)
                 self._text = None  # warned once; it's read again next time
             return self._dictionary
         if text != self._text:
@@ -157,10 +157,21 @@ class DictionaryFile:
                 return new
         raise ValueError("That entry isn't in the file anymore. It may have been edited as text.")
 
+    def text(self) -> str:
+        """The file's text. Raises ValueError with a plain message when it's held by another program or isn't
+        saved as UTF-8, and FileNotFoundError when it's missing."""
+        try:
+            return self.path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            raise
+        except (OSError, UnicodeError) as error:
+            raise ValueError(f"Couldn't read {self.path.name}. Save it as UTF-8 text, or close the app that has it open "
+                             f"({error.__class__.__name__}).") from error
+
     def _lines(self) -> list[str]:
         self.current()  # makes the file from the starter if it's missing
         try:
-            return self.path.read_text(encoding="utf-8").splitlines()
+            return self.text().splitlines()
         except FileNotFoundError:
             return []
 
@@ -222,7 +233,15 @@ def fix_line(heard: str, write: str) -> str:
 def _fix_entry(heard: str, write: str) -> str:
     """A fix from the app window or an imported file, checked and written the way the file keeps it."""
     versions = [part.strip() for part in _checked(heard, "what it hears").split(",") if part.strip()]
+    if not all(_matchable(version) for version in versions):
+        raise ValueError("Each version of what it hears needs a letter or number.")
     return fix_line(", ".join(versions), _checked(write, "what to write"))
+
+
+def _matchable(version: str) -> bool:
+    """Whether a version of what it hears has a word to match. One with only punctuation or emoji would match at
+    every word boundary."""
+    return re.search(r"\w", version) is not None
 
 
 def entry_key(line: str) -> str:
