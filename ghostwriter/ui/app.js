@@ -21,22 +21,17 @@ window.addEventListener("pywebviewready", async () => {
   if (state.firstRun) startSetup();
   else watchEngine();  // in case an engine switch is still going
   app.classList.add("loaded");
-  // The checks below start whatever the first reads find, so one bad file can't leave the window frozen.
+  // The checks start before the first reads, so one bad file can't leave the window frozen.
+  watchSettings.stamp = await api().settings_stamp();
   setInterval(watchHistory, 1000);
   setInterval(watchSettings, 1000);
-  try {
-    const entries = await api().dictionary();
-    renderDictionary(entries);
-    showDictionaryNote(entries.error);
-    await watchHistory();
-  } finally {
-    watchSettings.stamp ??= await api().settings_stamp();
-  }
+  renderDictionary(await api().dictionary());
+  await watchHistory();
 });
 
 // The tray menu can change settings while the window is open; this keeps the page in step with it.
 async function watchSettings() {
-  if (document.hidden || watchSettings.stamp === undefined) return;
+  if (document.hidden) return;
   const stamp = await api().settings_stamp();
   if (stamp === watchSettings.stamp) return;
   watchSettings.stamp = stamp;
@@ -169,7 +164,7 @@ function showView(name) {
 
 function render(next) {
   state = next;
-  document.getElementById("settings-note").hidden = true;  // change() shows it again when a save didn't land
+  if (state.settingsReadable) document.getElementById("settings-note").hidden = true;  // the problem is gone
   const settings = state.settings;
   app.classList.toggle("system-frame", !state.ownFrame);  // the desktop draws the frame
   applyTheme();
@@ -451,6 +446,8 @@ function showTab(name) {
 }
 
 function renderDictionary(entries) {
+  showDictionaryNote(entries.readError);
+  if (entries.readError) return;  // keep the lists last shown rather than an empty dictionary
   dictionaryView.entries = entries;
   document.getElementById("word-count").textContent = entries.words.length;
   document.getElementById("fix-count").textContent = entries.fixes.length;
@@ -579,7 +576,6 @@ function addedDay(day) {
 async function editDictionary(action, values, errorId) {
   const entries = await api()[action](...values);
   showError(errorId, entries.error);
-  if (!entries.error) showDictionaryNote("");  // a change that saved means the file reads fine again
   renderDictionary(entries);
   return !entries.error;
 }
@@ -608,8 +604,8 @@ async function addFix(event) {
 
 async function dictionaryFile(action) {
   const result = await api()[action]();
-  if (result.words) renderDictionary(result);
-  showDictionaryNote(result.message || result.error);
+  if (result.words || result.readError) renderDictionary(result);
+  if (result.message) showDictionaryNote(result.message);
 }
 
 function showDictionaryNote(message) {

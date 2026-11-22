@@ -49,6 +49,7 @@ class Settings:
     path: Path = field(default=SETTINGS_PATH, repr=False, compare=False)
     _broken: bytes | None = field(default=None, repr=False, compare=False)  # the unreadable file, as last read
     _broken_since: float = field(default=0.0, repr=False, compare=False)  # when it was first seen that way
+    _from_file: bool = field(default=False, repr=False, compare=False)  # read from the file at least once
     # The tray menu changes settings on its own thread while the main loop checks the file.
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
 
@@ -60,6 +61,8 @@ class Settings:
         settings._take(saved or {})
         if saved is None:
             settings._broken, settings._broken_since = raw, time.monotonic()
+        else:
+            settings._from_file = True
         return settings
 
     def _take(self, saved: dict) -> None:
@@ -86,18 +89,19 @@ class Settings:
             return self._change(name, value)
 
     def _change(self, name: str, value) -> bool:
-        setattr(self, name, value)
         raw, on_disk = _read_file(self.path)
         if on_disk is None and raw is not None:
             # There, but unreadable: saving would write defaults over every other setting. The tray app repairs a
-            # file that stays broken (see _reload), so the change waits for that.
+            # file that stays broken (see _reload), so the change waits for that and nothing changes meanwhile.
             log.warning("Didn't save %s, since %s can't be read right now", name, self.path.name)
             return False
+        setattr(self, name, value)
         current = Settings(path=self.path)
         current._take(self.saved() if on_disk is None else on_disk)
         merged = {**current.saved(), name: value}
         self._write(merged)
         self._take(merged)  # what another program saved is in use right away, along with this change
+        self._from_file = True
         return True
 
     def saved(self) -> dict:
@@ -138,11 +142,14 @@ class Settings:
                 return False  # gone, or held by another program: nothing to repair
             if raw != self._broken:
                 self._broken, self._broken_since = raw, time.monotonic()
-            elif time.monotonic() - self._broken_since >= REPAIR_SECONDS:
+            elif self._from_file and time.monotonic() - self._broken_since >= REPAIR_SECONDS:
                 # The same unreadable file for a while, so not a save still going on or a hand edit being fixed.
+                # Only settings once read from the file repair it; defaults standing in would reset everything.
                 self._repair(raw)
+                self._broken_since = time.monotonic()  # a repair that failed waits as long again
             return False
         self._broken = None
+        self._from_file = True
         fresh = Settings(path=self.path)
         fresh._take(saved)
         changed = False

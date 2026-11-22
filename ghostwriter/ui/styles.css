@@ -650,6 +650,10 @@ kbd {
 
 .entry .icon-button { width: 36px; height: 36px; border-radius: 9px; }
 
+/* A save that didn't land, shown over whichever page is open */
+
+.settings-note { margin: 20px 28px 0; border-color: var(--danger-line); color: var(--danger); }
+
 /* History */
 
 .view-header .clear-button { align-self: flex-start; margin-top: 4px; }

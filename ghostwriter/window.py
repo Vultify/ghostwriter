@@ -66,7 +66,8 @@ class Api:
 
     def state(self) -> dict:
         settings = Settings.load(self._settings_path)
-        if settings.readable:
+        readable = settings.readable
+        if readable:
             self._last_settings = settings
         elif self._last_settings:  # unreadable for now: show what was last read, not the defaults
             settings = self._last_settings
@@ -80,6 +81,7 @@ class Api:
             "system": desktop.NAME,
             "ownFrame": app_window.OWN_FRAME,
             "ownApp": OWN_APP,
+            "settingsReadable": readable,
             "appMenu": desktop.APP_MENU,
             "startAtLogin": shortcuts.starts_at_login(self._login_folder),
             "soundStyles": list(sounds.STYLES),
@@ -110,8 +112,8 @@ class Api:
         """The words and fixes, each with the day it was added, or an error when the file can't be read."""
         try:
             entries = self._dictionary.entries()
-        except ValueError as error:
-            return {"words": [], "fixes": [], "error": str(error)}
+        except ValueError as error:  # no lists, so the page keeps what it last showed instead of an empty dictionary
+            return {"readError": str(error)}
         lines = [*entries["words"], *(fix_line(fix["heard"], fix["write"]) for fix in entries["fixes"])]
         added = self._dates.dates(lines)
         return {
@@ -149,7 +151,10 @@ class Api:
             text = Path(picked[0]).read_text(encoding="utf-8-sig")
         except (OSError, UnicodeError):
             return {**self.dictionary(), "message": "Couldn't read that file. Pick a plain text file."}
-        words, fixes = self._dictionary.merge(text)
+        try:
+            words, fixes = self._dictionary.merge(text)
+        except ValueError as error:  # dictionary.txt itself can't be read
+            return {**self.dictionary(), "message": str(error)}
         found = " and ".join(part for part in (_count(words, "word"), _count(fixes, "fix", "fixes")) if part)
         return {**self.dictionary(), "message": f"Added {found}." if found else "Nothing new in that file."}
 

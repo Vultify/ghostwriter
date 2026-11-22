@@ -402,7 +402,7 @@ def test_opening_twice_gives_one_window_and_quitting_closes_it():
 def test_the_window_explains_a_dictionary_or_settings_file_it_cant_read(api, tmp_path):
     (tmp_path / "dictionary.txt").write_bytes("Caf\xe9\n".encode("latin-1"))
     entries = api.dictionary()
-    assert (entries["words"], entries["fixes"]) == ([], []) and "UTF-8" in entries["error"]
+    assert list(entries) == ["readError"] and "UTF-8" in entries["readError"]  # no lists, so the page keeps its own
     assert "UTF-8" in api.add_word("Brightwater")["error"]
     api.set_setting("theme", "light")
     (tmp_path / "settings.json").write_text("{ half", encoding="utf-8")
